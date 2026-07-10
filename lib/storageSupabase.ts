@@ -1,3 +1,5 @@
+"use server";
+
 import { createClient } from "@supabase/supabase-js";
 import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus } from "./types";
 import crypto from "crypto";

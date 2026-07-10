@@ -1,5 +1,15 @@
-import * as serverActions from "./storage";
+import * as localActions from "./storage";
+import * as supabaseActions from "./storageSupabase";
 import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus } from "./types";
+
+// Determine if we should use the cloud Supabase database
+// NEXT_PUBLIC_SUPABASE_URL is injected by Vercel in production
+const useSupabase = (): boolean => {
+  return !!process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== "";
+};
+
+// Dispatch server actions based on config
+const serverActions = useSupabase() ? supabaseActions : localActions;
 
 // Helper to determine if we are in Demo Sandbox Mode (stored in browser localStorage)
 const isDemoMode = (): boolean => {
@@ -122,7 +132,7 @@ const seedSandboxIfNeeded = () => {
   }
 };
 
-// CLIENT HANDLER: DISPATCHES TO LOCALSTORAGE IF IN DEMO, ELSE CALLS SERVER ACTIONS
+// CLIENT HANDLER: DISPATCHES TO LOCALSTORAGE IF IN DEMO, ELSE CALLS ACTIVE SERVER ACTIONS
 export async function getProfile(): Promise<Profile> {
   if (isDemoMode()) {
     seedSandboxIfNeeded();
@@ -267,7 +277,6 @@ export async function acceptContract(
     if (!contract) return null;
     const milestones = await getMilestones(contractId);
     
-    // In-browser mock IP since we cannot query server headers directly in sandbox
     const sandboxIp = "189.144.22.84";
     const sandboxHash = Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join("");
     
@@ -279,7 +288,6 @@ export async function acceptContract(
     contract.updated_at = new Date().toISOString();
     await saveContract(contract);
     
-    // Update first milestone to requested
     if (milestones.length > 0 && milestones[0].status === "pending") {
       await updateMilestoneStatus(milestones[0].id, "requested");
     }
