@@ -26,5 +26,11 @@ jobs:
     - name: Run Unit Tests
       run: npm run test
 
+    - name: Run ESLint Linter
+      run: npm run lint
+
+    - name: Run Security Audit
+      run: npm audit --audit-level=critical
+
     - name: Compile and Build Next.js Bundle
       run: npm run build
