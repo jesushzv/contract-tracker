@@ -649,3 +649,14 @@ async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
     });
   }
 }
+
+export async function loadSampleData(): Promise<boolean> {
+  if (isDemoMode()) {
+    seedSandboxIfNeeded();
+    return true;
+  }
+  if (shouldUseSupabase()) {
+    return supabaseActions.loadSampleData();
+  }
+  return false;
+}

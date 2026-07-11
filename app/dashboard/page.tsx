@@ -30,7 +30,8 @@ import {
   updateMilestoneStatus,
   getAuditLogs,
   vetAndAcceptContract,
-  addAuditLog
+  addAuditLog,
+  loadSampleData
 } from "@/lib/storageClient";
 import { Contract, Milestone, Profile, AuditLog } from "@/lib/types";
 import { MOCK_CLAUSES } from "@/lib/mockData";
@@ -52,6 +53,7 @@ export default function Dashboard() {
   const [isEditingContract, setIsEditingContract] = useState(false);
   const [editScopeDescription, setEditScopeDescription] = useState("");
   const [editTotalAmount, setEditTotalAmount] = useState(0);
+  const [editMilestones, setEditMilestones] = useState<Milestone[]>([]);
 
   const [fullName, setFullName] = useState("");
   const [clabe, setClabe] = useState("");
@@ -172,29 +174,40 @@ export default function Dashboard() {
     }
   };
 
+  const handleEditTotalAmountChange = (newTotal: number) => {
+    setEditTotalAmount(newTotal);
+    setEditMilestones(prev => {
+      if (prev.length === 0) return prev;
+      const oldSum = prev.reduce((sum, m) => sum + m.amount, 0) || 1;
+      const scaleFactor = newTotal / oldSum;
+      let runningSum = 0;
+      return prev.map((m, idx) => {
+        const isLast = idx === prev.length - 1;
+        let newAmt = Math.round(m.amount * scaleFactor);
+        if (isLast) {
+          newAmt = newTotal - runningSum;
+        } else {
+          runningSum += newAmt;
+        }
+        return { ...m, amount: newAmt };
+      });
+    });
+  };
+
+  const handleEditMilestoneAmount = (idx: number, newAmt: number) => {
+    setEditMilestones(prev => {
+      const updated = prev.map((m, i) => i === idx ? { ...m, amount: newAmt } : m);
+      const newSum = updated.reduce((sum, m) => sum + m.amount, 0);
+      setEditTotalAmount(newSum);
+      return updated;
+    });
+  };
+
   const handleSaveModification = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedContract) return;
 
     try {
-      const oldAmount = selectedContract.totalAmount || 1;
-      const scaleFactor = editTotalAmount / oldAmount;
-      
-      let sum = 0;
-      const updatedMilestones = milestones.map((m, idx) => {
-        const isLast = idx === milestones.length - 1;
-        let newAmt = Math.round(m.amount * scaleFactor);
-        if (isLast) {
-          newAmt = editTotalAmount - sum;
-        } else {
-          sum += newAmt;
-        }
-        return {
-          ...m,
-          amount: newAmt
-        };
-      });
-
       const updatedContract: Contract = {
         ...selectedContract,
         scopeDescription: editScopeDescription,
@@ -210,7 +223,7 @@ export default function Dashboard() {
       };
 
       await saveContract(updatedContract);
-      await saveMilestones(updatedMilestones);
+      await saveMilestones(editMilestones);
 
       await addAuditLog({
         contractId: selectedContract.id,
@@ -264,6 +277,25 @@ export default function Dashboard() {
       window.location.href = "/login";
     } catch (err) {
       alert("Error al cerrar sesión: " + err);
+    }
+  };
+
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const handleLoadDemoData = async () => {
+    setIsSeeding(true);
+    try {
+      const ok = await loadSampleData();
+      if (ok) {
+        alert("¡Datos de ejemplo cargados con éxito! Ahora puedes probar el flujo completo en tu propio perfil.");
+        await refreshData();
+      } else {
+        alert("No se pudieron cargar los datos de ejemplo.");
+      }
+    } catch (err) {
+      alert("Error al cargar datos demo: " + err);
+    } finally {
+      setIsSeeding(false);
     }
   };
 
@@ -473,6 +505,45 @@ export default function Dashboard() {
           >
             <Plus className="h-4 w-4" />
             Crear Contrato
+          </Link>
+        </div>
+      </div>
+
+      {/* Quick-Start Templates Deck */}
+      <div className="flex flex-col gap-3 text-left">
+        <span className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Crear Nuevo desde Plantilla</span>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Link
+            href="/contracts/new?template=general"
+            className="glass p-4 rounded-2xl border-indigo-500/10 hover:border-indigo-500/35 transition-all text-left flex flex-col justify-between h-28 group relative overflow-hidden cursor-pointer bg-white/40 dark:bg-slate-900/40"
+          >
+            <div className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-indigo-500/5 group-hover:bg-indigo-500/10 blur-xl transition-all" />
+            <h4 className="font-bold text-xs text-slate-800 dark:text-white group-hover:text-indigo-500 transition-colors">Plantilla General</h4>
+            <p className="text-3xs text-slate-400 leading-normal mt-1">Servicios profesionales generales de honorarios.</p>
+          </Link>
+          <Link
+            href="/contracts/new?template=development"
+            className="glass p-4 rounded-2xl border-indigo-500/10 hover:border-indigo-500/35 transition-all text-left flex flex-col justify-between h-28 group relative overflow-hidden cursor-pointer bg-white/40 dark:bg-slate-900/40"
+          >
+            <div className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-emerald-500/5 group-hover:bg-emerald-500/10 blur-xl transition-all" />
+            <h4 className="font-bold text-xs text-slate-800 dark:text-white group-hover:text-emerald-500 transition-colors">Desarrollo Software</h4>
+            <p className="text-3xs text-slate-400 leading-normal mt-1">Hitos para código, Beta y despliegue a producción.</p>
+          </Link>
+          <Link
+            href="/contracts/new?template=design"
+            className="glass p-4 rounded-2xl border-indigo-500/10 hover:border-indigo-500/35 transition-all text-left flex flex-col justify-between h-28 group relative overflow-hidden cursor-pointer bg-white/40 dark:bg-slate-900/40"
+          >
+            <div className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-indigo-500/5 group-hover:bg-indigo-500/10 blur-xl transition-all" />
+            <h4 className="font-bold text-xs text-slate-800 dark:text-white group-hover:text-indigo-500 transition-colors">Diseño UI/UX</h4>
+            <p className="text-3xs text-slate-400 leading-normal mt-1">Esquema conceptual, revisiones y entrega final.</p>
+          </Link>
+          <Link
+            href="/contracts/new?template=consulting"
+            className="glass p-4 rounded-2xl border-indigo-500/10 hover:border-indigo-500/35 transition-all text-left flex flex-col justify-between h-28 group relative overflow-hidden cursor-pointer bg-white/40 dark:bg-slate-900/40"
+          >
+            <div className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-amber-500/5 group-hover:bg-amber-500/10 blur-xl transition-all" />
+            <h4 className="font-bold text-xs text-slate-800 dark:text-white group-hover:text-amber-500 transition-colors">Consultoría Directa</h4>
+            <p className="text-3xs text-slate-400 leading-normal mt-1">Pago único del 100% contra honorarios.</p>
           </Link>
         </div>
       </div>
@@ -950,7 +1021,19 @@ export default function Dashboard() {
 
           {/* List display */}
           <div className="flex flex-col gap-3 overflow-y-auto max-h-[70vh] pr-2">
-            {filteredContracts.length === 0 ? (
+            {contracts.length === 0 ? (
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/20 dark:bg-slate-950/20 p-8 text-center flex flex-col items-center gap-3.5 border-dashed">
+                <span className="text-xs text-slate-400 font-light">Aún no tienes contratos registrados en tu cuenta.</span>
+                <button
+                  type="button"
+                  onClick={handleLoadDemoData}
+                  disabled={isSeeding}
+                  className="rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-550 dark:text-indigo-400 font-bold px-4 py-2 text-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isSeeding ? "Cargando..." : "Cargar Datos de Ejemplo"}
+                </button>
+              </div>
+            ) : filteredContracts.length === 0 ? (
               <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/20 dark:bg-slate-950/20 p-8 text-center text-xs text-slate-400 font-light border-dashed">
                 No se encontraron contratos con los criterios seleccionados.
               </div>
@@ -1105,6 +1188,7 @@ export default function Dashboard() {
                     onClick={() => {
                       setEditScopeDescription(selectedContract.scopeDescription);
                       setEditTotalAmount(selectedContract.totalAmount);
+                      setEditMilestones(milestones.map(m => ({ ...m })));
                       setIsEditingContract(true);
                     }}
                     className="w-full mt-1 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 text-indigo-650 dark:text-indigo-400 font-bold py-2 text-xs transition-colors flex items-center justify-center gap-1.5"
@@ -1137,6 +1221,7 @@ export default function Dashboard() {
                       onClick={() => {
                         setEditScopeDescription(selectedContract.scopeDescription);
                         setEditTotalAmount(selectedContract.totalAmount);
+                        setEditMilestones(milestones.map(m => ({ ...m })));
                         setIsEditingContract(true);
                       }}
                       className="rounded-xl border border-purple-200 dark:border-purple-800 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 text-purple-750 dark:text-purple-400 font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5"
@@ -1638,12 +1723,50 @@ export default function Dashboard() {
                     min={1}
                     required
                     value={editTotalAmount || ""}
-                    onChange={(e) => setEditTotalAmount(Number(e.target.value))}
-                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                    onChange={(e) => handleEditTotalAmountChange(Number(e.target.value))}
+                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-bold"
                   />
                   <p className="text-3xs text-slate-500 dark:text-slate-400 leading-normal mt-1">
-                    Nota: Los montos de los hitos existentes se ajustarán proporcionalmente para sumar exactamente esta cantidad.
+                    Tip: Edita el total para escalar proporcionalmente los hitos, o modifica los montos individuales abajo.
                   </p>
+                </div>
+
+                {/* Individual Milestones Editing Section */}
+                <div className="md:col-span-2 flex flex-col gap-3.5 bg-slate-50/50 dark:bg-slate-900/10 p-4 rounded-2xl border border-slate-200 dark:border-slate-800/80 mt-2">
+                  <span className="text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Desglose e Importes de Hitos</span>
+                  <div className="flex flex-col gap-3">
+                    {editMilestones.map((m, idx) => (
+                      <div key={m.id || idx} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                        <div className="sm:col-span-7">
+                          <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Concepto</label>
+                          <input
+                            type="text"
+                            required
+                            value={m.label}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, label: val } : item));
+                            }}
+                            className="w-full rounded-lg border border-slate-350 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                          />
+                        </div>
+                        <div className="sm:col-span-5">
+                          <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Importe ({selectedContract.currency})</label>
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-3xs font-bold text-slate-400">$</span>
+                            <input
+                              type="number"
+                              required
+                              min={0}
+                              value={m.amount || ""}
+                              onChange={(e) => handleEditMilestoneAmount(idx, Number(e.target.value))}
+                              className="w-full rounded-lg border border-slate-350 dark:border-slate-700 bg-transparent pl-5 pr-3 py-1.5 text-xs font-bold focus:border-indigo-500 focus:outline-none dark:text-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 

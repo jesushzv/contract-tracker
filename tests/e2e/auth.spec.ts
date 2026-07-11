@@ -27,6 +27,18 @@ test.describe("Authentication & Session Redirection E2E Suite", () => {
     await expect(page.locator("body")).toContainText("Guerrero");
   });
 
+  test("should load the correct template in /contracts/new based on URL parameter", async ({ page }) => {
+    // Navigate to new contract page with demo mode and template parameter
+    await page.goto("/contracts/new?demo=true&template=development");
+    
+    // Expect the page title to load
+    await expect(page.locator("h1")).toHaveText("Crear Nuevo Contrato");
+    
+    // Expect the development template card to be visually selected
+    const devCard = page.locator('text="Desarrollo de Software / Devs"').locator("xpath=..");
+    await expect(devCard).toHaveClass(/border-indigo-500/);
+  });
+
   test("should render Login, Register forms and allow link transitions", async ({ page }) => {
     // Navigate to login
     await page.goto("/login");

@@ -683,3 +683,100 @@ function mapContractFromDb(row: any): Contract {
     updated_at: row.updated_at
   };
 }
+
+export async function loadSampleData(): Promise<boolean> {
+  const userId = await getCurrentUserId();
+  if (!userId || userId === "demo-freelancer-uuid") return false;
+
+  // Check if profile exists, if not create a default one
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profile) {
+    await supabase.from("profiles").insert({
+      id: userId,
+      email: "freelancer@ejemplo.com",
+      full_name: "Freelancer Mexicano",
+      rfc: "GUEH860710MX3",
+      regimen_fiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
+      codigo_postal: "06700",
+      bank_details: {
+        clabe: "012180001509987654",
+        bankName: "BBVA México",
+        beneficiaryName: "Freelancer Mexicano"
+      }
+    });
+  }
+
+  // Check if contracts already exist for this user, if so don't double load
+  const { data: existingContracts } = await supabase
+    .from("contracts")
+    .select("id")
+    .eq("freelancer_id", userId)
+    .limit(1);
+
+  if (existingContracts && existingContracts.length > 0) {
+    return true; // Already loaded or has active contracts
+  }
+
+  // Insert Sofia Garza contract
+  const contractId = `c-sample-${userId.substring(0, 8)}`;
+  const { error: cError } = await supabase.from("contracts").insert({
+    id: contractId,
+    freelancer_id: userId,
+    client_name: "Sofía Garza (Studio Flora)",
+    client_email: "sofia@studioflora.mx",
+    client_rfc: "GASF920412HX2",
+    client_regimen: "612 - Personas Físicas con Actividades Empresariales y Profesionales",
+    client_postal: "06700",
+    scope_description: "Rediseño completo de la identidad de marca, incluyendo logotipo, paleta de colores, tipografías y manual de identidad gráfica para Studio Flora.",
+    total_amount: 30000.00,
+    currency: "MXN",
+    status: "accepted",
+    clabe: "012180001509987654",
+    bank_name: "BBVA México",
+    beneficiary_name: "Freelancer Mexicano",
+    freelancer_rfc: "GUEH860710MX3",
+    freelancer_regimen: "626 - Régimen Simplificado de Confianza (RESICO)",
+    freelancer_postal: "06700"
+  });
+
+  if (cError) {
+    console.error("Error inserting sample contract:", cError);
+    return false;
+  }
+
+  // Insert milestones
+  await supabase.from("milestones").insert([
+    {
+      id: `m-sample-1-${userId.substring(0, 8)}`,
+      contract_id: contractId,
+      label: "Anticipo de inicio (50%)",
+      amount: 15000.00,
+      due_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "requested"
+    },
+    {
+      id: `m-sample-2-${userId.substring(0, 8)}`,
+      contract_id: contractId,
+      label: "Entrega de manual final (50%)",
+      amount: 15000.00,
+      due_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "pending"
+    }
+  ]);
+
+  // Write audit log entry
+  await addAuditLog({
+    contractId: contractId,
+    action: "created",
+    actor: "freelancer",
+    details: "Contrato creado a partir de datos de ejemplo.",
+    ip: "127.0.0.1"
+  });
+
+  return true;
+}
