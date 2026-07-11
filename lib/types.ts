@@ -12,7 +12,7 @@ export interface Profile {
   };
 }
 
-export type ContractStatus = 'draft' | 'sent' | 'accepted' | 'completed' | 'cancelled';
+export type ContractStatus = 'draft' | 'sent' | 'client_signed' | 'accepted' | 'completed' | 'cancelled';
 
 export interface Contract {
   id: string;
@@ -30,10 +30,15 @@ export interface Contract {
   pdfUrl?: string;
   contractHash?: string;
   
-  // Acceptance Info
+  // Client Acceptance Info
   acceptedAt?: string;
   acceptedByName?: string;
   acceptedIp?: string;
+
+  // Freelancer Acceptance Info (Double-Acceptance Vetting)
+  freelancerAcceptedAt?: string;
+  freelancerAcceptedByName?: string;
+  freelancerAcceptedIp?: string;
   
   // Payment Details
   clabe?: string;
@@ -70,4 +75,15 @@ export interface ClauseTemplate {
   category: 'general' | 'design' | 'development' | 'consulting';
   title: string;
   content: string;
+}
+
+export interface AuditLog {
+  id: string;
+  contractId: string;
+  action: 'created' | 'client_signed' | 'freelancer_accepted' | 'milestone_requested' | 'milestone_transferred' | 'milestone_confirmed';
+  actor: 'freelancer' | 'client' | 'system';
+  details: string;
+  timestamp: string;
+  ip?: string;
+  signature?: string;
 }

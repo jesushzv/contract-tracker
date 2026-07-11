@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus } from "./types";
+import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog } from "./types";
 import crypto from "crypto";
 import { headers } from "next/headers";
 
@@ -14,6 +14,59 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 // In server actions, we use the service role key to bypass RLS when performing admin or client signatures,
 // or we can use the default anon client. Let's create a client.
 const supabase = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey);
+
+// SERVER ACTIONS FOR AUDIT LOGS
+export async function getAuditLogs(contractId?: string): Promise<AuditLog[]> {
+  let query = supabase.from("audit_logs").select("*");
+  if (contractId) {
+    query = query.eq("contract_id", contractId);
+  }
+  const { data, error } = await query.order("timestamp", { ascending: false });
+  if (error || !data) return [];
+  
+  return data.map((row) => ({
+    id: row.id,
+    contractId: row.contract_id,
+    action: row.action as AuditLog["action"],
+    actor: row.actor as AuditLog["actor"],
+    details: row.details,
+    timestamp: row.timestamp,
+    ip: row.ip,
+    signature: row.signature
+  }));
+}
+
+export async function addAuditLog(
+  log: Omit<AuditLog, "id" | "timestamp">
+): Promise<AuditLog> {
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .insert({
+      contract_id: log.contractId,
+      action: log.action,
+      actor: log.actor,
+      details: log.details,
+      ip: log.ip,
+      signature: log.signature
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw new Error("Error writing audit log to Supabase: " + (error?.message || "unknown error"));
+  }
+
+  return {
+    id: data.id,
+    contractId: data.contract_id,
+    action: data.action as AuditLog["action"],
+    actor: data.actor as AuditLog["actor"],
+    details: data.details,
+    timestamp: data.timestamp,
+    ip: data.ip,
+    signature: data.signature
+  };
+}
 
 export async function getProfile(): Promise<Profile> {
   // In production, we would query by the logged in user ID.
@@ -48,25 +101,50 @@ export async function getProfile(): Promise<Profile> {
     rfc: data.rfc,
     regimenFiscal: data.regimen_fiscal,
     codigoPostal: data.codigo_postal,
-    bankDetails: data.bank_details
+    bankDetails: {
+      clabe: data.bank_details.clabe,
+      bankName: data.bank_details.bankName,
+      beneficiaryName: data.bank_details.beneficiaryName
+    }
   };
 }
 
 export async function updateProfile(profile: Profile): Promise<Profile> {
-  const { error } = await supabase
-    .from("profiles")
-    .upsert({
-      id: profile.id,
-      email: profile.email,
-      full_name: profile.fullName,
-      rfc: profile.rfc,
-      regimen_fiscal: profile.regimenFiscal,
-      codigo_postal: profile.codigoPostal,
-      bank_details: profile.bankDetails,
-      updated_at: new Date().toISOString()
-    });
+  // Check if profile exists first
+  const current = await getProfile().catch(() => null);
 
-  if (error) throw new Error("Error updating profile in Supabase: " + error.message);
+  if (current && current.id !== "demo-freelancer-uuid") {
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        email: profile.email,
+        full_name: profile.fullName,
+        rfc: profile.rfc,
+        regimen_fiscal: profile.regimenFiscal,
+        codigo_postal: profile.codigoPostal,
+        bank_details: profile.bankDetails,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", current.id);
+
+    if (error) throw new Error("Error updating Supabase profile: " + error.message);
+  } else {
+    // Create new profile record
+    const { error } = await supabase
+      .from("profiles")
+      .insert({
+        id: profile.id === "demo-freelancer-uuid" ? undefined : profile.id,
+        email: profile.email,
+        full_name: profile.fullName,
+        rfc: profile.rfc,
+        regimen_fiscal: profile.regimenFiscal,
+        codigo_postal: profile.codigoPostal,
+        bank_details: profile.bankDetails
+      });
+
+    if (error) throw new Error("Error inserting Supabase profile: " + error.message);
+  }
+
   return profile;
 }
 
@@ -92,11 +170,17 @@ export async function getContractById(id: string): Promise<Contract | null> {
 }
 
 export async function saveContract(contract: Contract): Promise<Contract> {
+  const existing = await getContractById(contract.id);
+  const isNew = !existing;
+
+  const profile = await getProfile().catch(() => null);
+  const freelancerId = profile?.id && profile.id !== "demo-freelancer-uuid" ? profile.id : "c596e102-1200-4b2a-8888-888888888888";
+
   const { error } = await supabase
     .from("contracts")
     .upsert({
       id: contract.id,
-      freelancer_id: contract.freelancerId,
+      freelancer_id: freelancerId,
       client_name: contract.clientName,
       client_email: contract.clientEmail,
       client_rfc: contract.clientRfc,
@@ -111,16 +195,29 @@ export async function saveContract(contract: Contract): Promise<Contract> {
       accepted_at: contract.acceptedAt,
       accepted_by_name: contract.acceptedByName,
       accepted_ip: contract.acceptedIp,
-      clabe: contract.clabe,
-      bank_name: contract.bankName,
-      beneficiary_name: contract.beneficiaryName,
-      freelancer_rfc: contract.freelancerRfc,
-      freelancer_regimen: contract.freelancerRegimen,
-      freelancer_postal: contract.freelancerPostal,
+      freelancer_accepted_at: contract.freelancerAcceptedAt,
+      freelancer_accepted_by_name: contract.freelancerAcceptedByName,
+      freelancer_accepted_ip: contract.freelancerAcceptedIp,
+      clabe: contract.clabe || profile?.bankDetails.clabe,
+      bank_name: contract.bankName || profile?.bankDetails.bankName,
+      beneficiary_name: contract.beneficiaryName || profile?.bankDetails.beneficiaryName,
+      freelancer_rfc: contract.freelancerRfc || profile?.rfc,
+      freelancer_regimen: contract.freelancerRegimen || profile?.regimenFiscal,
+      freelancer_postal: contract.freelancerPostal || profile?.codigoPostal,
       updated_at: new Date().toISOString()
     });
 
   if (error) throw new Error("Error saving contract to Supabase: " + error.message);
+  
+  if (isNew) {
+    await addAuditLog({
+      contractId: contract.id,
+      action: "created",
+      actor: "freelancer",
+      details: `El contrato para "${contract.clientName}" fue creado y guardado como borrador.`
+    });
+  }
+
   return contract;
 }
 
@@ -204,9 +301,28 @@ export async function updateMilestoneStatus(
   };
 
   await checkAndUpdateContractStatus(milestone.contractId);
+  
+  // Log milestone status events
+  if (status === "requested") {
+    await addAuditLog({
+      contractId: milestone.contractId,
+      action: "milestone_requested",
+      actor: "freelancer",
+      details: `Cobro solicitado para el hito: "${milestone.label}" (Monto: $${milestone.amount}).`
+    });
+  } else if (status === "confirmed") {
+    await addAuditLog({
+      contractId: milestone.contractId,
+      action: "milestone_confirmed",
+      actor: "freelancer",
+      details: `Pago confirmado y recibido para el hito: "${milestone.label}".`
+    });
+  }
+
   return milestone;
 }
 
+// SERVER ACTION: Record client transfer reference and mark milestone as paid
 export async function markMilestoneAsTransferred(
   milestoneId: string,
   trackingReference: string,
@@ -245,9 +361,43 @@ export async function markMilestoneAsTransferred(
   };
 
   await checkAndUpdateContractStatus(milestone.contractId);
+
+  // Log transfer
+  await addAuditLog({
+    contractId: milestone.contractId,
+    action: "milestone_transferred",
+    actor: "client",
+    details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${trackingReference}).`
+  });
+
   return milestone;
 }
 
+async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
+  const contract = await getContractById(contractId);
+  if (!contract) return;
+  const milestones = await getMilestones(contractId);
+  const allPaid = milestones.every(
+    (m) => m.status === "marked_paid" || m.status === "confirmed"
+  );
+  if (allPaid && contract.status === "accepted") {
+    const { error } = await supabase
+      .from("contracts")
+      .update({ status: "completed", updated_at: new Date().toISOString() })
+      .eq("id", contractId);
+
+    if (!error) {
+      await addAuditLog({
+        contractId: contractId,
+        action: "milestone_confirmed",
+        actor: "system",
+        details: "Todos los hitos han sido liquidados. Contrato marcado como Completado."
+      });
+    }
+  }
+}
+
+// CLIENT PORTAL: Client accepts & signs contract (moves to 'client_signed')
 export async function acceptContract(
   contractId: string,
   clientName: string
@@ -270,9 +420,6 @@ export async function acceptContract(
     freelancerId: contract.freelancerId,
     clientName: contract.clientName,
     clientEmail: contract.clientEmail,
-    clientRfc: contract.clientRfc,
-    clientRegimen: contract.clientRegimen,
-    clientPostal: contract.clientPostal,
     scopeDescription: contract.scopeDescription,
     totalAmount: contract.totalAmount,
     currency: contract.currency,
@@ -287,7 +434,7 @@ export async function acceptContract(
   const { data, error } = await supabase
     .from("contracts")
     .update({
-      status: "accepted",
+      status: "client_signed",
       accepted_at: new Date().toISOString(),
       accepted_by_name: clientName,
       accepted_ip: clientIp,
@@ -300,28 +447,87 @@ export async function acceptContract(
 
   if (error || !data) return null;
 
+  // Write audit log entry
+  await addAuditLog({
+    contractId: contract.id,
+    action: "client_signed",
+    actor: "client",
+    details: `El cliente ${clientName} firmó el contrato digitalmente.`,
+    ip: clientIp,
+    signature: sha256Hash
+  });
+
+  return mapContractFromDb(data);
+}
+
+// FREELANCER VETS & COUNTERSIGNS CONTRACT (moves to 'accepted' and locks)
+export async function vetAndAcceptContract(
+  contractId: string,
+  freelancerName: string
+): Promise<Contract | null> {
+  const contract = await getContractById(contractId);
+  if (!contract) return null;
+  const milestones = await getMilestones(contractId);
+
+  const headerList = await headers();
+  const forwardedFor = headerList.get("x-forwarded-for");
+  let freelancerIp = "127.0.0.1";
+  if (forwardedFor) {
+    freelancerIp = forwardedFor.split(",")[0].trim();
+  } else {
+    freelancerIp = headerList.get("x-real-ip") || "127.0.0.1";
+  }
+
+  const payload = {
+    contractId: contract.id,
+    freelancerId: contract.freelancerId,
+    clientName: contract.clientName,
+    clientEmail: contract.clientEmail,
+    scopeDescription: contract.scopeDescription,
+    totalAmount: contract.totalAmount,
+    currency: contract.currency,
+    milestones: milestones.map(m => ({ label: m.label, amount: m.amount, dueDate: m.dueDate })),
+    clientAcceptedAt: contract.acceptedAt,
+    clientAcceptedByName: contract.acceptedByName,
+    clientAcceptedIp: contract.acceptedIp
+  };
+
+  const finalHash = crypto
+    .createHash("sha256")
+    .update(JSON.stringify(payload))
+    .digest("hex");
+
+  const { data, error } = await supabase
+    .from("contracts")
+    .update({
+      status: "accepted",
+      freelancer_accepted_at: new Date().toISOString(),
+      freelancer_accepted_by_name: freelancerName,
+      freelancer_accepted_ip: freelancerIp,
+      contract_hash: finalHash,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", contractId)
+    .select()
+    .single();
+
+  if (error || !data) return null;
+
+  // Write audit log entry
+  await addAuditLog({
+    contractId: contract.id,
+    action: "freelancer_accepted",
+    actor: "freelancer",
+    details: `El freelancer ${freelancerName} verificó y aprobó el contrato. Documento sellado y activo.`,
+    ip: freelancerIp,
+    signature: finalHash
+  });
+
   if (milestones.length > 0 && milestones[0].status === "pending") {
     await updateMilestoneStatus(milestones[0].id, "requested");
   }
 
   return mapContractFromDb(data);
-}
-
-// Helpers
-async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
-  const contract = await getContractById(contractId);
-  if (!contract) return;
-  const milestones = await getMilestones(contractId);
-  const allPaid = milestones.every(
-    (m) => m.status === "marked_paid" || m.status === "confirmed"
-  );
-  if (allPaid && contract.status === "accepted") {
-    contract.status = "completed";
-    await saveContract(contract);
-  } else if (!allPaid && contract.status === "completed") {
-    contract.status = "accepted";
-    await saveContract(contract);
-  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -343,6 +549,9 @@ function mapContractFromDb(row: any): Contract {
     acceptedAt: row.accepted_at,
     acceptedByName: row.accepted_by_name,
     acceptedIp: row.accepted_ip,
+    freelancerAcceptedAt: row.freelancer_accepted_at,
+    freelancerAcceptedByName: row.freelancer_accepted_by_name,
+    freelancerAcceptedIp: row.freelancer_accepted_ip,
     clabe: row.clabe,
     bankName: row.bank_name,
     beneficiaryName: row.beneficiary_name,

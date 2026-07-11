@@ -13,9 +13,9 @@ import {
   Printer,
   CreditCard
 } from "lucide-react";
-import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred } from "@/lib/storageClient";
+import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
-import { Contract, Milestone } from "@/lib/types";
+import { Contract, Milestone, AuditLog } from "@/lib/types";
 
 export default function ClientContractView() {
   const params = useParams();
@@ -23,6 +23,7 @@ export default function ClientContractView() {
 
   const [contract, setContract] = useState<Contract | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [copiedClabe, setCopiedClabe] = useState(false);
   
   // Modals state
@@ -45,6 +46,8 @@ export default function ClientContractView() {
         if (c) {
           const mList = await getMilestones(c.id);
           setMilestones(mList);
+          const logs = await getAuditLogs(c.id);
+          setAuditLogs(logs);
         }
       }
     }
@@ -57,6 +60,8 @@ export default function ClientContractView() {
     if (c) {
       const mList = await getMilestones(c.id);
       setMilestones(mList);
+      const logs = await getAuditLogs(c.id);
+      setAuditLogs(logs);
     }
   };
 
@@ -79,6 +84,8 @@ export default function ClientContractView() {
         setContract(updated);
         const mList = await getMilestones(contractId);
         setMilestones(mList);
+        const logs = await getAuditLogs(contractId);
+        setAuditLogs(logs);
         setAcceptedSuccess(true);
         setTimeout(() => setAcceptedSuccess(false), 5000);
       }
@@ -178,6 +185,13 @@ export default function ClientContractView() {
               Revisar y Firmar Aceptación
             </button>
           )}
+
+          {contract.status === 'client_signed' && (
+            <div className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2 text-xs font-semibold text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20">
+              <Clock className="h-4 w-4" />
+              Esperando Validación Final
+            </div>
+          )}
         </div>
       </div>
 
@@ -186,9 +200,9 @@ export default function ClientContractView() {
         <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-800 dark:text-emerald-400 flex items-start gap-3 print:hidden animate-in zoom-in-95 duration-200">
           <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <div>
-            <span className="font-bold">¡Contrato aceptado exitosamente!</span>
+            <span className="font-bold">¡Contrato firmado exitosamente!</span>
             <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
-              Hemos registrado la aceptación digital vinculante. Ya puedes proceder a realizar el pago del anticipo solicitado a continuación.
+              Hemos registrado tu firma electrónica. El contrato se encuentra ahora en revisión final por parte del freelancer.
             </p>
           </div>
         </div>
@@ -211,11 +225,13 @@ export default function ClientContractView() {
                   ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400'
                   : contract.status === 'completed'
                   ? 'bg-blue-50 text-blue-700 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400'
+                  : contract.status === 'client_signed'
+                  ? 'bg-purple-50 text-purple-700 ring-purple-600/20 dark:bg-purple-500/10 dark:text-purple-400'
                   : contract.status === 'sent'
                   ? 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400'
                   : 'bg-slate-50 text-slate-700 ring-slate-600/20 dark:bg-slate-500/10 dark:text-slate-400'
               }`}>
-                {contract.status === 'draft' ? 'Borrador' : contract.status === 'sent' ? 'Pendiente' : contract.status === 'accepted' ? 'Firmado' : contract.status === 'completed' ? 'Completado' : 'Cancelado'}
+                {contract.status === 'draft' ? 'Borrador' : contract.status === 'sent' ? 'Pendiente' : contract.status === 'client_signed' ? 'Firmado (Cliente)' : contract.status === 'accepted' ? 'Sellado' : contract.status === 'completed' ? 'Completado' : 'Cancelado'}
               </span>
             </div>
 
@@ -254,19 +270,17 @@ export default function ClientContractView() {
 
           {/* Scope details */}
           <div className="py-6 border-b border-slate-100 dark:border-slate-900 flex flex-col gap-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cláusula Primera: Objeto y Alcance del Trabajo</h3>
-            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-light whitespace-pre-line">
-              {contract.scopeDescription}
-            </p>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Declaraciones & Alcance del Proyecto</h3>
+            <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-350 font-light">{contract.scopeDescription}</p>
           </div>
 
-          {/* Legal clauses */}
+          {/* Clause list */}
           <div className="py-6 border-b border-slate-100 dark:border-slate-900 flex flex-col gap-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cláusula Segunda: Acuerdos Legales de Prestación</h3>
-            <div className="flex flex-col gap-4">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cláusulas Legales Generales</h3>
+            <div className="flex flex-col gap-4 text-xs">
               {MOCK_CLAUSES.map((clause, idx) => (
-                <div key={clause.id} className="text-xs flex gap-2.5 items-start">
-                  <span className="font-extrabold text-indigo-500">2.{idx + 1}</span>
+                <div key={clause.id} className="flex gap-3">
+                  <span className="font-mono font-bold text-indigo-500 bg-indigo-500/5 h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">{idx + 1}</span>
                   <div>
                     <h4 className="font-bold text-slate-800 dark:text-slate-200">{clause.title}</h4>
                     <p className="text-slate-500 dark:text-slate-400 mt-1 leading-relaxed font-light">{clause.content}</p>
@@ -280,20 +294,17 @@ export default function ClientContractView() {
           <div className="py-6 flex flex-col gap-4">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Aceptación y Firmas Electrónicas</h3>
             
-            {contract.status === 'accepted' || contract.status === 'completed' ? (
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-xs flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+            {/* 1. Client signature details if present */}
+            {contract.acceptedAt ? (
+              <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 text-xs flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-bold">
                   <ShieldCheck className="h-4 w-4" />
-                  <span>Aceptado Digitalmente por el Cliente (Acción del Servidor)</span>
+                  <span>Firmado Electrónicamente por el Cliente</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-500 dark:text-slate-400 mt-1 font-light">
                   <p>Firmante: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.acceptedByName}</span></p>
                   <p>Dirección IP: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.acceptedIp}</span></p>
                   <p>Fecha/Hora: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.acceptedAt ? new Date(contract.acceptedAt).toLocaleString('es-MX') : ''}</span></p>
-                  <p className="col-span-1 sm:col-span-2 font-semibold">Integrity Hash Code (SHA-256):</p>
-                </div>
-                <div className="text-3xs font-mono bg-slate-100 dark:bg-slate-900/60 rounded p-2 text-slate-400 break-all select-all font-light">
-                  {contract.contractHash}
                 </div>
               </div>
             ) : (
@@ -301,8 +312,101 @@ export default function ClientContractView() {
                 Pendiente de firma de aceptación del Cliente. Presiona el botón en la parte superior para firmar electrónicamente.
               </div>
             )}
+
+            {/* 2. Freelancer counter-signature details if present */}
+            {(contract.status === 'accepted' || contract.status === 'completed') && contract.freelancerAcceptedAt ? (
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-xs flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Verificado y Contra-firmado por el Freelancer</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-500 dark:text-slate-400 mt-1 font-light">
+                  <p>Validador: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedByName}</span></p>
+                  <p>Dirección IP: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedIp}</span></p>
+                  <p>Fecha/Hora: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedAt ? new Date(contract.freelancerAcceptedAt).toLocaleString('es-MX') : ''}</span></p>
+                </div>
+              </div>
+            ) : contract.status === 'client_signed' ? (
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold">
+                  <Clock className="h-4 w-4" />
+                  <span>Pendiente de Validación Final por el Freelancer</span>
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 leading-relaxed font-light mt-1">
+                  Tu firma ha sido registrada. El contrato se sellará y los cobros de hitos se habilitarán en cuanto el freelancer revise el documento y contra-firme.
+                </p>
+              </div>
+            ) : null}
+
+            {/* 3. Cryptographic seal explainer */}
+            {contract.contractHash && (
+              <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-5 text-xs flex flex-col gap-3 mt-2">
+                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold">
+                  <ShieldCheck className="h-5 w-5" />
+                  <span>Sello de Integridad Criptográfica Activo</span>
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 leading-relaxed font-light">
+                  ¿Para qué sirve este sello? Este código hash es una huella digital única generada usando el algoritmo **SHA-256**. Captura el contenido exacto de este contrato (montos, hitos, términos y firmas de ambas partes). Cualquier modificación posterior rompería esta huella digital, garantizando la inmutabilidad absoluta y la validez legal del acuerdo.
+                </p>
+                <div className="bg-slate-100 dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200/40 dark:border-slate-800/40">
+                  <span className="text-3xs font-semibold text-slate-400 block mb-1 uppercase tracking-wider">Código de Seguridad Hash SHA-256</span>
+                  <span className="font-mono text-xs text-slate-600 dark:text-slate-300 break-all select-all font-light">{contract.contractHash}</span>
+                </div>
+              </div>
+            )}
           </div>
           
+          {/* Timeline Audit Trail */}
+          {auditLogs.length > 0 && (
+            <div className="py-6 border-t border-slate-100 dark:border-slate-900 mt-6 flex flex-col gap-4">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Historial del Contrato (Audit Log)</h3>
+              
+              <div className="flow-root mt-2">
+                <ul role="list" className="-mb-8">
+                  {auditLogs.map((log, logIdx) => (
+                    <li key={log.id}>
+                      <div className="relative pb-8">
+                        {logIdx !== auditLogs.length - 1 ? (
+                          <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-slate-200 dark:bg-slate-800" aria-hidden="true" />
+                        ) : null}
+                        <div className="relative flex space-x-3 items-start">
+                          <div>
+                            <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white dark:ring-slate-950 ${
+                              log.action === 'created' ? 'bg-slate-100 dark:bg-slate-900 text-slate-500' :
+                              log.action === 'client_signed' ? 'bg-purple-100 dark:bg-purple-950/40 text-purple-600' :
+                              log.action === 'freelancer_accepted' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600' :
+                              log.action === 'milestone_requested' ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-600' :
+                              log.action === 'milestone_transferred' ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-600' :
+                              'bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600'
+                            }`}>
+                              {log.action === 'created' && <Briefcase className="h-4 w-4" />}
+                              {log.action === 'client_signed' && <ShieldCheck className="h-4 w-4" />}
+                              {log.action === 'freelancer_accepted' && <CheckCircle2 className="h-4 w-4" />}
+                              {log.action === 'milestone_requested' && <Clock className="h-4 w-4" />}
+                              {log.action === 'milestone_transferred' && <CreditCard className="h-4 w-4" />}
+                              {log.action === 'milestone_confirmed' && <CheckCircle2 className="h-4 w-4" />}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0 pt-1.5 flex justify-between space-x-4">
+                            <div>
+                              <p className="text-xs text-slate-700 dark:text-slate-300">
+                                {log.details}
+                                {log.ip && <span className="text-3xs text-slate-400 block mt-0.5">IP registrada: {log.ip}</span>}
+                              </p>
+                            </div>
+                            <div className="text-right text-3xs whitespace-nowrap text-slate-400 self-start">
+                              <time dateTime={log.timestamp}>{new Date(log.timestamp).toLocaleString('es-MX', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}</time>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
           {/* Printable signature lines */}
           <div className="hidden print:grid grid-cols-2 gap-16 mt-20 pt-8 border-t border-slate-200">
             <div className="text-center">
@@ -314,8 +418,8 @@ export default function ClientContractView() {
               </div>
             </div>
             <div className="text-center">
-              <div className="h-16 flex items-center justify-center text-emerald-500 text-xs font-mono">
-                {contract.status === 'accepted' && `ACEPTADO DIGITALMENTE - IP: ${contract.acceptedIp}`}
+              <div className="h-16 flex items-center justify-center text-purple-500 text-xs font-mono">
+                {contract.status !== 'draft' && contract.status !== 'sent' && `FIRMADO CLIENTE - IP: ${contract.acceptedIp}`}
               </div>
               <div className="border-t border-slate-300 pt-2 text-xs">
                 <p className="font-bold text-slate-700">{contract.acceptedByName || contract.clientName}</p>
@@ -378,7 +482,7 @@ export default function ClientContractView() {
           </div>
 
           {/* Active invoice request */}
-          {activePayment && (
+          {activePayment && contract.status === 'accepted' ? (
             <div className="glass rounded-3xl p-5 border-amber-500/20 bg-amber-500/5 flex flex-col gap-4 text-left animate-pulse-subtle">
               <h4 className="text-xs font-extrabold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                 <Clock className="h-4 w-4" />
@@ -402,7 +506,17 @@ export default function ClientContractView() {
                 Ya transferí por SPEI
               </button>
             </div>
-          )}
+          ) : activePayment ? (
+            <div className="glass rounded-3xl p-5 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 flex flex-col gap-2 text-left">
+              <h4 className="text-xs font-bold uppercase text-slate-400 flex items-center gap-1.5">
+                <Clock className="h-4 w-4" />
+                Hito Inicial Pendiente
+              </h4>
+              <p className="text-3xs text-slate-400 leading-relaxed font-light">
+                Los pagos de hitos se habilitarán en cuanto el contrato sea formalmente sellado por ambas partes.
+              </p>
+            </div>
+          ) : null}
 
           {/* Milestones chronology sidebar */}
           <div className="flex flex-col gap-3 text-left">

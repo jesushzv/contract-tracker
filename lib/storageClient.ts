@@ -1,6 +1,6 @@
 import * as localActions from "./storage";
 import * as supabaseActions from "./storageSupabase";
-import { Contract, Milestone, Profile, MilestoneStatus } from "./types";
+import { Contract, Milestone, Profile, MilestoneStatus, AuditLog } from "./types";
 
 // Determine if we should use the cloud Supabase database
 const shouldUseSupabase = (): boolean => {
@@ -32,6 +32,7 @@ const KEYS = {
   PROFILE: "sandbox_profile",
   CONTRACTS: "sandbox_contracts",
   MILESTONES: "sandbox_milestones",
+  AUDIT_LOGS: "sandbox_audit_logs"
 };
 
 // Seed standard mock data in browser sandbox if empty
@@ -74,9 +75,12 @@ const seedSandboxIfNeeded = () => {
         acceptedAt: "2026-07-05T18:24:00Z",
         acceptedByName: "Alejandro Rivera",
         acceptedIp: "189.243.54.12",
+        freelancerAcceptedAt: "2026-07-05T18:25:00Z",
+        freelancerAcceptedByName: "Héctor J. Guerrero",
+        freelancerAcceptedIp: "189.243.54.10",
         contractHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         created_at: "2026-07-04T12:00:00Z",
-        updated_at: "2026-07-05T18:24:00Z"
+        updated_at: "2026-07-05T18:25:00Z"
       },
       {
         id: "c2-landing-page",
@@ -108,9 +112,12 @@ const seedSandboxIfNeeded = () => {
         acceptedAt: "2026-06-14T10:00:00Z",
         acceptedByName: "Carlos Martínez",
         acceptedIp: "201.166.45.10",
+        freelancerAcceptedAt: "2026-06-14T10:05:00Z",
+        freelancerAcceptedByName: "Héctor J. Guerrero",
+        freelancerAcceptedIp: "201.166.45.12",
         contractHash: "6c5edf7f90f23028cd97818e698fb924a7ee41e4649b934ca495991b7852b861",
         created_at: "2026-06-12T14:00:00Z",
-        updated_at: "2026-06-14T10:00:00Z"
+        updated_at: "2026-06-14T10:05:00Z"
       },
       {
         id: "c4-desarrollo-ecommerce",
@@ -127,9 +134,12 @@ const seedSandboxIfNeeded = () => {
         acceptedAt: "2026-06-25T11:00:00Z",
         acceptedByName: "Roberto Sánchez",
         acceptedIp: "187.143.52.99",
+        freelancerAcceptedAt: "2026-06-25T11:10:00Z",
+        freelancerAcceptedByName: "Héctor J. Guerrero",
+        freelancerAcceptedIp: "187.143.52.10",
         contractHash: "9e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b810",
         created_at: "2026-06-24T08:00:00Z",
-        updated_at: "2026-06-25T11:00:00Z"
+        updated_at: "2026-06-25T11:10:00Z"
       },
       {
         id: "c5-draft-contrato",
@@ -251,6 +261,48 @@ const seedSandboxIfNeeded = () => {
     ];
     localStorage.setItem(KEYS.MILESTONES, JSON.stringify(defaultMilestones));
   }
+
+  if (!localStorage.getItem(KEYS.AUDIT_LOGS)) {
+    const defaultAuditLogs: AuditLog[] = [
+      {
+        id: "l1",
+        contractId: "c1-rediseño-marca",
+        action: "created",
+        actor: "freelancer",
+        details: "El contrato para \"Alejandro Rivera (FintechMX)\" fue creado y guardado como borrador.",
+        timestamp: "2026-07-04T12:00:00Z"
+      },
+      {
+        id: "l2",
+        contractId: "c1-rediseño-marca",
+        action: "client_signed",
+        actor: "client",
+        details: "El cliente Alejandro Rivera firmó el contrato digitalmente.",
+        timestamp: "2026-07-05T18:24:00Z",
+        ip: "189.243.54.12",
+        signature: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        id: "l3",
+        contractId: "c1-rediseño-marca",
+        action: "freelancer_accepted",
+        actor: "freelancer",
+        details: "El freelancer Héctor J. Guerrero verificó y aprobó el contrato. Documento sellado y activo.",
+        timestamp: "2026-07-05T18:25:00Z",
+        ip: "189.243.54.10",
+        signature: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        id: "l4",
+        contractId: "c1-rediseño-marca",
+        action: "milestone_confirmed",
+        actor: "freelancer",
+        details: "Pago confirmado y recibido para el hito: \"Anticipo inicial (50%)\".",
+        timestamp: "2026-07-06T12:30:00Z"
+      }
+    ];
+    localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(defaultAuditLogs));
+  }
 };
 
 // CLIENT HANDLER: DISPATCHES TO LOCALSTORAGE IF IN DEMO, ELSE CALLS ACTIVE SERVER ACTIONS
@@ -292,12 +344,24 @@ export async function saveContract(contract: Contract): Promise<Contract> {
   if (isDemoMode()) {
     const contracts = await getContracts();
     const index = contracts.findIndex((c) => c.id === contract.id);
+    const isNew = index < 0;
+
     if (index >= 0) {
       contracts[index] = contract;
     } else {
       contracts.push(contract);
     }
     localStorage.setItem(KEYS.CONTRACTS, JSON.stringify(contracts));
+
+    if (isNew) {
+      await addAuditLog({
+        contractId: contract.id,
+        action: "created",
+        actor: "freelancer",
+        details: `El contrato para "${contract.clientName}" fue creado y guardado como borrador.`
+      });
+    }
+
     return contract;
   }
   return serverActions.saveContract(contract);
@@ -346,6 +410,7 @@ export async function updateMilestoneStatus(
     if (idx < 0) return null;
     
     const milestone = allList[idx];
+    const oldStatus = milestone.status;
     milestone.status = status;
     if (status === "marked_paid") {
       milestone.markedPaidAt = new Date().toISOString();
@@ -356,6 +421,26 @@ export async function updateMilestoneStatus(
     localStorage.setItem(KEYS.MILESTONES, JSON.stringify(allList));
     
     await checkAndUpdateContractStatus(milestone.contractId);
+
+    // Log milestone changes
+    if (status !== oldStatus) {
+      if (status === "requested") {
+        await addAuditLog({
+          contractId: milestone.contractId,
+          action: "milestone_requested",
+          actor: "freelancer",
+          details: `Cobro solicitado para el hito: "${milestone.label}" (Monto: $${milestone.amount}).`
+        });
+      } else if (status === "confirmed") {
+        await addAuditLog({
+          contractId: milestone.contractId,
+          action: "milestone_confirmed",
+          actor: "freelancer",
+          details: `Pago confirmado y recibido para el hito: "${milestone.label}".`
+        });
+      }
+    }
+
     return milestone;
   }
   return serverActions.updateMilestoneStatus(milestoneId, status);
@@ -384,6 +469,14 @@ export async function markMilestoneAsTransferred(
     localStorage.setItem(KEYS.MILESTONES, JSON.stringify(allList));
     
     await checkAndUpdateContractStatus(milestone.contractId);
+
+    await addAuditLog({
+      contractId: milestone.contractId,
+      action: "milestone_transferred",
+      actor: "client",
+      details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${trackingReference}).`
+    });
+
     return milestone;
   }
   return serverActions.markMilestoneAsTransferred(milestoneId, trackingReference, transferredAmount);
@@ -396,25 +489,101 @@ export async function acceptContract(
   if (isDemoMode()) {
     const contract = await getContractById(contractId);
     if (!contract) return null;
-    const milestones = await getMilestones(contractId);
     
     const sandboxIp = "189.144.22.84";
     const sandboxHash = Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join("");
     
-    contract.status = "accepted";
+    contract.status = "client_signed";
     contract.acceptedAt = new Date().toISOString();
     contract.acceptedByName = clientName;
     contract.acceptedIp = sandboxIp;
     contract.contractHash = sandboxHash;
     contract.updated_at = new Date().toISOString();
     await saveContract(contract);
+
+    await addAuditLog({
+      contractId: contract.id,
+      action: "client_signed",
+      actor: "client",
+      details: `El cliente ${clientName} firmó el contrato digitalmente.`,
+      ip: sandboxIp,
+      signature: sandboxHash
+    });
     
+    return contract;
+  }
+  return serverActions.acceptContract(contractId, clientName);
+}
+
+export async function vetAndAcceptContract(
+  contractId: string,
+  freelancerName: string
+): Promise<Contract | null> {
+  if (isDemoMode()) {
+    const contract = await getContractById(contractId);
+    if (!contract) return null;
+    const milestones = await getMilestones(contractId);
+
+    const sandboxIp = "189.144.22.84";
+    const sandboxHash = Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join("");
+
+    contract.status = "accepted";
+    contract.freelancerAcceptedAt = new Date().toISOString();
+    contract.freelancerAcceptedByName = freelancerName;
+    contract.freelancerAcceptedIp = sandboxIp;
+    contract.contractHash = sandboxHash;
+    contract.updated_at = new Date().toISOString();
+    await saveContract(contract);
+
+    await addAuditLog({
+      contractId: contract.id,
+      action: "freelancer_accepted",
+      actor: "freelancer",
+      details: `El freelancer ${freelancerName} verificó y aprobó el contrato. Documento sellado y activo.`,
+      ip: sandboxIp,
+      signature: sandboxHash
+    });
+
     if (milestones.length > 0 && milestones[0].status === "pending") {
       await updateMilestoneStatus(milestones[0].id, "requested");
     }
     return contract;
   }
-  return serverActions.acceptContract(contractId, clientName);
+  return serverActions.vetAndAcceptContract(contractId, freelancerName);
+}
+
+export async function getAuditLogs(contractId?: string): Promise<AuditLog[]> {
+  if (isDemoMode()) {
+    seedSandboxIfNeeded();
+    const data = localStorage.getItem(KEYS.AUDIT_LOGS);
+    const logs: AuditLog[] = data ? JSON.parse(data) : [];
+    if (contractId) {
+      return logs
+        .filter((l) => l.contractId === contractId)
+        .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+    }
+    return logs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  }
+  return serverActions.getAuditLogs(contractId);
+}
+
+export async function addAuditLog(
+  log: Omit<AuditLog, "id" | "timestamp">
+): Promise<AuditLog> {
+  if (isDemoMode()) {
+    seedSandboxIfNeeded();
+    const data = localStorage.getItem(KEYS.AUDIT_LOGS);
+    const logs: AuditLog[] = data ? JSON.parse(data) : [];
+    const newLog: AuditLog = {
+      ...log,
+      id: "log-" + Math.random().toString(36).substring(2, 9),
+      timestamp: new Date().toISOString()
+    };
+    logs.push(newLog);
+    localStorage.setItem(KEYS.AUDIT_LOGS, JSON.stringify(logs));
+    return newLog;
+  }
+  return serverActions.addAuditLog(log);
 }
 
 // Sandbox local contract checker
@@ -428,6 +597,12 @@ async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
   if (allPaid && contract.status === "accepted") {
     contract.status = "completed";
     await saveContract(contract);
+    await addAuditLog({
+      contractId: contractId,
+      action: "milestone_confirmed",
+      actor: "system",
+      details: "Todos los hitos han sido liquidados. Contrato marcado como Completado."
+    });
   } else if (!allPaid && contract.status === "completed") {
     contract.status = "accepted";
     await saveContract(contract);
