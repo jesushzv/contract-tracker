@@ -34,6 +34,7 @@ import {
 } from "@/lib/storageClient";
 import { Contract, Milestone, Profile, AuditLog } from "@/lib/types";
 import { MOCK_CLAUSES } from "@/lib/mockData";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -253,6 +254,16 @@ export default function Dashboard() {
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       alert("Error al guardar perfil: " + err);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      localStorage.removeItem("demo_mode");
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+    } catch (err) {
+      alert("Error al cerrar sesión: " + err);
     }
   };
 
@@ -816,19 +827,28 @@ export default function Dashboard() {
               />
             </div>
 
-            <div className="md:col-span-3 flex justify-end gap-3 pt-2">
-              {saveSuccess && (
-                <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Perfil guardado con éxito
-                </span>
-              )}
+            <div className="md:col-span-3 flex justify-between items-center pt-2">
               <button
-                type="submit"
-                className="rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors"
+                type="button"
+                onClick={handleSignOut}
+                className="rounded-xl border border-red-200 dark:border-red-900 text-red-650 hover:bg-red-50 dark:hover:bg-red-950/20 px-5 py-2.5 text-xs font-semibold transition-colors cursor-pointer"
               >
-                Guardar Cambios
+                Cerrar Sesión
               </button>
+              <div className="flex gap-3 items-center">
+                {saveSuccess && (
+                  <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Perfil guardado con éxito
+                  </span>
+                )}
+                <button
+                  type="submit"
+                  className="rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors cursor-pointer"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
             </div>
           </form>
         </div>

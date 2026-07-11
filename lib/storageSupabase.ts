@@ -3,17 +3,38 @@
 import { createClient } from "@supabase/supabase-js";
 import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog } from "./types";
 import crypto from "crypto";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 
 // Initialize Supabase Client
 // These variables must be configured in Vercel's Environment Settings
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 // In server actions, we use the service role key to bypass RLS when performing admin or client signatures,
 // or we can use the default anon client. Let's create a client.
 const supabase = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey);
+
+async function getCurrentUserId(): Promise<string> {
+  try {
+    const cookieStore = await cookies();
+    const authCookie = cookieStore.getAll().find((cookie) => 
+      cookie.name.startsWith("sb-") && cookie.name.endsWith("-auth-token")
+    );
+
+    if (authCookie) {
+      const parsed = JSON.parse(authCookie.value);
+      if (parsed?.user?.id) {
+        return parsed.user.id;
+      }
+    }
+  } catch (e) {
+    console.error("Error reading Supabase auth cookie:", e);
+  }
+
+  // Fallback default profile UUID for sandbox/demo
+  return "d8b67104-e3c3-4d37-88ab-8c9df4a2e5d9";
+}
 
 // SERVER ACTIONS FOR AUDIT LOGS
 export async function getAuditLogs(contractId?: string): Promise<AuditLog[]> {
@@ -69,13 +90,12 @@ export async function addAuditLog(
 }
 
 export async function getProfile(): Promise<Profile> {
-  // In production, we would query by the logged in user ID.
-  // For the MVP, we query the single freelancer profile (or first profile)
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
-    .limit(1)
-    .single();
+    .eq("id", userId)
+    .maybeSingle();
 
   if (error || !data) {
     // Return a default profile if none exists yet
@@ -114,10 +134,17 @@ export async function getProfile(): Promise<Profile> {
 }
 
 export async function updateProfile(profile: Profile): Promise<Profile> {
-  // Check if profile exists first
-  const current = await getProfile().catch(() => null);
+  const userId = await getCurrentUserId();
+  const targetId = userId && userId !== "demo-freelancer-uuid" ? userId : (profile.id && profile.id !== "demo-freelancer-uuid" ? profile.id : "c596e102-1200-4b2a-8888-888888888888");
 
-  if (current && current.id !== "demo-freelancer-uuid") {
+  // Check if profile exists first
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", targetId)
+    .maybeSingle();
+
+  if (existing) {
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -131,7 +158,7 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
         bank_details: profile.bankDetails,
         updated_at: new Date().toISOString()
       })
-      .eq("id", current.id);
+      .eq("id", targetId);
 
     if (error) throw new Error("Error updating Supabase profile: " + error.message);
   } else {
@@ -139,7 +166,7 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
     const { error } = await supabase
       .from("profiles")
       .insert({
-        id: profile.id === "demo-freelancer-uuid" ? undefined : profile.id,
+        id: targetId,
         email: profile.email,
         full_name: profile.fullName,
         rfc: profile.rfc,
@@ -153,13 +180,15 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
     if (error) throw new Error("Error inserting Supabase profile: " + error.message);
   }
 
-  return profile;
+  return { ...profile, id: targetId };
 }
 
 export async function getContracts(): Promise<Contract[]> {
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from("contracts")
     .select("*")
+    .eq("freelancer_id", userId)
     .order("created_at", { ascending: false });
 
   if (error || !data) return [];
