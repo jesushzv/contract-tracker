@@ -17,8 +17,8 @@ import {
   ArrowRight,
   Loader2
 } from "lucide-react";
-import { getContracts, getMilestones } from "@/lib/storage"; // Direct server database access
-import { Contract, Milestone } from "@/lib/types";
+import { getContracts } from "@/lib/storage"; // Direct server database access
+import { Contract } from "@/lib/types";
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);

@@ -173,7 +173,7 @@ export async function updateMilestoneStatus(
   milestoneId: string,
   status: MilestoneStatus
 ): Promise<Milestone | null> {
-  const updates: any = { status };
+  const updates: { status: MilestoneStatus; marked_paid_at?: string; confirmed_at?: string } = { status };
   if (status === "marked_paid") {
     updates.marked_paid_at = new Date().toISOString();
   } else if (status === "confirmed") {
@@ -212,7 +212,7 @@ export async function markMilestoneAsTransferred(
   trackingReference: string,
   transferredAmount?: number
 ): Promise<Milestone | null> {
-  const updates: any = {
+  const updates: { status: MilestoneStatus; marked_paid_at: string; tracking_reference: string; transferred_amount?: number } = {
     status: "marked_paid",
     marked_paid_at: new Date().toISOString(),
     tracking_reference: trackingReference
@@ -324,6 +324,7 @@ async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapContractFromDb(row: any): Contract {
   return {
     id: row.id,

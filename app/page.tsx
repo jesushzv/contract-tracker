@@ -8,11 +8,9 @@ import {
   ShieldCheck, 
   ArrowRight, 
   Sparkles, 
-  MessageSquare, 
   Landmark, 
   Smartphone,
   TrendingUp,
-  Percent,
   Clock,
   HelpCircle,
   Calculator,
@@ -309,7 +307,7 @@ export default function Home() {
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-indigo-500 flex-shrink-0" />
-                    Alertas dinámicas de atraso ("Atrasado")
+                    Alertas dinámicas de atraso (&quot;Atrasado&quot;)
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-indigo-500 flex-shrink-0" />

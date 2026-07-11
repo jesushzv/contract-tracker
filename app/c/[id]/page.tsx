@@ -1,30 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { 
   ShieldCheck, 
   Clock, 
   CheckCircle2, 
   Copy, 
-  Download, 
-  User, 
   AlertCircle,
   Briefcase,
-  ExternalLink,
-  ChevronRight,
   Printer,
-  Building,
   CreditCard
 } from "lucide-react";
-import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, updateMilestoneStatus } from "@/lib/storageClient";
+import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 import { Contract, Milestone } from "@/lib/types";
 
 export default function ClientContractView() {
   const params = useParams();
-  const router = useRouter();
   const contractId = params.id as string;
 
   const [contract, setContract] = useState<Contract | null>(null);

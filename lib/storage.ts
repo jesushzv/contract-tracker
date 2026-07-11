@@ -4,16 +4,22 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { headers } from "next/headers";
-import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus } from "./types";
+import { Contract, Milestone, Profile, MilestoneStatus } from "./types";
 
 const DB_PATH = path.join(process.cwd(), "data", "db.json");
 
+interface DbSchema {
+  profile: Profile;
+  contracts: Contract[];
+  milestones: Milestone[];
+}
+
 // Helper to read JSON file database
-async function readDb() {
+async function readDb(): Promise<DbSchema> {
   try {
     const data = await fs.readFile(DB_PATH, "utf-8");
     return JSON.parse(data);
-  } catch (error) {
+  } catch {
     // If file doesn't exist, return empty structures
     return {
       profile: {
@@ -36,7 +42,7 @@ async function readDb() {
 }
 
 // Helper to write JSON file database
-async function writeDb(data: any) {
+async function writeDb(data: DbSchema) {
   // Ensure the directory exists
   await fs.mkdir(path.dirname(DB_PATH), { recursive: true });
   await fs.writeFile(DB_PATH, JSON.stringify(data, null, 2), "utf-8");

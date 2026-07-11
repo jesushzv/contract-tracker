@@ -14,12 +14,8 @@ import {
   CreditCard, 
   AlertCircle, 
   Eye, 
-  ChevronRight, 
-  Download, 
-  User, 
   Settings, 
   RefreshCw,
-  TrendingUp,
   ExternalLink,
   Info
 } from "lucide-react";
@@ -193,7 +189,9 @@ export default function Dashboard() {
     if (contracts.length > 0) {
       calculateMetrics();
     } else {
-      setMetrics({ totalContracted: 0, totalPaid: 0, totalOutstanding: 0 });
+      setTimeout(() => {
+        setMetrics({ totalContracted: 0, totalPaid: 0, totalOutstanding: 0 });
+      }, 0);
     }
   }, [contracts]);
 

@@ -17,7 +17,7 @@ export async function GET() {
   try {
     // Service-level connection verification query
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    const { data, error } = await supabase.from("profiles").select("id").limit(1);
+    const { error } = await supabase.from("profiles").select("id").limit(1);
 
     if (error) {
       return NextResponse.json(
@@ -35,12 +35,12 @@ export async function GET() {
       database: "supabase-connected",
       timestamp: new Date().toISOString()
     });
-  } catch (err: any) {
+  } catch (err) {
     return NextResponse.json(
       { 
         status: "unhealthy", 
         database: "connection-failed", 
-        error: err.message 
+        error: err instanceof Error ? err.message : String(err)
       },
       { status: 500 }
     );

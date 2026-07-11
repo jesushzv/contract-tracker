@@ -1,9 +1,9 @@
 import * as localActions from "./storage";
 import * as supabaseActions from "./storageSupabase";
-import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus } from "./types";
+import { Contract, Milestone, Profile, MilestoneStatus } from "./types";
 
 // Determine if we should use the cloud Supabase database
-const useSupabase = (): boolean => {
+const shouldUseSupabase = (): boolean => {
   // If running in a Vercel Staging/Preview environment, we bypass the cloud DB
   // to avoid persistent data storage or requiring a secondary DB.
   if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") {
@@ -13,7 +13,7 @@ const useSupabase = (): boolean => {
 };
 
 // Dispatch server actions based on config
-const serverActions = useSupabase() ? supabaseActions : localActions;
+const serverActions = shouldUseSupabase() ? supabaseActions : localActions;
 
 // Helper to determine if we are in Demo Sandbox Mode (stored in browser localStorage)
 const isDemoMode = (): boolean => {
@@ -208,7 +208,7 @@ export async function getMilestones(contractId?: string): Promise<Milestone[]> {
 export async function saveMilestones(milestones: Milestone[]): Promise<void> {
   if (isDemoMode()) {
     const data = localStorage.getItem(KEYS.MILESTONES);
-    let allList: Milestone[] = data ? JSON.parse(data) : [];
+    const allList: Milestone[] = data ? JSON.parse(data) : [];
     milestones.forEach((m) => {
       const idx = allList.findIndex((item) => item.id === m.id);
       if (idx >= 0) {
@@ -230,7 +230,7 @@ export async function updateMilestoneStatus(
   if (isDemoMode()) {
     const data = localStorage.getItem(KEYS.MILESTONES);
     if (!data) return null;
-    let allList: Milestone[] = JSON.parse(data);
+    const allList: Milestone[] = JSON.parse(data);
     const idx = allList.findIndex((m) => m.id === milestoneId);
     if (idx < 0) return null;
     
@@ -258,7 +258,7 @@ export async function markMilestoneAsTransferred(
   if (isDemoMode()) {
     const data = localStorage.getItem(KEYS.MILESTONES);
     if (!data) return null;
-    let allList: Milestone[] = JSON.parse(data);
+    const allList: Milestone[] = JSON.parse(data);
     const idx = allList.findIndex((m) => m.id === milestoneId);
     if (idx < 0) return null;
     

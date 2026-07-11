@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 // Basic unit test runner in Node.js to verify core contract financial validations
 const assert = require("assert");
 

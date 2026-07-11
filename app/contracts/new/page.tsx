@@ -19,11 +19,11 @@ import {
 } from "lucide-react";
 import { MOCK_CLAUSES, CONTRACT_TEMPLATES } from "@/lib/mockData";
 import { getProfile, saveContract, saveMilestones } from "@/lib/storageClient";
-import { Contract, Milestone } from "@/lib/types";
+import { Contract, Milestone, Profile } from "@/lib/types";
 
 export default function NewContract() {
   const router = useRouter();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   // Stepper state
   const [step, setStep] = useState(1);
@@ -47,7 +47,7 @@ export default function NewContract() {
   ]);
 
   // Selected Legal Clauses
-  const [selectedClauses, setSelectedClauses] = useState<string[]>([]);
+  const [selectedClauses, setSelectedClauses] = useState<string[]>(CONTRACT_TEMPLATES.general.defaultClauses);
 
   // SPEI details (pre-populated from profile)
   const [clabe, setClabe] = useState("");
@@ -71,9 +71,6 @@ export default function NewContract() {
       setFreelancerPostal(prof.codigoPostal || "");
     }
     loadProfile();
-    
-    // Set default clauses for initial template ('general')
-    setSelectedClauses(CONTRACT_TEMPLATES.general.defaultClauses);
   }, []);
 
   // Update clause selection when template changes
@@ -377,7 +374,7 @@ export default function NewContract() {
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Moneda del Contrato</label>
                 <select
                   value={currency}
-                  onChange={(e: any) => setCurrency(e.target.value)}
+                  onChange={(e) => setCurrency(e.target.value as 'MXN' | 'USD')}
                   className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
                 >
                   <option value="MXN">Peso Mexicano (MXN)</option>
