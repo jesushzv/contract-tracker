@@ -3,8 +3,12 @@ import * as supabaseActions from "./storageSupabase";
 import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus } from "./types";
 
 // Determine if we should use the cloud Supabase database
-// NEXT_PUBLIC_SUPABASE_URL is injected by Vercel in production
 const useSupabase = (): boolean => {
+  // If running in a Vercel Staging/Preview environment, we bypass the cloud DB
+  // to avoid persistent data storage or requiring a secondary DB.
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") {
+    return false;
+  }
   return !!process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== "";
 };
 
@@ -14,6 +18,12 @@ const serverActions = useSupabase() ? supabaseActions : localActions;
 // Helper to determine if we are in Demo Sandbox Mode (stored in browser localStorage)
 const isDemoMode = (): boolean => {
   if (typeof window === "undefined") return false;
+  
+  // Force sandbox/localStorage mode by default in Vercel Staging/Preview deployments
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") {
+    return true;
+  }
+  
   return localStorage.getItem("demo_mode") === "true";
 };
 
