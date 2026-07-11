@@ -55,8 +55,9 @@ export default function RegisterPage() {
           router.push("/onboarding");
         }, 2000);
       }
-    } catch (err: any) {
-      setError(err.message || "Error al registrarse.");
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "Error al registrarse.");
       setLoading(false);
     }
   };

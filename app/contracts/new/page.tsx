@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
@@ -20,6 +20,7 @@ import {
 import { MOCK_CLAUSES, CONTRACT_TEMPLATES } from "@/lib/mockData";
 import { getProfile, saveContract, saveMilestones } from "@/lib/storageClient";
 import { Contract, Milestone, Profile } from "@/lib/types";
+import { validateRFC } from "@/lib/rfcValidator";
 
 function NewContractForm() {
   const router = useRouter();
@@ -41,6 +42,9 @@ function NewContractForm() {
   const [totalAmount, setTotalAmount] = useState<number>(30000);
   const [currency, setCurrency] = useState<'MXN' | 'USD'>("MXN");
   const [selectedTemplate, setSelectedTemplate] = useState<'general' | 'design' | 'development' | 'consulting'>("general");
+  const [retencionIsr, setRetencionIsr] = useState(false);
+  const [retencionIva, setRetencionIva] = useState(false);
+  const [clientRfcError, setClientRfcError] = useState("");
 
   // Dynamic Milestones
   const [milestones, setMilestones] = useState([
@@ -75,14 +79,21 @@ function NewContractForm() {
     loadProfile();
   }, []);
 
-  useEffect(() => {
-    if (templateParam && ["general", "design", "development", "consulting"].includes(templateParam)) {
-      handleTemplateChange(templateParam as any);
+  const handleClientRfcBlur = () => {
+    if (!clientRfc) {
+      setClientRfcError("");
+      return;
     }
-  }, [templateParam]);
+    const check = validateRFC(clientRfc);
+    if (!check.isValid) {
+      setClientRfcError(check.error || "RFC inválido");
+    } else {
+      setClientRfcError("");
+    }
+  };
 
   // Update clause selection when template changes
-  const handleTemplateChange = (tmplKey: 'general' | 'design' | 'development' | 'consulting') => {
+  const handleTemplateChange = useCallback((tmplKey: 'general' | 'design' | 'development' | 'consulting') => {
     setSelectedTemplate(tmplKey);
     setSelectedClauses(CONTRACT_TEMPLATES[tmplKey].defaultClauses);
 
@@ -111,7 +122,14 @@ function NewContractForm() {
       ];
     }
     setMilestones(newMilestones);
-  };
+  }, [totalAmount]);
+
+  useEffect(() => {
+    if (templateParam && ["general", "design", "development", "consulting"].includes(templateParam)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      handleTemplateChange(templateParam as 'general' | 'design' | 'development' | 'consulting');
+    }
+  }, [templateParam, handleTemplateChange]);
 
   // Recalculate milestone values based on total amount
   const handleTotalAmountChange = (amount: number) => {
@@ -201,6 +219,13 @@ function NewContractForm() {
       freelancerRfc: freelancerRfc || undefined,
       freelancerRegimen: freelancerRegimen || undefined,
       freelancerPostal: freelancerPostal || undefined,
+      
+      retencionIsr,
+      retencionIva,
+      taxWithholdingAmount: (retencionIsr ? totalAmount * 0.10 : 0) + (retencionIva ? totalAmount * 0.16 * (2 / 3) : 0),
+      ivaAmount: totalAmount * 0.16,
+      subtotalAmount: totalAmount,
+      clientOtpVerified: false,
       
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -333,8 +358,14 @@ function NewContractForm() {
                     placeholder="Opcional (Ej. GAF1203058X4)"
                     value={clientRfc}
                     onChange={(e) => setClientRfc(e.target.value.toUpperCase())}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
+                    onBlur={handleClientRfcBlur}
+                    className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:ring-1 focus:outline-none transition-all shadow-inner uppercase font-mono ${
+                      clientRfcError ? "border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-500/5" : "border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 focus:border-indigo-500 focus:ring-indigo-500"
+                    }`}
                   />
+                  {clientRfcError && (
+                    <span className="text-3xs text-red-500 font-semibold mt-1 block">{clientRfcError}</span>
+                  )}
                 </div>
                 
                 <div>
@@ -383,8 +414,18 @@ function NewContractForm() {
             <div className="flex justify-end mt-4">
               <button
                 type="button"
-                onClick={() => setStep(2)}
-                disabled={!clientName || !clientEmail || !scopeDescription}
+                onClick={() => {
+                  if (clientRfc) {
+                    const check = validateRFC(clientRfc);
+                    if (!check.isValid) {
+                      setClientRfcError(check.error || "RFC inválido");
+                      return;
+                    }
+                  }
+                  setClientRfcError("");
+                  setStep(2);
+                }}
+                disabled={!clientName || !clientEmail || !scopeDescription || !!clientRfcError}
                 className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-6 py-2.5 text-sm font-semibold text-white transition-colors"
               >
                 Siguiente Paso
@@ -423,6 +464,7 @@ function NewContractForm() {
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
                     <input
                       type="number"
+                      name="totalAmount"
                       required
                       min={100}
                       value={totalAmount === 0 ? "" : totalAmount}
@@ -430,6 +472,31 @@ function NewContractForm() {
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 pl-8 pr-4 py-2.5 text-sm font-bold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Withholdings Toggles for Mexico (ISR/IVA) */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800/80 p-4 bg-slate-50/10 dark:bg-slate-900/5 flex flex-col gap-3 mt-1">
+                <span className="text-2xs font-extrabold text-slate-400 uppercase tracking-wider block">Retenciones Fiscales (Personas Morales)</span>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={retencionIsr}
+                      onChange={(e) => setRetencionIsr(e.target.checked)}
+                      className="rounded border-slate-350 dark:border-slate-800 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                    />
+                    Retener ISR (10%)
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={retencionIva}
+                      onChange={(e) => setRetencionIva(e.target.checked)}
+                      className="rounded border-slate-350 dark:border-slate-800 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                    />
+                    Retener IVA (10.667% / 2/3 partes)
+                  </label>
                 </div>
               </div>
 
@@ -569,6 +636,39 @@ function NewContractForm() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Tax breakdown summary card */}
+            <div className="glass p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80 bg-slate-50/10 dark:bg-slate-900/5 flex flex-col gap-3">
+              <span className="text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Desglose Fiscal Estimado (SAT México)</span>
+              
+              <div className="flex flex-col gap-2 text-xs">
+                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                  <span>Subtotal (Honorarios brutos)</span>
+                  <span className="font-semibold">{formatMoney(totalAmount, currency)}</span>
+                </div>
+                <div className="flex justify-between text-slate-650 dark:text-slate-400">
+                  <span>+ IVA Trasladado (16%)</span>
+                  <span className="font-semibold">{formatMoney(totalAmount * 0.16, currency)}</span>
+                </div>
+                {retencionIsr && (
+                  <div className="flex justify-between text-red-650 dark:text-red-400">
+                    <span>- Retención ISR (10% Ley de ISR)</span>
+                    <span className="font-semibold">-{formatMoney(totalAmount * 0.10, currency)}</span>
+                  </div>
+                )}
+                {retencionIva && (
+                  <div className="flex justify-between text-red-650 dark:text-red-400">
+                    <span>- Retención IVA (2/3 de IVA - 10.667%)</span>
+                    <span className="font-semibold">-{formatMoney(totalAmount * 0.16 * (2 / 3), currency)}</span>
+                  </div>
+                )}
+                <div className="border-t border-slate-200 dark:border-slate-800 my-1.5" />
+                <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white">
+                  <span>Total Neto Recibido (Estimado)</span>
+                  <span className="text-indigo-650 dark:text-indigo-400">{formatMoney(totalAmount + (totalAmount * 0.16) - (retencionIsr ? totalAmount * 0.10 : 0) - (retencionIva ? totalAmount * 0.16 * (2 / 3) : 0), currency)}</span>
+                </div>
               </div>
             </div>
 

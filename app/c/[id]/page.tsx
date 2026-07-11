@@ -14,7 +14,7 @@ import {
   CreditCard,
   ExternalLink
 } from "lucide-react";
-import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile } from "@/lib/storageClient";
+import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 import { Contract, Milestone, AuditLog, Profile } from "@/lib/types";
 
@@ -31,6 +31,10 @@ export default function ClientContractView() {
   // Modals state
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [signerName, setSignerName] = useState("");
+  const [acceptStep, setAcceptStep] = useState<'name' | 'otp'>('name');
+  const [otpInput, setOtpInput] = useState("");
+  const [debugOtp, setDebugOtp] = useState<string | null>(null);
+  const [otpError, setOtpError] = useState("");
   
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMilestone, setPaymentMilestone] = useState<Milestone | null>(null);
@@ -82,23 +86,42 @@ export default function ClientContractView() {
     if (!contract || !signerName) return;
     
     setLoading(true);
+    setOtpError("");
     
     try {
-      const updated = await acceptContract(contractId, signerName);
-      if (updated) {
-        setContract(updated);
-        const mList = await getMilestones(contractId);
-        setMilestones(mList);
-        const logs = await getAuditLogs(contractId);
-        setAuditLogs(logs);
-        setAcceptedSuccess(true);
-        setTimeout(() => setAcceptedSuccess(false), 5000);
+      if (acceptStep === 'name') {
+        const otp = await generateClientOtp(contractId);
+        if (otp) {
+          setDebugOtp(otp);
+          setAcceptStep('otp');
+        } else {
+          alert("Error al generar el código de verificación OTP.");
+        }
+      } else {
+        const updated = await acceptContract(contractId, signerName, otpInput);
+        if (updated) {
+          setContract(updated);
+          const mList = await getMilestones(contractId);
+          setMilestones(mList);
+          const logs = await getAuditLogs(contractId);
+          setAuditLogs(logs);
+          setAcceptedSuccess(true);
+          setAcceptStep('name');
+          setOtpInput("");
+          setDebugOtp(null);
+          setShowAcceptModal(false);
+          setTimeout(() => setAcceptedSuccess(false), 5000);
+        }
       }
     } catch (err) {
-      alert("Error al firmar el contrato: " + err);
+      const error = err as Error;
+      if (acceptStep === 'otp') {
+        setOtpError(error.message || "Código de verificación incorrecto.");
+      } else {
+        alert("Error al firmar el contrato: " + error.message);
+      }
     } finally {
       setLoading(false);
-      setShowAcceptModal(false);
     }
   };
 
@@ -695,40 +718,76 @@ export default function ClientContractView() {
             </p>
 
             <form onSubmit={handleAcceptContract} className="mt-6 flex flex-col gap-4">
-              <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Nombre completo del Firmante</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Escribe tu nombre y apellido"
-                  value={signerName}
-                  onChange={(e) => setSignerName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-                />
-              </div>
+              {acceptStep === 'name' ? (
+                <div>
+                  <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Nombre completo del Firmante</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Escribe tu nombre y apellido"
+                    value={signerName}
+                    onChange={(e) => setSignerName(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {debugOtp && (
+                    <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 p-3 rounded-xl text-3xs text-indigo-700 dark:text-indigo-400 font-semibold leading-relaxed">
+                      💡 <strong>Demo Debug Info:</strong> El código de firma enviado al cliente es: <span className="font-extrabold underline text-sm tracking-widest">{debugOtp}</span>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Código de Firma Electrónica (OTP de 6 dígitos)</label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      required
+                      placeholder="Ej. 123456"
+                      value={otpInput}
+                      onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm font-bold text-center tracking-widest focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
+                  {otpError && (
+                    <span className="text-3xs text-red-500 font-semibold">{otpError}</span>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-3 justify-end mt-2">
                 <button
                   type="button"
-                  onClick={() => setShowAcceptModal(false)}
+                  onClick={() => {
+                    if (acceptStep === 'otp') {
+                      setAcceptStep('name');
+                    } else {
+                      setShowAcceptModal(false);
+                    }
+                  }}
                   className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                 >
-                  Cancelar
+                  {acceptStep === 'otp' ? "Atrás" : "Cancelar"}
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || !signerName}
+                  disabled={loading || (acceptStep === 'name' ? !signerName : otpInput.length < 6)}
                   className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
                       <Clock className="h-4 w-4 animate-spin" />
-                      Firmando...
+                      Procesando...
+                    </>
+                  ) : acceptStep === 'name' ? (
+                    <>
+                      <ShieldCheck className="h-4 w-4" />
+                      Enviar Código de Firma
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="h-4 w-4" />
-                      Aceptar y Firmar
+                      Verificar y Firmar
                     </>
                   )}
                 </button>

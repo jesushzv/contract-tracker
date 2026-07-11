@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { updateProfile } from "@/lib/storageClient";
 import { Profile } from "@/lib/types";
 import { ShieldCheck, ArrowRight, AlertCircle, Loader2, Landmark } from "lucide-react";
+import { validateRFC } from "@/lib/rfcValidator";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -25,6 +26,13 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     async function checkSession() {
+      const isDemo = new URLSearchParams(window.location.search).get("demo") === "true";
+      if (isDemo) {
+        setEmail("hector@freelancemx.dev");
+        setSessionCheckLoading(false);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push("/login");
@@ -36,9 +44,32 @@ export default function OnboardingPage() {
     checkSession();
   }, [router]);
 
+  const [rfcError, setRfcError] = useState("");
+
+  const handleRfcBlur = () => {
+    if (!rfc) {
+      setRfcError("");
+      return;
+    }
+    const result = validateRFC(rfc);
+    if (!result.isValid) {
+      setRfcError(result.error || "RFC inválido");
+    } else {
+      setRfcError("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    
+    // Strict RFC check
+    const rfcCheck = validateRFC(rfc);
+    if (!rfcCheck.isValid) {
+      setError(rfcCheck.error || "RFC inválido");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -67,8 +98,9 @@ export default function OnboardingPage() {
 
       await updateProfile(newProfile);
       router.push("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Error al completar tu registro.");
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "Error al completar tu registro.");
       setLoading(false);
     }
   };
@@ -134,8 +166,14 @@ export default function OnboardingPage() {
               placeholder="Ej. GUEH860710MX3"
               value={rfc}
               onChange={(e) => setRfc(e.target.value.toUpperCase())}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white uppercase font-mono"
+              onBlur={handleRfcBlur}
+              className={`rounded-xl border bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:outline-none dark:text-white uppercase font-mono ${
+                rfcError ? "border-red-500 focus:border-red-500" : "border-slate-200 dark:border-slate-800 focus:border-indigo-500"
+              }`}
             />
+            {rfcError && (
+              <span className="text-3xs text-red-500 font-semibold">{rfcError}</span>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">

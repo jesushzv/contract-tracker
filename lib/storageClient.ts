@@ -43,7 +43,7 @@ const seedSandboxIfNeeded = () => {
       id: "demo-freelancer-uuid",
       email: "hector@freelancemx.dev",
       fullName: "Héctor J. Guerrero",
-      rfc: "GUEH860710MX3",
+      rfc: "GUEH860710MX8",
       regimenFiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
       codigoPostal: "06700",
       bankDetails: {
@@ -517,37 +517,16 @@ export async function markMilestoneAsTransferred(
   return serverActions.markMilestoneAsTransferred(milestoneId, trackingReference, transferredAmount, receiptUrl);
 }
 
+export async function generateClientOtp(contractId: string): Promise<string | null> {
+  return serverActions.generateClientOtp(contractId);
+}
+
 export async function acceptContract(
   contractId: string,
-  clientName: string
+  clientName: string,
+  otpCode: string
 ): Promise<Contract | null> {
-  if (isDemoMode()) {
-    const contract = await getContractById(contractId);
-    if (!contract) return null;
-    
-    const sandboxIp = "189.144.22.84";
-    const sandboxHash = Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join("");
-    
-    contract.status = "client_signed";
-    contract.acceptedAt = new Date().toISOString();
-    contract.acceptedByName = clientName;
-    contract.acceptedIp = sandboxIp;
-    contract.contractHash = sandboxHash;
-    contract.updated_at = new Date().toISOString();
-    await saveContract(contract);
-
-    await addAuditLog({
-      contractId: contract.id,
-      action: "client_signed",
-      actor: "client",
-      details: `El cliente ${clientName} firmó el contrato digitalmente.`,
-      ip: sandboxIp,
-      signature: sandboxHash
-    });
-    
-    return contract;
-  }
-  return serverActions.acceptContract(contractId, clientName);
+  return serverActions.acceptContract(contractId, clientName, otpCode);
 }
 
 export async function vetAndAcceptContract(

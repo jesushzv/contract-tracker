@@ -11,7 +11,6 @@ import {
   Key, 
   ArrowLeft, 
   TrendingUp, 
-  CheckCircle2, 
   AlertCircle,
   Database,
   ArrowRight,
@@ -84,6 +83,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (isAuthenticated) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadAdminData();
     }
   }, [isAuthenticated]);

@@ -103,7 +103,7 @@ export async function getProfile(): Promise<Profile> {
       id: "demo-freelancer-uuid",
       email: "hector@freelancemx.dev",
       fullName: "Héctor J. Guerrero",
-      rfc: "GUEH860710MX3",
+      rfc: "GUEH860710MX8",
       regimenFiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
       codigoPostal: "06700",
       logoUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&h=120&fit=crop&auto=format",
@@ -241,6 +241,13 @@ export async function saveContract(contract: Contract): Promise<Contract> {
       freelancer_rfc: contract.freelancerRfc || profile?.rfc,
       freelancer_regimen: contract.freelancerRegimen || profile?.regimenFiscal,
       freelancer_postal: contract.freelancerPostal || profile?.codigoPostal,
+      retencion_isr: contract.retencionIsr || false,
+      retencion_iva: contract.retencionIva || false,
+      tax_withholding_amount: contract.taxWithholdingAmount || 0,
+      iva_amount: contract.ivaAmount || 0,
+      subtotal_amount: contract.subtotalAmount || 0,
+      client_otp_code: contract.clientOtpCode || null,
+      client_otp_verified: contract.clientOtpVerified || false,
       updated_at: new Date().toISOString()
     });
 
@@ -518,13 +525,33 @@ async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
   }
 }
 
+export async function generateClientOtp(contractId: string): Promise<string | null> {
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const { error } = await supabase
+    .from("contracts")
+    .update({ client_otp_code: otpCode })
+    .eq("id", contractId);
+
+  if (error) {
+    console.error("Error generating OTP:", error);
+    return null;
+  }
+  return otpCode;
+}
+
 // CLIENT PORTAL: Client accepts & signs contract (moves to 'client_signed')
 export async function acceptContract(
   contractId: string,
-  clientName: string
+  clientName: string,
+  otpCode: string
 ): Promise<Contract | null> {
   const contract = await getContractById(contractId);
   if (!contract) return null;
+
+  if (!contract.clientOtpCode || contract.clientOtpCode !== otpCode) {
+    throw new Error("El código de verificación ingresado es incorrecto.");
+  }
+
   const milestones = await getMilestones(contractId);
 
   const headerList = await headers();
@@ -560,6 +587,8 @@ export async function acceptContract(
       accepted_by_name: clientName,
       accepted_ip: clientIp,
       contract_hash: sha256Hash,
+      client_otp_code: null,
+      client_otp_verified: true,
       updated_at: new Date().toISOString()
     })
     .eq("id", contractId)
@@ -573,7 +602,7 @@ export async function acceptContract(
     contractId: contract.id,
     action: "client_signed",
     actor: "client",
-    details: `El cliente ${clientName} firmó el contrato digitalmente.`,
+    details: `El cliente ${clientName} firmó el contrato digitalmente (Verificado con OTP).`,
     ip: clientIp,
     signature: sha256Hash
   });
@@ -679,6 +708,13 @@ function mapContractFromDb(row: any): Contract {
     freelancerRfc: row.freelancer_rfc,
     freelancerRegimen: row.freelancer_regimen,
     freelancerPostal: row.freelancer_postal,
+    retencionIsr: !!row.retencion_isr,
+    retencionIva: !!row.retencion_iva,
+    taxWithholdingAmount: Number(row.tax_withholding_amount || 0),
+    ivaAmount: Number(row.iva_amount || 0),
+    subtotalAmount: Number(row.subtotal_amount || 0),
+    clientOtpCode: row.client_otp_code,
+    clientOtpVerified: !!row.client_otp_verified,
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -700,7 +736,7 @@ export async function loadSampleData(): Promise<boolean> {
       id: userId,
       email: "freelancer@ejemplo.com",
       full_name: "Freelancer Mexicano",
-      rfc: "GUEH860710MX3",
+      rfc: "GUEH860710MX8",
       regimen_fiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
       codigo_postal: "06700",
       bank_details: {
@@ -729,7 +765,7 @@ export async function loadSampleData(): Promise<boolean> {
     freelancer_id: userId,
     client_name: "Sofía Garza (Studio Flora)",
     client_email: "sofia@studioflora.mx",
-    client_rfc: "GASF920412HX2",
+    client_rfc: "GASF920412HX8",
     client_regimen: "612 - Personas Físicas con Actividades Empresariales y Profesionales",
     client_postal: "06700",
     scope_description: "Rediseño completo de la identidad de marca, incluyendo logotipo, paleta de colores, tipografías y manual de identidad gráfica para Studio Flora.",
@@ -739,7 +775,7 @@ export async function loadSampleData(): Promise<boolean> {
     clabe: "012180001509987654",
     bank_name: "BBVA México",
     beneficiary_name: "Freelancer Mexicano",
-    freelancer_rfc: "GUEH860710MX3",
+    freelancer_rfc: "GUEH860710MX8",
     freelancer_regimen: "626 - Régimen Simplificado de Confianza (RESICO)",
     freelancer_postal: "06700"
   });

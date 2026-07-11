@@ -51,6 +51,17 @@ export interface Contract {
   freelancerRfc?: string;
   freelancerRegimen?: string;
   freelancerPostal?: string;
+
+  // Tax details
+  retencionIsr?: boolean;
+  retencionIva?: boolean;
+  taxWithholdingAmount?: number;
+  ivaAmount?: number;
+  subtotalAmount?: number;
+
+  // OTP Verification
+  clientOtpCode?: string;
+  clientOtpVerified?: boolean;
   
   created_at: string;
   updated_at: string;

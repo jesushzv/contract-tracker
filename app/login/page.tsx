@@ -45,8 +45,9 @@ export default function LoginPage() {
           router.push("/onboarding");
         }
       }
-    } catch (err: any) {
-      setError(err.message || "Error al iniciar sesión.");
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "Error al iniciar sesión.");
       setLoading(false);
     }
   };

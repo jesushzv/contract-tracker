@@ -27,7 +27,7 @@ async function readDb(): Promise<DbSchema> {
         id: "demo-freelancer-uuid",
         email: "hector@freelancemx.dev",
         fullName: "Héctor J. Guerrero",
-        rfc: "GUEH860710MX3",
+        rfc: "GUEH860710MX8",
         regimenFiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
         codigoPostal: "06700",
         bankDetails: {
@@ -311,13 +311,33 @@ async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
   }
 }
 
+export async function generateClientOtp(contractId: string): Promise<string | null> {
+  const db = await readDb();
+  const contracts = db.contracts || [];
+  const idx = contracts.findIndex(c => c.id === contractId);
+  if (idx < 0) return null;
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  contracts[idx].clientOtpCode = otpCode;
+  db.contracts = contracts;
+  await writeDb(db);
+  return otpCode;
+}
+
 // CLIENT PORTAL: Client accepts & signs contract (moves to 'client_signed')
 export async function acceptContract(
   contractId: string,
-  clientName: string
+  clientName: string,
+  otpCode: string
 ): Promise<Contract | null> {
-  const contract = await getContractById(contractId);
-  if (!contract) return null;
+  const db = await readDb();
+  const contracts = db.contracts || [];
+  const idx = contracts.findIndex(c => c.id === contractId);
+  if (idx < 0) return null;
+  const contract = contracts[idx];
+
+  if (!contract.clientOtpCode || contract.clientOtpCode !== otpCode) {
+    throw new Error("El código de verificación ingresado es incorrecto.");
+  }
   
   const milestones = await getMilestones(contractId);
   
@@ -354,16 +374,21 @@ export async function acceptContract(
   contract.acceptedByName = clientName;
   contract.acceptedIp = clientIp;
   contract.contractHash = sha256Hash;
+  contract.clientOtpCode = undefined;
+  contract.clientOtpVerified = true;
   contract.updated_at = new Date().toISOString();
   
-  await saveContract(contract);
-
+  // Save updated contracts array in memory db
+  contracts[idx] = contract;
+  db.contracts = contracts;
+  await writeDb(db);
+ 
   // Write audit log entry
   await addAuditLog({
     contractId: contract.id,
     action: "client_signed",
     actor: "client",
-    details: `El cliente ${clientName} firmó el contrato digitalmente.`,
+    details: `El cliente ${clientName} firmó el contrato digitalmente (Verificado con OTP).`,
     ip: clientIp,
     signature: sha256Hash
   });
