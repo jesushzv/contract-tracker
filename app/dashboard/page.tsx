@@ -26,9 +26,11 @@ import {
   getProfile, 
   updateProfile, 
   saveContract, 
+  saveMilestones,
   updateMilestoneStatus,
   getAuditLogs,
-  vetAndAcceptContract
+  vetAndAcceptContract,
+  addAuditLog
 } from "@/lib/storageClient";
 import { Contract, Milestone, Profile, AuditLog } from "@/lib/types";
 import { MOCK_CLAUSES } from "@/lib/mockData";
@@ -46,6 +48,9 @@ export default function Dashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [isEditingContract, setIsEditingContract] = useState(false);
+  const [editScopeDescription, setEditScopeDescription] = useState("");
+  const [editTotalAmount, setEditTotalAmount] = useState(0);
 
   const [fullName, setFullName] = useState("");
   const [clabe, setClabe] = useState("");
@@ -54,6 +59,8 @@ export default function Dashboard() {
   const [rfc, setRfc] = useState("");
   const [regimenFiscal, setRegimenFiscal] = useState("");
   const [codigoPostal, setCodigoPostal] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [signatureUrl, setSignatureUrl] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
 
@@ -81,6 +88,8 @@ export default function Dashboard() {
       setRfc(prof.rfc || "");
       setRegimenFiscal(prof.regimenFiscal || "");
       setCodigoPostal(prof.codigoPostal || "");
+      setLogoUrl(prof.logoUrl || "");
+      setSignatureUrl(prof.signatureUrl || "");
 
       const allContracts = await getContracts();
       setContracts(allContracts);
@@ -162,6 +171,62 @@ export default function Dashboard() {
     }
   };
 
+  const handleSaveModification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedContract) return;
+
+    try {
+      const oldAmount = selectedContract.totalAmount || 1;
+      const scaleFactor = editTotalAmount / oldAmount;
+      
+      let sum = 0;
+      const updatedMilestones = milestones.map((m, idx) => {
+        const isLast = idx === milestones.length - 1;
+        let newAmt = Math.round(m.amount * scaleFactor);
+        if (isLast) {
+          newAmt = editTotalAmount - sum;
+        } else {
+          sum += newAmt;
+        }
+        return {
+          ...m,
+          amount: newAmt
+        };
+      });
+
+      const updatedContract: Contract = {
+        ...selectedContract,
+        scopeDescription: editScopeDescription,
+        totalAmount: editTotalAmount,
+        status: 'sent',
+        acceptedAt: undefined,
+        acceptedByName: undefined,
+        acceptedIp: undefined,
+        freelancerAcceptedAt: undefined,
+        freelancerAcceptedByName: undefined,
+        freelancerAcceptedIp: undefined,
+        contractHash: undefined
+      };
+
+      await saveContract(updatedContract);
+      await saveMilestones(updatedMilestones);
+
+      await addAuditLog({
+        contractId: selectedContract.id,
+        action: 'modified',
+        actor: 'freelancer',
+        details: `El freelancer modificó el alcance y presupuesto del contrato (Nuevo monto: ${editTotalAmount} ${selectedContract.currency}). El acuerdo regresó a estado Enviado.`,
+        ip: '127.0.0.1'
+      });
+
+      setIsEditingContract(false);
+      await refreshData();
+      alert("Propuesta modificada con éxito. El estado se ha restablecido a 'Enviado' para la aceptación y firma del cliente.");
+    } catch (err) {
+      alert("Error al guardar modificaciones: " + err);
+    }
+  };
+
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
@@ -172,6 +237,8 @@ export default function Dashboard() {
       rfc: rfc || undefined,
       regimenFiscal: regimenFiscal || undefined,
       codigoPostal: codigoPostal || undefined,
+      logoUrl: logoUrl || undefined,
+      signatureUrl: signatureUrl || undefined,
       bankDetails: {
         clabe,
         bankName,
@@ -727,6 +794,28 @@ export default function Dashboard() {
               />
             </div>
 
+            <div className="flex flex-col gap-1.5 md:col-span-2">
+              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Logo de la Empresa (URL de Imagen)</label>
+              <input
+                type="text"
+                placeholder="Ej. https://images.unsplash.com/photo-... o de tu sitio"
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Firma Digital (URL de Imagen)</label>
+              <input
+                type="text"
+                placeholder="Ej. https://upload.wikimedia.org/... o firma"
+                value={signatureUrl}
+                onChange={(e) => setSignatureUrl(e.target.value)}
+                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+              />
+            </div>
+
             <div className="md:col-span-3 flex justify-end gap-3 pt-2">
               {saveSuccess && (
                 <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1">
@@ -985,11 +1074,23 @@ export default function Dashboard() {
               )}
 
               {selectedContract.status === 'sent' && (
-                <div className="rounded-2xl bg-indigo-500/10 border border-indigo-500/20 p-4 text-sm text-indigo-800 dark:text-indigo-400 flex items-start gap-3">
-                  <Send className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold">Estado: Enviado (Pendiente de Aceptación)</span>. Envía el enlace al cliente para que revise el alcance y firme de aceptado electrónicamente.
+                <div className="rounded-2xl bg-indigo-500/10 border border-indigo-500/20 p-4 text-sm text-indigo-800 dark:text-indigo-400 flex flex-col gap-2.5">
+                  <div className="flex items-start gap-3">
+                    <Send className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Estado: Enviado (Pendiente de Aceptación)</span>. Envía el enlace al cliente para que revise el alcance y firme de aceptado electrónicamente.
+                    </div>
                   </div>
+                  <button
+                    onClick={() => {
+                      setEditScopeDescription(selectedContract.scopeDescription);
+                      setEditTotalAmount(selectedContract.totalAmount);
+                      setIsEditingContract(true);
+                    }}
+                    className="w-full mt-1 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 text-indigo-650 dark:text-indigo-400 font-bold py-2 text-xs transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    Modificar Propuesta
+                  </button>
                 </div>
               )}
 
@@ -1004,13 +1105,25 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={handleVetAndCounterSign}
-                    className="w-full mt-2 rounded-xl bg-purple-600 hover:bg-purple-550 text-white font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-purple-500/10"
-                  >
-                    <ShieldCheck className="h-4 w-4" />
-                    Validar y Contra-firmar
-                  </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                    <button
+                      onClick={handleVetAndCounterSign}
+                      className="rounded-xl bg-purple-600 hover:bg-purple-550 text-white font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-purple-500/10"
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                      Validar y Contra-firmar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditScopeDescription(selectedContract.scopeDescription);
+                        setEditTotalAmount(selectedContract.totalAmount);
+                        setIsEditingContract(true);
+                      }}
+                      className="rounded-xl border border-purple-200 dark:border-purple-800 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 text-purple-750 dark:text-purple-400 font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      Modificar Propuesta
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -1339,9 +1452,14 @@ export default function Dashboard() {
             {/* Paper content */}
             <div className="p-8 flex flex-col gap-8 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-250 m-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 max-w-3xl mx-auto w-full">
               {/* Proposal Header */}
-              <div className="text-center pb-6 border-b border-slate-150 dark:border-slate-800">
-                <h1 className="text-2xl font-extrabold text-indigo-500 uppercase tracking-wider">PROPUESTA DE SERVICIOS PROFESIONALES</h1>
-                <p className="text-xs text-slate-400 mt-1">ID Contrato: <span className="font-mono">{selectedContract.id}</span></p>
+              <div className="flex flex-col items-center gap-3 pb-6 border-b border-slate-150 dark:border-slate-800">
+                {profile?.logoUrl && (
+                  <img src={profile.logoUrl} alt="Logo" className="h-16 object-contain rounded-xl border border-slate-100 dark:border-slate-800 bg-white p-1" />
+                )}
+                <div className="text-center">
+                  <h1 className="text-2xl font-extrabold text-indigo-500 uppercase tracking-wider">PROPUESTA DE SERVICIOS PROFESIONALES</h1>
+                  <p className="text-xs text-slate-400 mt-1">ID Contrato: <span className="font-mono">{selectedContract.id}</span></p>
+                </div>
               </div>
 
               {/* Parties info */}
@@ -1428,10 +1546,15 @@ export default function Dashboard() {
                   <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4">
                     <p className="font-semibold text-slate-400 uppercase tracking-wider mb-2">Contra-firma Digital (Freelancer)</p>
                     {selectedContract.freelancerAcceptedByName ? (
-                      <div>
-                        <p className="font-bold text-slate-900 dark:text-white font-serif italic text-sm">{selectedContract.freelancerAcceptedByName}</p>
-                        <p className="text-slate-400 mt-1">Fecha: {new Date(selectedContract.freelancerAcceptedAt!).toLocaleString('es-MX')}</p>
-                        <p className="text-slate-400">IP: {selectedContract.freelancerAcceptedIp}</p>
+                      <div className="flex justify-between items-start gap-4">
+                        <div>
+                          <p className="font-bold text-slate-900 dark:text-white font-serif italic text-sm">{selectedContract.freelancerAcceptedByName}</p>
+                          <p className="text-slate-400 mt-1">Fecha: {new Date(selectedContract.freelancerAcceptedAt!).toLocaleString('es-MX')}</p>
+                          <p className="text-slate-400">IP: {selectedContract.freelancerAcceptedIp}</p>
+                        </div>
+                        {profile?.signatureUrl && (
+                          <img src={profile.signatureUrl} alt="Firma Freelancer" className="max-h-12 object-contain bg-white rounded-lg p-1 border border-slate-100 dark:border-slate-850 dark:bg-slate-900/50" />
+                        )}
                       </div>
                     ) : (
                       <p className="text-slate-400 italic">Pendiente de contra-firma del freelancer</p>
@@ -1451,6 +1574,109 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isEditingContract && selectedContract && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto print:hidden">
+          <div className="bg-slate-50 dark:bg-slate-950 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl border border-indigo-500/20">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900 sticky top-0 z-10 rounded-t-3xl">
+              <h3 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <Settings className="h-5 w-5 text-indigo-500" />
+                Modificar Términos de la Propuesta
+              </h3>
+              <button
+                onClick={() => setIsEditingContract(false)}
+                className="rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-bold transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+
+            {/* Content */}
+            <form onSubmit={handleSaveModification} className="p-6 flex flex-col gap-6 text-left">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Scope Input */}
+                <div className="md:col-span-2 flex flex-col gap-1.5">
+                  <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Concepto y Alcance de Trabajo</label>
+                  <textarea
+                    rows={6}
+                    required
+                    value={editScopeDescription}
+                    onChange={(e) => setEditScopeDescription(e.target.value)}
+                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                </div>
+
+                {/* Amount Input */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Presupuesto Total ({selectedContract.currency})</label>
+                  <input
+                    type="number"
+                    min={1}
+                    required
+                    value={editTotalAmount || ""}
+                    onChange={(e) => setEditTotalAmount(Number(e.target.value))}
+                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                  <p className="text-3xs text-slate-500 dark:text-slate-400 leading-normal mt-1">
+                    Nota: Los montos de los hitos existentes se ajustarán proporcionalmente para sumar exactamente esta cantidad.
+                  </p>
+                </div>
+              </div>
+
+              {/* Visual Diff Panel */}
+              <div className="border-t border-slate-200 dark:border-slate-800 pt-6">
+                <span className="text-xs font-bold text-slate-900 dark:text-white block mb-4 uppercase tracking-wider">Comparativa de Cambios (Diff Visual)</span>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left: Original */}
+                  <div className="flex flex-col gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-3xs font-extrabold text-red-600 uppercase tracking-wider">Versión Original</span>
+                      <span className="text-xs font-bold text-red-600 line-through">
+                        {formatMoney(selectedContract.totalAmount, selectedContract.currency)}
+                      </span>
+                    </div>
+                    <div className="whitespace-pre-wrap text-xs text-slate-650 dark:text-slate-450 line-through leading-relaxed">
+                      {selectedContract.scopeDescription}
+                    </div>
+                  </div>
+
+                  {/* Right: Proposed */}
+                  <div className="flex flex-col gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-3xs font-extrabold text-emerald-600 uppercase tracking-wider">Nueva Propuesta</span>
+                      <span className="text-xs font-black text-emerald-600">
+                        {formatMoney(editTotalAmount, selectedContract.currency)}
+                      </span>
+                    </div>
+                    <div className="whitespace-pre-wrap text-xs text-slate-800 dark:text-white leading-relaxed">
+                      {editScopeDescription}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="border-t border-slate-200 dark:border-slate-800 pt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingContract(false)}
+                  className="rounded-xl bg-slate-100 dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-indigo-500/10"
+                >
+                  Confirmar y Solicitar Firma
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

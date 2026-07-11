@@ -14,9 +14,9 @@ import {
   CreditCard,
   ExternalLink
 } from "lucide-react";
-import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs } from "@/lib/storageClient";
+import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
-import { Contract, Milestone, AuditLog } from "@/lib/types";
+import { Contract, Milestone, AuditLog, Profile } from "@/lib/types";
 
 export default function ClientContractView() {
   const params = useParams();
@@ -25,6 +25,7 @@ export default function ClientContractView() {
   const [contract, setContract] = useState<Contract | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [copiedClabe, setCopiedClabe] = useState(false);
   
   // Modals state
@@ -49,6 +50,9 @@ export default function ClientContractView() {
           setMilestones(mList);
           const logs = await getAuditLogs(c.id);
           setAuditLogs(logs);
+          
+          const prof = await getProfile();
+          setProfile(prof);
         }
       }
     }
@@ -223,9 +227,14 @@ export default function ClientContractView() {
           {/* Header document representation */}
           <div className="flex flex-col gap-6 pb-6 border-b border-slate-100 dark:border-slate-900">
             <div className="flex justify-between items-start gap-4">
-              <div>
-                <h1 className="text-2xl font-black uppercase text-slate-800 dark:text-white tracking-tight">Propuesta de Contrato</h1>
-                <p className="text-xs text-slate-400 font-mono mt-1">ID: {contract.id.substring(0, 18)}</p>
+              <div className="flex items-center gap-4">
+                {profile?.logoUrl && (
+                  <img src={profile.logoUrl} alt="Logo" className="h-12 w-12 object-contain rounded-xl border border-slate-100 dark:border-slate-800 bg-white" />
+                )}
+                <div>
+                  <h1 className="text-2xl font-black uppercase text-slate-800 dark:text-white tracking-tight">Propuesta de Contrato</h1>
+                  <p className="text-xs text-slate-400 font-mono mt-1">ID: {contract.id.substring(0, 18)}</p>
+                </div>
               </div>
               <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold uppercase ring-1 ring-inset ${
                 contract.status === 'accepted'
@@ -322,15 +331,22 @@ export default function ClientContractView() {
 
             {/* 2. Freelancer counter-signature details if present */}
             {(contract.status === 'accepted' || contract.status === 'completed') && contract.freelancerAcceptedAt ? (
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-xs flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
-                  <ShieldCheck className="h-4 w-4" />
-                  <span>Verificado y Contra-firmado por el Freelancer</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-500 dark:text-slate-400 mt-1 font-light">
-                  <p>Validador: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedByName}</span></p>
-                  <p>Dirección IP: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedIp}</span></p>
-                  <p>Fecha/Hora: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedAt ? new Date(contract.freelancerAcceptedAt).toLocaleString('es-MX') : ''}</span></p>
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-xs flex flex-col gap-3">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>Verificado y Contra-firmado por el Freelancer</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-500 dark:text-slate-400 mt-1 font-light">
+                      <p>Validador: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedByName}</span></p>
+                      <p>Dirección IP: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedIp}</span></p>
+                      <p>Fecha/Hora: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedAt ? new Date(contract.freelancerAcceptedAt).toLocaleString('es-MX') : ''}</span></p>
+                    </div>
+                  </div>
+                  {profile?.signatureUrl && (
+                    <img src={profile.signatureUrl} alt="Firma Freelancer" className="max-h-12 object-contain bg-white rounded-lg p-1 border border-slate-100 dark:border-slate-800 dark:bg-slate-900/50" />
+                  )}
                 </div>
               </div>
             ) : contract.status === 'client_signed' ? (

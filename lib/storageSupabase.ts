@@ -86,6 +86,8 @@ export async function getProfile(): Promise<Profile> {
       rfc: "GUEH860710MX3",
       regimenFiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
       codigoPostal: "06700",
+      logoUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&h=120&fit=crop&auto=format",
+      signatureUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3a/John_Hancock_signature.svg",
       bankDetails: {
         clabe: "012180001509987654",
         bankName: "BBVA México",
@@ -101,6 +103,8 @@ export async function getProfile(): Promise<Profile> {
     rfc: data.rfc,
     regimenFiscal: data.regimen_fiscal,
     codigoPostal: data.codigo_postal,
+    logoUrl: data.logo_url || undefined,
+    signatureUrl: data.signature_url || undefined,
     bankDetails: {
       clabe: data.bank_details.clabe,
       bankName: data.bank_details.bankName,
@@ -122,6 +126,8 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
         rfc: profile.rfc,
         regimen_fiscal: profile.regimenFiscal,
         codigo_postal: profile.codigoPostal,
+        logo_url: profile.logoUrl || null,
+        signature_url: profile.signatureUrl || null,
         bank_details: profile.bankDetails,
         updated_at: new Date().toISOString()
       })
@@ -139,6 +145,8 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
         rfc: profile.rfc,
         regimen_fiscal: profile.regimenFiscal,
         codigo_postal: profile.codigoPostal,
+        logo_url: profile.logoUrl || null,
+        signature_url: profile.signatureUrl || null,
         bank_details: profile.bankDetails
       });
 

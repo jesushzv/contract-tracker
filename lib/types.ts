@@ -5,6 +5,8 @@ export interface Profile {
   rfc?: string;
   regimenFiscal?: string;
   codigoPostal?: string;
+  logoUrl?: string;
+  signatureUrl?: string;
   bankDetails: {
     clabe: string;
     bankName: string;
@@ -81,7 +83,7 @@ export interface ClauseTemplate {
 export interface AuditLog {
   id: string;
   contractId: string;
-  action: 'created' | 'client_signed' | 'freelancer_accepted' | 'milestone_requested' | 'milestone_transferred' | 'milestone_confirmed';
+  action: 'created' | 'client_signed' | 'freelancer_accepted' | 'milestone_requested' | 'milestone_transferred' | 'milestone_confirmed' | 'modified';
   actor: 'freelancer' | 'client' | 'system';
   details: string;
   timestamp: string;
