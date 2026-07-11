@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { 
   FileText, 
@@ -14,10 +14,11 @@ import {
   AlertCircle, 
   Eye, 
   Settings, 
-  ExternalLink,
-  ShieldCheck,
-  Briefcase,
-  RotateCcw
+  ExternalLink, 
+  ShieldCheck, 
+  Briefcase, 
+  RotateCcw,
+  BarChart3
 } from "lucide-react";
 import { 
   getContracts, 
@@ -25,12 +26,16 @@ import {
   getProfile, 
   updateProfile, 
   saveContract, 
+  saveMilestones,
   updateMilestoneStatus,
   getAuditLogs,
-  vetAndAcceptContract
+  vetAndAcceptContract,
+  addAuditLog,
+  loadSampleData
 } from "@/lib/storageClient";
 import { Contract, Milestone, Profile, AuditLog } from "@/lib/types";
 import { MOCK_CLAUSES } from "@/lib/mockData";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -44,6 +49,11 @@ export default function Dashboard() {
   const [allMilestones, setAllMilestones] = useState<Milestone[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [isEditingContract, setIsEditingContract] = useState(false);
+  const [editScopeDescription, setEditScopeDescription] = useState("");
+  const [editTotalAmount, setEditTotalAmount] = useState(0);
+  const [editMilestones, setEditMilestones] = useState<Milestone[]>([]);
 
   const [fullName, setFullName] = useState("");
   const [clabe, setClabe] = useState("");
@@ -52,6 +62,8 @@ export default function Dashboard() {
   const [rfc, setRfc] = useState("");
   const [regimenFiscal, setRegimenFiscal] = useState("");
   const [codigoPostal, setCodigoPostal] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [signatureUrl, setSignatureUrl] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
 
@@ -79,6 +91,8 @@ export default function Dashboard() {
       setRfc(prof.rfc || "");
       setRegimenFiscal(prof.regimenFiscal || "");
       setCodigoPostal(prof.codigoPostal || "");
+      setLogoUrl(prof.logoUrl || "");
+      setSignatureUrl(prof.signatureUrl || "");
 
       const allContracts = await getContracts();
       setContracts(allContracts);
@@ -160,6 +174,73 @@ export default function Dashboard() {
     }
   };
 
+  const handleEditTotalAmountChange = (newTotal: number) => {
+    setEditTotalAmount(newTotal);
+    setEditMilestones(prev => {
+      if (prev.length === 0) return prev;
+      const oldSum = prev.reduce((sum, m) => sum + m.amount, 0) || 1;
+      const scaleFactor = newTotal / oldSum;
+      let runningSum = 0;
+      return prev.map((m, idx) => {
+        const isLast = idx === prev.length - 1;
+        let newAmt = Math.round(m.amount * scaleFactor);
+        if (isLast) {
+          newAmt = newTotal - runningSum;
+        } else {
+          runningSum += newAmt;
+        }
+        return { ...m, amount: newAmt };
+      });
+    });
+  };
+
+  const handleEditMilestoneAmount = (idx: number, newAmt: number) => {
+    setEditMilestones(prev => {
+      const updated = prev.map((m, i) => i === idx ? { ...m, amount: newAmt } : m);
+      const newSum = updated.reduce((sum, m) => sum + m.amount, 0);
+      setEditTotalAmount(newSum);
+      return updated;
+    });
+  };
+
+  const handleSaveModification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedContract) return;
+
+    try {
+      const updatedContract: Contract = {
+        ...selectedContract,
+        scopeDescription: editScopeDescription,
+        totalAmount: editTotalAmount,
+        status: 'sent',
+        acceptedAt: undefined,
+        acceptedByName: undefined,
+        acceptedIp: undefined,
+        freelancerAcceptedAt: undefined,
+        freelancerAcceptedByName: undefined,
+        freelancerAcceptedIp: undefined,
+        contractHash: undefined
+      };
+
+      await saveContract(updatedContract);
+      await saveMilestones(editMilestones);
+
+      await addAuditLog({
+        contractId: selectedContract.id,
+        action: 'modified',
+        actor: 'freelancer',
+        details: `El freelancer modificó el alcance y presupuesto del contrato (Nuevo monto: ${editTotalAmount} ${selectedContract.currency}). El acuerdo regresó a estado Enviado.`,
+        ip: '127.0.0.1'
+      });
+
+      setIsEditingContract(false);
+      await refreshData();
+      alert("Propuesta modificada con éxito. El estado se ha restablecido a 'Enviado' para la aceptación y firma del cliente.");
+    } catch (err) {
+      alert("Error al guardar modificaciones: " + err);
+    }
+  };
+
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
@@ -170,6 +251,8 @@ export default function Dashboard() {
       rfc: rfc || undefined,
       regimenFiscal: regimenFiscal || undefined,
       codigoPostal: codigoPostal || undefined,
+      logoUrl: logoUrl || undefined,
+      signatureUrl: signatureUrl || undefined,
       bankDetails: {
         clabe,
         bankName,
@@ -184,6 +267,35 @@ export default function Dashboard() {
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       alert("Error al guardar perfil: " + err);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      localStorage.removeItem("demo_mode");
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+    } catch (err) {
+      alert("Error al cerrar sesión: " + err);
+    }
+  };
+
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const handleLoadDemoData = async () => {
+    setIsSeeding(true);
+    try {
+      const ok = await loadSampleData();
+      if (ok) {
+        alert("¡Datos de ejemplo cargados con éxito! Ahora puedes probar el flujo completo en tu propio perfil.");
+        await refreshData();
+      } else {
+        alert("No se pudieron cargar los datos de ejemplo.");
+      }
+    } catch (err) {
+      alert("Error al cargar datos demo: " + err);
+    } finally {
+      setIsSeeding(false);
     }
   };
 
@@ -238,6 +350,120 @@ export default function Dashboard() {
 
   const totalOverdueMilestones = allMilestones.filter(m => isMilestoneOverdue(m)).length;
 
+  const contractMap = useMemo(() => {
+    const map = new Map<string, { currency: string; status: string }>();
+    contracts.forEach(c => {
+      map.set(c.id, { currency: c.currency || 'MXN', status: c.status });
+    });
+    return map;
+  }, [contracts]);
+
+  const financialStats = useMemo(() => {
+    const stats = {
+      MXN: { confirmed: 0, marked_paid: 0, pending: 0 },
+      USD: { confirmed: 0, marked_paid: 0, pending: 0 }
+    };
+
+    allMilestones.forEach(m => {
+      const cMeta = contractMap.get(m.contractId);
+      if (!cMeta) return;
+
+      const curr = cMeta.currency === 'USD' ? 'USD' : 'MXN';
+      const amount = m.amount || 0;
+
+      if (m.status === 'confirmed') {
+        stats[curr].confirmed += amount;
+      } else if (m.status === 'marked_paid') {
+        stats[curr].marked_paid += amount;
+      } else {
+        if (cMeta.status !== 'cancelled' && cMeta.status !== 'draft') {
+          stats[curr].pending += amount;
+        }
+      }
+    });
+
+    return stats;
+  }, [allMilestones, contractMap]);
+
+  const contractStateStats = useMemo(() => {
+    const stats = {
+      draft: 0,
+      sent: 0,
+      client_signed: 0,
+      accepted: 0,
+      completed: 0,
+      cancelled: 0,
+      total: 0
+    };
+
+    contracts.forEach(c => {
+      const status = c.status as keyof typeof stats;
+      if (stats[status] !== undefined) {
+        stats[status]++;
+        stats['total']++;
+      }
+    });
+
+    return stats;
+  }, [contracts]);
+
+  const timelineStats = useMemo(() => {
+    const monthlyData: {
+      [key: string]: {
+        monthKey: string;
+        sortKey: string;
+        MXN: { total: number; confirmed: number; marked_paid: number; pending: number };
+        USD: { total: number; confirmed: number; marked_paid: number; pending: number };
+      }
+    } = {};
+
+    allMilestones.forEach(m => {
+      const cMeta = contractMap.get(m.contractId);
+      if (!cMeta || cMeta.status === 'cancelled') return;
+
+      if (!m.dueDate) return;
+      const date = new Date(m.dueDate);
+      if (isNaN(date.getTime())) return;
+      
+      const year = date.getFullYear();
+      const monthIndex = date.getMonth();
+      const months = [
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+      ];
+      const monthName = months[monthIndex];
+      const monthKey = `${monthName} ${year}`;
+      const sortKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+
+      if (!monthlyData[sortKey]) {
+        monthlyData[sortKey] = {
+          monthKey,
+          sortKey,
+          MXN: { total: 0, confirmed: 0, marked_paid: 0, pending: 0 },
+          USD: { total: 0, confirmed: 0, marked_paid: 0, pending: 0 }
+        };
+      }
+
+      const curr = cMeta.currency === 'USD' ? 'USD' : 'MXN';
+      const amount = m.amount || 0;
+
+      if (m.status === 'confirmed') {
+        monthlyData[sortKey][curr].confirmed += amount;
+        monthlyData[sortKey][curr].total += amount;
+      } else if (m.status === 'marked_paid') {
+        monthlyData[sortKey][curr].marked_paid += amount;
+        monthlyData[sortKey][curr].total += amount;
+      } else {
+        if (cMeta.status !== 'draft') {
+          monthlyData[sortKey][curr].pending += amount;
+          monthlyData[sortKey][curr].total += amount;
+        }
+      }
+    });
+
+    return Object.values(monthlyData).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  }, [allMilestones, contractMap]);
+
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 text-slate-800 dark:text-slate-200">
       {/* Dashboard Top Header bar */}
@@ -258,6 +484,14 @@ export default function Dashboard() {
         
         <div className="flex items-center gap-2 self-start sm:self-center">
           <button
+            onClick={() => setShowSummary(!showSummary)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all"
+          >
+            <BarChart3 className="h-4 w-4 text-indigo-500" />
+            {showSummary ? "Ocultar Analíticas" : "Ver Resumen Financiero"}
+          </button>
+          
+          <button
             onClick={() => setShowSettings(!showSettings)}
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all"
           >
@@ -274,6 +508,285 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Quick-Start Templates Deck */}
+      <div className="flex flex-col gap-3 text-left">
+        <span className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Crear Nuevo desde Plantilla</span>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Link
+            href="/contracts/new?template=general"
+            className="glass p-4 rounded-2xl border-indigo-500/10 hover:border-indigo-500/35 transition-all text-left flex flex-col justify-between h-28 group relative overflow-hidden cursor-pointer bg-white/40 dark:bg-slate-900/40"
+          >
+            <div className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-indigo-500/5 group-hover:bg-indigo-500/10 blur-xl transition-all" />
+            <h4 className="font-bold text-xs text-slate-800 dark:text-white group-hover:text-indigo-500 transition-colors">Plantilla General</h4>
+            <p className="text-3xs text-slate-400 leading-normal mt-1">Servicios profesionales generales de honorarios.</p>
+          </Link>
+          <Link
+            href="/contracts/new?template=development"
+            className="glass p-4 rounded-2xl border-indigo-500/10 hover:border-indigo-500/35 transition-all text-left flex flex-col justify-between h-28 group relative overflow-hidden cursor-pointer bg-white/40 dark:bg-slate-900/40"
+          >
+            <div className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-emerald-500/5 group-hover:bg-emerald-500/10 blur-xl transition-all" />
+            <h4 className="font-bold text-xs text-slate-800 dark:text-white group-hover:text-emerald-500 transition-colors">Desarrollo Software</h4>
+            <p className="text-3xs text-slate-400 leading-normal mt-1">Hitos para código, Beta y despliegue a producción.</p>
+          </Link>
+          <Link
+            href="/contracts/new?template=design"
+            className="glass p-4 rounded-2xl border-indigo-500/10 hover:border-indigo-500/35 transition-all text-left flex flex-col justify-between h-28 group relative overflow-hidden cursor-pointer bg-white/40 dark:bg-slate-900/40"
+          >
+            <div className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-indigo-500/5 group-hover:bg-indigo-500/10 blur-xl transition-all" />
+            <h4 className="font-bold text-xs text-slate-800 dark:text-white group-hover:text-indigo-500 transition-colors">Diseño UI/UX</h4>
+            <p className="text-3xs text-slate-400 leading-normal mt-1">Esquema conceptual, revisiones y entrega final.</p>
+          </Link>
+          <Link
+            href="/contracts/new?template=consulting"
+            className="glass p-4 rounded-2xl border-indigo-500/10 hover:border-indigo-500/35 transition-all text-left flex flex-col justify-between h-28 group relative overflow-hidden cursor-pointer bg-white/40 dark:bg-slate-900/40"
+          >
+            <div className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-amber-500/5 group-hover:bg-amber-500/10 blur-xl transition-all" />
+            <h4 className="font-bold text-xs text-slate-800 dark:text-white group-hover:text-amber-500 transition-colors">Consultoría Directa</h4>
+            <p className="text-3xs text-slate-400 leading-normal mt-1">Pago único del 100% contra honorarios.</p>
+          </Link>
+        </div>
+      </div>
+
+      {/* Freelancer Analytics Summary View */}
+      {showSummary && (
+        <div className="glass rounded-3xl p-6 border-indigo-500/20 bg-white/50 dark:bg-slate-950/50 flex flex-col gap-6 text-left animate-in slide-in-from-top-4 duration-300">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+              <BarChart3 className="h-5 w-5 text-indigo-500" />
+              Resumen de Flujo y Estados de Contrato
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Visualiza tus ingresos cobrados, fondos en tránsito de validación y tus cobros futuros proyectados en base a tu cronograma mensual.
+            </p>
+          </div>
+
+          {/* Financial Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Confirmed Earnings Card */}
+            <div className="glass rounded-2xl p-5 border-emerald-500/20 bg-emerald-500/5 flex flex-col gap-1.5 shadow-sm">
+              <span className="text-2xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Ingresos Verificados (Cobrado)
+              </span>
+              <div className="flex flex-col gap-1">
+                {(financialStats.MXN.confirmed > 0 || financialStats.USD.confirmed === 0) && (
+                  <span className="text-2xl font-black text-slate-900 dark:text-white">
+                    {formatMoney(financialStats.MXN.confirmed, 'MXN')}
+                  </span>
+                )}
+                {financialStats.USD.confirmed > 0 && (
+                  <span className="text-lg font-bold text-slate-700 dark:text-slate-350">
+                    {formatMoney(financialStats.USD.confirmed, 'USD')}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* In Transit Card */}
+            <div className="glass rounded-2xl p-5 border-amber-500/20 bg-amber-500/5 flex flex-col gap-1.5 shadow-sm">
+              <span className="text-2xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5 animate-pulse" />
+                En Tránsito (Por Validar)
+              </span>
+              <div className="flex flex-col gap-1">
+                {(financialStats.MXN.marked_paid > 0 || financialStats.USD.marked_paid === 0) && (
+                  <span className="text-2xl font-black text-slate-900 dark:text-white">
+                    {formatMoney(financialStats.MXN.marked_paid, 'MXN')}
+                  </span>
+                )}
+                {financialStats.USD.marked_paid > 0 && (
+                  <span className="text-lg font-bold text-slate-700 dark:text-slate-350">
+                    {formatMoney(financialStats.USD.marked_paid, 'USD')}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Projected Card */}
+            <div className="glass rounded-2xl p-5 border-indigo-500/20 bg-indigo-500/5 flex flex-col gap-1.5 shadow-sm">
+              <span className="text-2xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1">
+                <Briefcase className="h-3.5 w-3.5" />
+                Proyectado Futuro (Por Cobrar)
+              </span>
+              <div className="flex flex-col gap-1">
+                {(financialStats.MXN.pending > 0 || financialStats.USD.pending === 0) && (
+                  <span className="text-2xl font-black text-slate-900 dark:text-white">
+                    {formatMoney(financialStats.MXN.pending, 'MXN')}
+                  </span>
+                )}
+                {financialStats.USD.pending > 0 && (
+                  <span className="text-lg font-bold text-slate-700 dark:text-slate-350">
+                    {formatMoney(financialStats.USD.pending, 'USD')}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* State-wise Distribution */}
+          <div className="border-t border-slate-200 dark:border-slate-800/80 pt-5">
+            <h4 className="text-2xs font-bold text-slate-400 uppercase tracking-widest mb-3">Distribución por Estado de Contrato</h4>
+            <div className="flex flex-col gap-2">
+              {/* Progress bar stack */}
+              <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
+                {contractStateStats.total > 0 ? (
+                  <>
+                    <div 
+                      className="bg-slate-400 dark:bg-slate-500 transition-all duration-300" 
+                      style={{ width: `${(contractStateStats.draft / contractStateStats.total) * 100}%` }}
+                      title={`Borradores: ${contractStateStats.draft}`}
+                    />
+                    <div 
+                      className="bg-amber-500 transition-all duration-300" 
+                      style={{ width: `${(contractStateStats.sent / contractStateStats.total) * 100}%` }}
+                      title={`Pendientes: ${contractStateStats.sent}`}
+                    />
+                    <div 
+                      className="bg-purple-500 transition-all duration-300" 
+                      style={{ width: `${(contractStateStats.client_signed / contractStateStats.total) * 100}%` }}
+                      title={`Firmados Cliente: ${contractStateStats.client_signed}`}
+                    />
+                    <div 
+                      className="bg-indigo-600 transition-all duration-300" 
+                      style={{ width: `${(contractStateStats.accepted / contractStateStats.total) * 100}%` }}
+                      title={`Sellados Activos: ${contractStateStats.accepted}`}
+                    />
+                    <div 
+                      className="bg-emerald-500 transition-all duration-300" 
+                      style={{ width: `${(contractStateStats.completed / contractStateStats.total) * 100}%` }}
+                      title={`Completados: ${contractStateStats.completed}`}
+                    />
+                  </>
+                ) : (
+                  <div className="w-full bg-slate-100 dark:bg-slate-900" />
+                )}
+              </div>
+
+              {/* Labels list */}
+              <div className="flex flex-wrap gap-x-5 gap-y-2 text-3xs font-semibold text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500" />
+                  Borrador: <span className="text-slate-850 dark:text-slate-200 font-black">{contractStateStats.draft}</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  Pendiente: <span className="text-slate-850 dark:text-slate-200 font-black">{contractStateStats.sent}</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-purple-500" />
+                  Firmado Cliente: <span className="text-slate-850 dark:text-slate-200 font-black">{contractStateStats.client_signed}</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-indigo-600" />
+                  Activo / Sellado: <span className="text-slate-850 dark:text-slate-200 font-black">{contractStateStats.accepted}</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Completado: <span className="text-slate-850 dark:text-slate-200 font-black">{contractStateStats.completed}</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Timeline monthly view */}
+          <div className="border-t border-slate-200 dark:border-slate-800/80 pt-5">
+            <h4 className="text-2xs font-bold text-slate-400 uppercase tracking-widest mb-4">Cronograma Mensual de Cobros (Timeline)</h4>
+            
+            {timelineStats.length > 0 ? (
+              <div className="flex flex-col gap-4 max-h-[250px] overflow-y-auto pr-2">
+                {timelineStats.map((item) => (
+                  <div key={item.sortKey} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center border-b border-slate-100 dark:border-slate-900/40 pb-3 last:border-b-0 last:pb-0">
+                    <div className="sm:col-span-3 text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {item.monthKey}
+                    </div>
+                    
+                    <div className="sm:col-span-9 flex flex-col gap-2">
+                      {/* MXN Timeline Flow */}
+                      {item.MXN.total > 0 && (
+                        <div className="flex items-center gap-3 w-full">
+                          <span className="text-3xs font-mono text-slate-400 dark:text-slate-500 w-24 text-left">MXN: {formatMoney(item.MXN.total, 'MXN')}</span>
+                          <div className="flex-1 h-3.5 bg-slate-100 dark:bg-slate-900/60 rounded-full overflow-hidden flex shadow-inner">
+                            {item.MXN.confirmed > 0 && (
+                              <div 
+                                className="bg-emerald-500/80 hover:bg-emerald-500 transition-all duration-300" 
+                                style={{ width: `${(item.MXN.confirmed / item.MXN.total) * 100}%` }}
+                                title={`Cobrado: ${formatMoney(item.MXN.confirmed, 'MXN')}`}
+                              />
+                            )}
+                            {item.MXN.marked_paid > 0 && (
+                              <div 
+                                className="bg-amber-500/80 hover:bg-amber-500 transition-all duration-300 animate-pulse" 
+                                style={{ width: `${(item.MXN.marked_paid / item.MXN.total) * 100}%` }}
+                                title={`Por Validar: ${formatMoney(item.MXN.marked_paid, 'MXN')}`}
+                              />
+                            )}
+                            {item.MXN.pending > 0 && (
+                              <div 
+                                className="bg-indigo-500/30 hover:bg-indigo-500/50 transition-all duration-300" 
+                                style={{ width: `${(item.MXN.pending / item.MXN.total) * 100}%` }}
+                                title={`Por Cobrar: ${formatMoney(item.MXN.pending, 'MXN')}`}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* USD Timeline Flow */}
+                      {item.USD.total > 0 && (
+                        <div className="flex items-center gap-3 w-full">
+                          <span className="text-3xs font-mono text-slate-400 dark:text-slate-500 w-24 text-left">USD: {formatMoney(item.USD.total, 'USD')}</span>
+                          <div className="flex-1 h-3.5 bg-slate-100 dark:bg-slate-900/60 rounded-full overflow-hidden flex shadow-inner">
+                            {item.USD.confirmed > 0 && (
+                              <div 
+                                className="bg-emerald-500/80 hover:bg-emerald-500 transition-all duration-300" 
+                                style={{ width: `${(item.USD.confirmed / item.USD.total) * 100}%` }}
+                                title={`Cobrado: ${formatMoney(item.USD.confirmed, 'USD')}`}
+                              />
+                            )}
+                            {item.USD.marked_paid > 0 && (
+                              <div 
+                                className="bg-amber-500/80 hover:bg-amber-500 transition-all duration-300 animate-pulse" 
+                                style={{ width: `${(item.USD.marked_paid / item.USD.total) * 100}%` }}
+                                title={`Por Validar: ${formatMoney(item.USD.marked_paid, 'USD')}`}
+                              />
+                            )}
+                            {item.USD.pending > 0 && (
+                              <div 
+                                className="bg-indigo-500/30 hover:bg-indigo-500/50 transition-all duration-300" 
+                                style={{ width: `${(item.USD.pending / item.USD.total) * 100}%` }}
+                                title={`Por Cobrar: ${formatMoney(item.USD.pending, 'USD')}`}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Flow Legend */}
+                <div className="flex gap-4 text-3xs font-semibold text-slate-400 uppercase tracking-widest justify-end mt-2">
+                  <span className="flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Cobrado
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                    Por Validar
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-indigo-500/40" />
+                    Por Cobrar
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 italic">No hay hitos programados en este momento.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Fiscal settings toggle area */}
       {showSettings && (
@@ -363,19 +876,50 @@ export default function Dashboard() {
               />
             </div>
 
-            <div className="md:col-span-3 flex justify-end gap-3 pt-2">
-              {saveSuccess && (
-                <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Perfil guardado con éxito
-                </span>
-              )}
+            <div className="flex flex-col gap-1.5 md:col-span-2">
+              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Logo de la Empresa (URL de Imagen)</label>
+              <input
+                type="text"
+                placeholder="Ej. https://images.unsplash.com/photo-... o de tu sitio"
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Firma Digital (URL de Imagen)</label>
+              <input
+                type="text"
+                placeholder="Ej. https://upload.wikimedia.org/... o firma"
+                value={signatureUrl}
+                onChange={(e) => setSignatureUrl(e.target.value)}
+                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+              />
+            </div>
+
+            <div className="md:col-span-3 flex justify-between items-center pt-2">
               <button
-                type="submit"
-                className="rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors"
+                type="button"
+                onClick={handleSignOut}
+                className="rounded-xl border border-red-200 dark:border-red-900 text-red-650 hover:bg-red-50 dark:hover:bg-red-950/20 px-5 py-2.5 text-xs font-semibold transition-colors cursor-pointer"
               >
-                Guardar Cambios
+                Cerrar Sesión
               </button>
+              <div className="flex gap-3 items-center">
+                {saveSuccess && (
+                  <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Perfil guardado con éxito
+                  </span>
+                )}
+                <button
+                  type="submit"
+                  className="rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors cursor-pointer"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -477,7 +1021,19 @@ export default function Dashboard() {
 
           {/* List display */}
           <div className="flex flex-col gap-3 overflow-y-auto max-h-[70vh] pr-2">
-            {filteredContracts.length === 0 ? (
+            {contracts.length === 0 ? (
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/20 dark:bg-slate-950/20 p-8 text-center flex flex-col items-center gap-3.5 border-dashed">
+                <span className="text-xs text-slate-400 font-light">Aún no tienes contratos registrados en tu cuenta.</span>
+                <button
+                  type="button"
+                  onClick={handleLoadDemoData}
+                  disabled={isSeeding}
+                  className="rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-550 dark:text-indigo-400 font-bold px-4 py-2 text-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isSeeding ? "Cargando..." : "Cargar Datos de Ejemplo"}
+                </button>
+              </div>
+            ) : filteredContracts.length === 0 ? (
               <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/20 dark:bg-slate-950/20 p-8 text-center text-xs text-slate-400 font-light border-dashed">
                 No se encontraron contratos con los criterios seleccionados.
               </div>
@@ -621,11 +1177,24 @@ export default function Dashboard() {
               )}
 
               {selectedContract.status === 'sent' && (
-                <div className="rounded-2xl bg-indigo-500/10 border border-indigo-500/20 p-4 text-sm text-indigo-800 dark:text-indigo-400 flex items-start gap-3">
-                  <Send className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold">Estado: Enviado (Pendiente de Aceptación)</span>. Envía el enlace al cliente para que revise el alcance y firme de aceptado electrónicamente.
+                <div className="rounded-2xl bg-indigo-500/10 border border-indigo-500/20 p-4 text-sm text-indigo-800 dark:text-indigo-400 flex flex-col gap-2.5">
+                  <div className="flex items-start gap-3">
+                    <Send className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Estado: Enviado (Pendiente de Aceptación)</span>. Envía el enlace al cliente para que revise el alcance y firme de aceptado electrónicamente.
+                    </div>
                   </div>
+                  <button
+                    onClick={() => {
+                      setEditScopeDescription(selectedContract.scopeDescription);
+                      setEditTotalAmount(selectedContract.totalAmount);
+                      setEditMilestones(milestones.map(m => ({ ...m })));
+                      setIsEditingContract(true);
+                    }}
+                    className="w-full mt-1 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 text-indigo-650 dark:text-indigo-400 font-bold py-2 text-xs transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    Modificar Propuesta
+                  </button>
                 </div>
               )}
 
@@ -640,13 +1209,26 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={handleVetAndCounterSign}
-                    className="w-full mt-2 rounded-xl bg-purple-600 hover:bg-purple-550 text-white font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-purple-500/10"
-                  >
-                    <ShieldCheck className="h-4 w-4" />
-                    Validar y Contra-firmar
-                  </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                    <button
+                      onClick={handleVetAndCounterSign}
+                      className="rounded-xl bg-purple-600 hover:bg-purple-550 text-white font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-purple-500/10"
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                      Validar y Contra-firmar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditScopeDescription(selectedContract.scopeDescription);
+                        setEditTotalAmount(selectedContract.totalAmount);
+                        setEditMilestones(milestones.map(m => ({ ...m })));
+                        setIsEditingContract(true);
+                      }}
+                      className="rounded-xl border border-purple-200 dark:border-purple-800 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 text-purple-750 dark:text-purple-400 font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      Modificar Propuesta
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -975,9 +1557,14 @@ export default function Dashboard() {
             {/* Paper content */}
             <div className="p-8 flex flex-col gap-8 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-250 m-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 max-w-3xl mx-auto w-full">
               {/* Proposal Header */}
-              <div className="text-center pb-6 border-b border-slate-150 dark:border-slate-800">
-                <h1 className="text-2xl font-extrabold text-indigo-500 uppercase tracking-wider">PROPUESTA DE SERVICIOS PROFESIONALES</h1>
-                <p className="text-xs text-slate-400 mt-1">ID Contrato: <span className="font-mono">{selectedContract.id}</span></p>
+              <div className="flex flex-col items-center gap-3 pb-6 border-b border-slate-150 dark:border-slate-800">
+                {profile?.logoUrl && (
+                  <img src={profile.logoUrl} alt="Logo" className="h-16 object-contain rounded-xl border border-slate-100 dark:border-slate-800 bg-white p-1" />
+                )}
+                <div className="text-center">
+                  <h1 className="text-2xl font-extrabold text-indigo-500 uppercase tracking-wider">PROPUESTA DE SERVICIOS PROFESIONALES</h1>
+                  <p className="text-xs text-slate-400 mt-1">ID Contrato: <span className="font-mono">{selectedContract.id}</span></p>
+                </div>
               </div>
 
               {/* Parties info */}
@@ -1064,10 +1651,15 @@ export default function Dashboard() {
                   <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4">
                     <p className="font-semibold text-slate-400 uppercase tracking-wider mb-2">Contra-firma Digital (Freelancer)</p>
                     {selectedContract.freelancerAcceptedByName ? (
-                      <div>
-                        <p className="font-bold text-slate-900 dark:text-white font-serif italic text-sm">{selectedContract.freelancerAcceptedByName}</p>
-                        <p className="text-slate-400 mt-1">Fecha: {new Date(selectedContract.freelancerAcceptedAt!).toLocaleString('es-MX')}</p>
-                        <p className="text-slate-400">IP: {selectedContract.freelancerAcceptedIp}</p>
+                      <div className="flex justify-between items-start gap-4">
+                        <div>
+                          <p className="font-bold text-slate-900 dark:text-white font-serif italic text-sm">{selectedContract.freelancerAcceptedByName}</p>
+                          <p className="text-slate-400 mt-1">Fecha: {new Date(selectedContract.freelancerAcceptedAt!).toLocaleString('es-MX')}</p>
+                          <p className="text-slate-400">IP: {selectedContract.freelancerAcceptedIp}</p>
+                        </div>
+                        {profile?.signatureUrl && (
+                          <img src={profile.signatureUrl} alt="Firma Freelancer" className="max-h-12 object-contain bg-white rounded-lg p-1 border border-slate-100 dark:border-slate-850 dark:bg-slate-900/50" />
+                        )}
                       </div>
                     ) : (
                       <p className="text-slate-400 italic">Pendiente de contra-firma del freelancer</p>
@@ -1087,6 +1679,147 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isEditingContract && selectedContract && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto print:hidden">
+          <div className="bg-slate-50 dark:bg-slate-950 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl border border-indigo-500/20">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900 sticky top-0 z-10 rounded-t-3xl">
+              <h3 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <Settings className="h-5 w-5 text-indigo-500" />
+                Modificar Términos de la Propuesta
+              </h3>
+              <button
+                onClick={() => setIsEditingContract(false)}
+                className="rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-bold transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+
+            {/* Content */}
+            <form onSubmit={handleSaveModification} className="p-6 flex flex-col gap-6 text-left">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Scope Input */}
+                <div className="md:col-span-2 flex flex-col gap-1.5">
+                  <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Concepto y Alcance de Trabajo</label>
+                  <textarea
+                    rows={6}
+                    required
+                    value={editScopeDescription}
+                    onChange={(e) => setEditScopeDescription(e.target.value)}
+                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                </div>
+
+                {/* Amount Input */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Presupuesto Total ({selectedContract.currency})</label>
+                  <input
+                    type="number"
+                    min={1}
+                    required
+                    value={editTotalAmount || ""}
+                    onChange={(e) => handleEditTotalAmountChange(Number(e.target.value))}
+                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-bold"
+                  />
+                  <p className="text-3xs text-slate-500 dark:text-slate-400 leading-normal mt-1">
+                    Tip: Edita el total para escalar proporcionalmente los hitos, o modifica los montos individuales abajo.
+                  </p>
+                </div>
+
+                {/* Individual Milestones Editing Section */}
+                <div className="md:col-span-2 flex flex-col gap-3.5 bg-slate-50/50 dark:bg-slate-900/10 p-4 rounded-2xl border border-slate-200 dark:border-slate-800/80 mt-2">
+                  <span className="text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Desglose e Importes de Hitos</span>
+                  <div className="flex flex-col gap-3">
+                    {editMilestones.map((m, idx) => (
+                      <div key={m.id || idx} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                        <div className="sm:col-span-7">
+                          <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Concepto</label>
+                          <input
+                            type="text"
+                            required
+                            value={m.label}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, label: val } : item));
+                            }}
+                            className="w-full rounded-lg border border-slate-350 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                          />
+                        </div>
+                        <div className="sm:col-span-5">
+                          <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Importe ({selectedContract.currency})</label>
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-3xs font-bold text-slate-400">$</span>
+                            <input
+                              type="number"
+                              required
+                              min={0}
+                              value={m.amount || ""}
+                              onChange={(e) => handleEditMilestoneAmount(idx, Number(e.target.value))}
+                              className="w-full rounded-lg border border-slate-350 dark:border-slate-700 bg-transparent pl-5 pr-3 py-1.5 text-xs font-bold focus:border-indigo-500 focus:outline-none dark:text-white"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Visual Diff Panel */}
+              <div className="border-t border-slate-200 dark:border-slate-800 pt-6">
+                <span className="text-xs font-bold text-slate-900 dark:text-white block mb-4 uppercase tracking-wider">Comparativa de Cambios (Diff Visual)</span>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left: Original */}
+                  <div className="flex flex-col gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-3xs font-extrabold text-red-600 uppercase tracking-wider">Versión Original</span>
+                      <span className="text-xs font-bold text-red-600 line-through">
+                        {formatMoney(selectedContract.totalAmount, selectedContract.currency)}
+                      </span>
+                    </div>
+                    <div className="whitespace-pre-wrap text-xs text-slate-650 dark:text-slate-450 line-through leading-relaxed">
+                      {selectedContract.scopeDescription}
+                    </div>
+                  </div>
+
+                  {/* Right: Proposed */}
+                  <div className="flex flex-col gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-3xs font-extrabold text-emerald-600 uppercase tracking-wider">Nueva Propuesta</span>
+                      <span className="text-xs font-black text-emerald-600">
+                        {formatMoney(editTotalAmount, selectedContract.currency)}
+                      </span>
+                    </div>
+                    <div className="whitespace-pre-wrap text-xs text-slate-800 dark:text-white leading-relaxed">
+                      {editScopeDescription}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="border-t border-slate-200 dark:border-slate-800 pt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingContract(false)}
+                  className="rounded-xl bg-slate-100 dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-indigo-500/10"
+                >
+                  Confirmar y Solicitar Firma
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

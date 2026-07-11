@@ -34,3 +34,21 @@ jobs:
 
     - name: Compile and Build Next.js Bundle
       run: npm run build
+
+    - name: Cache Playwright Browsers
+      uses: actions/cache@v4
+      id: playwright-cache
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+    - name: Install Playwright Browsers and Deps
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      run: npx playwright install --with-deps chromium
+
+    - name: Install Playwright System Deps
+      if: steps.playwright-cache.outputs.cache-hit == 'true'
+      run: npx playwright install-deps chromium
+
+    - name: Run E2E Browser Tests
+      run: npx playwright test

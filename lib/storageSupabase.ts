@@ -3,17 +3,38 @@
 import { createClient } from "@supabase/supabase-js";
 import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog } from "./types";
 import crypto from "crypto";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 
 // Initialize Supabase Client
 // These variables must be configured in Vercel's Environment Settings
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 // In server actions, we use the service role key to bypass RLS when performing admin or client signatures,
 // or we can use the default anon client. Let's create a client.
 const supabase = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey);
+
+async function getCurrentUserId(): Promise<string> {
+  try {
+    const cookieStore = await cookies();
+    const authCookie = cookieStore.getAll().find((cookie) => 
+      cookie.name.startsWith("sb-") && cookie.name.endsWith("-auth-token")
+    );
+
+    if (authCookie) {
+      const parsed = JSON.parse(authCookie.value);
+      if (parsed?.user?.id) {
+        return parsed.user.id;
+      }
+    }
+  } catch (e) {
+    console.error("Error reading Supabase auth cookie:", e);
+  }
+
+  // Fallback default profile UUID for sandbox/demo
+  return "d8b67104-e3c3-4d37-88ab-8c9df4a2e5d9";
+}
 
 // SERVER ACTIONS FOR AUDIT LOGS
 export async function getAuditLogs(contractId?: string): Promise<AuditLog[]> {
@@ -69,13 +90,12 @@ export async function addAuditLog(
 }
 
 export async function getProfile(): Promise<Profile> {
-  // In production, we would query by the logged in user ID.
-  // For the MVP, we query the single freelancer profile (or first profile)
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
-    .limit(1)
-    .single();
+    .eq("id", userId)
+    .maybeSingle();
 
   if (error || !data) {
     // Return a default profile if none exists yet
@@ -83,9 +103,11 @@ export async function getProfile(): Promise<Profile> {
       id: "demo-freelancer-uuid",
       email: "hector@freelancemx.dev",
       fullName: "Héctor J. Guerrero",
-      rfc: "GUEH860710MX3",
+      rfc: "GUEH860710MX8",
       regimenFiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
       codigoPostal: "06700",
+      logoUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&h=120&fit=crop&auto=format",
+      signatureUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3a/John_Hancock_signature.svg",
       bankDetails: {
         clabe: "012180001509987654",
         bankName: "BBVA México",
@@ -101,6 +123,8 @@ export async function getProfile(): Promise<Profile> {
     rfc: data.rfc,
     regimenFiscal: data.regimen_fiscal,
     codigoPostal: data.codigo_postal,
+    logoUrl: data.logo_url || undefined,
+    signatureUrl: data.signature_url || undefined,
     bankDetails: {
       clabe: data.bank_details.clabe,
       bankName: data.bank_details.bankName,
@@ -110,10 +134,17 @@ export async function getProfile(): Promise<Profile> {
 }
 
 export async function updateProfile(profile: Profile): Promise<Profile> {
-  // Check if profile exists first
-  const current = await getProfile().catch(() => null);
+  const userId = await getCurrentUserId();
+  const targetId = userId && userId !== "demo-freelancer-uuid" ? userId : (profile.id && profile.id !== "demo-freelancer-uuid" ? profile.id : "c596e102-1200-4b2a-8888-888888888888");
 
-  if (current && current.id !== "demo-freelancer-uuid") {
+  // Check if profile exists first
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", targetId)
+    .maybeSingle();
+
+  if (existing) {
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -122,10 +153,12 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
         rfc: profile.rfc,
         regimen_fiscal: profile.regimenFiscal,
         codigo_postal: profile.codigoPostal,
+        logo_url: profile.logoUrl || null,
+        signature_url: profile.signatureUrl || null,
         bank_details: profile.bankDetails,
         updated_at: new Date().toISOString()
       })
-      .eq("id", current.id);
+      .eq("id", targetId);
 
     if (error) throw new Error("Error updating Supabase profile: " + error.message);
   } else {
@@ -133,25 +166,29 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
     const { error } = await supabase
       .from("profiles")
       .insert({
-        id: profile.id === "demo-freelancer-uuid" ? undefined : profile.id,
+        id: targetId,
         email: profile.email,
         full_name: profile.fullName,
         rfc: profile.rfc,
         regimen_fiscal: profile.regimenFiscal,
         codigo_postal: profile.codigoPostal,
+        logo_url: profile.logoUrl || null,
+        signature_url: profile.signatureUrl || null,
         bank_details: profile.bankDetails
       });
 
     if (error) throw new Error("Error inserting Supabase profile: " + error.message);
   }
 
-  return profile;
+  return { ...profile, id: targetId };
 }
 
 export async function getContracts(): Promise<Contract[]> {
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from("contracts")
     .select("*")
+    .eq("freelancer_id", userId)
     .order("created_at", { ascending: false });
 
   if (error || !data) return [];
@@ -204,6 +241,13 @@ export async function saveContract(contract: Contract): Promise<Contract> {
       freelancer_rfc: contract.freelancerRfc || profile?.rfc,
       freelancer_regimen: contract.freelancerRegimen || profile?.regimenFiscal,
       freelancer_postal: contract.freelancerPostal || profile?.codigoPostal,
+      retencion_isr: contract.retencionIsr || false,
+      retencion_iva: contract.retencionIva || false,
+      tax_withholding_amount: contract.taxWithholdingAmount || 0,
+      iva_amount: contract.ivaAmount || 0,
+      subtotal_amount: contract.subtotalAmount || 0,
+      client_otp_code: contract.clientOtpCode || null,
+      client_otp_verified: contract.clientOtpVerified || false,
       updated_at: new Date().toISOString()
     });
 
@@ -481,13 +525,33 @@ async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
   }
 }
 
+export async function generateClientOtp(contractId: string): Promise<string | null> {
+  const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const { error } = await supabase
+    .from("contracts")
+    .update({ client_otp_code: otpCode })
+    .eq("id", contractId);
+
+  if (error) {
+    console.error("Error generating OTP:", error);
+    return null;
+  }
+  return otpCode;
+}
+
 // CLIENT PORTAL: Client accepts & signs contract (moves to 'client_signed')
 export async function acceptContract(
   contractId: string,
-  clientName: string
+  clientName: string,
+  otpCode: string
 ): Promise<Contract | null> {
   const contract = await getContractById(contractId);
   if (!contract) return null;
+
+  if (!contract.clientOtpCode || contract.clientOtpCode !== otpCode) {
+    throw new Error("El código de verificación ingresado es incorrecto.");
+  }
+
   const milestones = await getMilestones(contractId);
 
   const headerList = await headers();
@@ -523,6 +587,8 @@ export async function acceptContract(
       accepted_by_name: clientName,
       accepted_ip: clientIp,
       contract_hash: sha256Hash,
+      client_otp_code: null,
+      client_otp_verified: true,
       updated_at: new Date().toISOString()
     })
     .eq("id", contractId)
@@ -536,7 +602,7 @@ export async function acceptContract(
     contractId: contract.id,
     action: "client_signed",
     actor: "client",
-    details: `El cliente ${clientName} firmó el contrato digitalmente.`,
+    details: `El cliente ${clientName} firmó el contrato digitalmente (Verificado con OTP).`,
     ip: clientIp,
     signature: sha256Hash
   });
@@ -642,7 +708,111 @@ function mapContractFromDb(row: any): Contract {
     freelancerRfc: row.freelancer_rfc,
     freelancerRegimen: row.freelancer_regimen,
     freelancerPostal: row.freelancer_postal,
+    retencionIsr: !!row.retencion_isr,
+    retencionIva: !!row.retencion_iva,
+    taxWithholdingAmount: Number(row.tax_withholding_amount || 0),
+    ivaAmount: Number(row.iva_amount || 0),
+    subtotalAmount: Number(row.subtotal_amount || 0),
+    clientOtpCode: row.client_otp_code,
+    clientOtpVerified: !!row.client_otp_verified,
     created_at: row.created_at,
     updated_at: row.updated_at
   };
+}
+
+export async function loadSampleData(): Promise<boolean> {
+  const userId = await getCurrentUserId();
+  if (!userId || userId === "demo-freelancer-uuid") return false;
+
+  // Check if profile exists, if not create a default one
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profile) {
+    await supabase.from("profiles").insert({
+      id: userId,
+      email: "freelancer@ejemplo.com",
+      full_name: "Freelancer Mexicano",
+      rfc: "GUEH860710MX8",
+      regimen_fiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
+      codigo_postal: "06700",
+      bank_details: {
+        clabe: "012180001509987654",
+        bankName: "BBVA México",
+        beneficiaryName: "Freelancer Mexicano"
+      }
+    });
+  }
+
+  // Check if contracts already exist for this user, if so don't double load
+  const { data: existingContracts } = await supabase
+    .from("contracts")
+    .select("id")
+    .eq("freelancer_id", userId)
+    .limit(1);
+
+  if (existingContracts && existingContracts.length > 0) {
+    return true; // Already loaded or has active contracts
+  }
+
+  // Insert Sofia Garza contract
+  const contractId = `c-sample-${userId.substring(0, 8)}`;
+  const { error: cError } = await supabase.from("contracts").insert({
+    id: contractId,
+    freelancer_id: userId,
+    client_name: "Sofía Garza (Studio Flora)",
+    client_email: "sofia@studioflora.mx",
+    client_rfc: "GASF920412HX8",
+    client_regimen: "612 - Personas Físicas con Actividades Empresariales y Profesionales",
+    client_postal: "06700",
+    scope_description: "Rediseño completo de la identidad de marca, incluyendo logotipo, paleta de colores, tipografías y manual de identidad gráfica para Studio Flora.",
+    total_amount: 30000.00,
+    currency: "MXN",
+    status: "accepted",
+    clabe: "012180001509987654",
+    bank_name: "BBVA México",
+    beneficiary_name: "Freelancer Mexicano",
+    freelancer_rfc: "GUEH860710MX8",
+    freelancer_regimen: "626 - Régimen Simplificado de Confianza (RESICO)",
+    freelancer_postal: "06700"
+  });
+
+  if (cError) {
+    console.error("Error inserting sample contract:", cError);
+    return false;
+  }
+
+  // Insert milestones
+  await supabase.from("milestones").insert([
+    {
+      id: `m-sample-1-${userId.substring(0, 8)}`,
+      contract_id: contractId,
+      label: "Anticipo de inicio (50%)",
+      amount: 15000.00,
+      due_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "requested"
+    },
+    {
+      id: `m-sample-2-${userId.substring(0, 8)}`,
+      contract_id: contractId,
+      label: "Entrega de manual final (50%)",
+      amount: 15000.00,
+      due_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "pending"
+    }
+  ]);
+
+  // Write audit log entry
+  await addAuditLog({
+    contractId: contractId,
+    action: "created",
+    actor: "freelancer",
+    details: "Contrato creado a partir de datos de ejemplo.",
+    ip: "127.0.0.1"
+  });
+
+  return true;
 }

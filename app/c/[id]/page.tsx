@@ -14,9 +14,9 @@ import {
   CreditCard,
   ExternalLink
 } from "lucide-react";
-import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs } from "@/lib/storageClient";
+import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
-import { Contract, Milestone, AuditLog } from "@/lib/types";
+import { Contract, Milestone, AuditLog, Profile } from "@/lib/types";
 
 export default function ClientContractView() {
   const params = useParams();
@@ -25,11 +25,16 @@ export default function ClientContractView() {
   const [contract, setContract] = useState<Contract | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [copiedClabe, setCopiedClabe] = useState(false);
   
   // Modals state
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [signerName, setSignerName] = useState("");
+  const [acceptStep, setAcceptStep] = useState<'name' | 'otp'>('name');
+  const [otpInput, setOtpInput] = useState("");
+  const [debugOtp, setDebugOtp] = useState<string | null>(null);
+  const [otpError, setOtpError] = useState("");
   
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMilestone, setPaymentMilestone] = useState<Milestone | null>(null);
@@ -49,6 +54,9 @@ export default function ClientContractView() {
           setMilestones(mList);
           const logs = await getAuditLogs(c.id);
           setAuditLogs(logs);
+          
+          const prof = await getProfile();
+          setProfile(prof);
         }
       }
     }
@@ -78,23 +86,42 @@ export default function ClientContractView() {
     if (!contract || !signerName) return;
     
     setLoading(true);
+    setOtpError("");
     
     try {
-      const updated = await acceptContract(contractId, signerName);
-      if (updated) {
-        setContract(updated);
-        const mList = await getMilestones(contractId);
-        setMilestones(mList);
-        const logs = await getAuditLogs(contractId);
-        setAuditLogs(logs);
-        setAcceptedSuccess(true);
-        setTimeout(() => setAcceptedSuccess(false), 5000);
+      if (acceptStep === 'name') {
+        const otp = await generateClientOtp(contractId);
+        if (otp) {
+          setDebugOtp(otp);
+          setAcceptStep('otp');
+        } else {
+          alert("Error al generar el código de verificación OTP.");
+        }
+      } else {
+        const updated = await acceptContract(contractId, signerName, otpInput);
+        if (updated) {
+          setContract(updated);
+          const mList = await getMilestones(contractId);
+          setMilestones(mList);
+          const logs = await getAuditLogs(contractId);
+          setAuditLogs(logs);
+          setAcceptedSuccess(true);
+          setAcceptStep('name');
+          setOtpInput("");
+          setDebugOtp(null);
+          setShowAcceptModal(false);
+          setTimeout(() => setAcceptedSuccess(false), 5000);
+        }
       }
     } catch (err) {
-      alert("Error al firmar el contrato: " + err);
+      const error = err as Error;
+      if (acceptStep === 'otp') {
+        setOtpError(error.message || "Código de verificación incorrecto.");
+      } else {
+        alert("Error al firmar el contrato: " + error.message);
+      }
     } finally {
       setLoading(false);
-      setShowAcceptModal(false);
     }
   };
 
@@ -223,9 +250,14 @@ export default function ClientContractView() {
           {/* Header document representation */}
           <div className="flex flex-col gap-6 pb-6 border-b border-slate-100 dark:border-slate-900">
             <div className="flex justify-between items-start gap-4">
-              <div>
-                <h1 className="text-2xl font-black uppercase text-slate-800 dark:text-white tracking-tight">Propuesta de Contrato</h1>
-                <p className="text-xs text-slate-400 font-mono mt-1">ID: {contract.id.substring(0, 18)}</p>
+              <div className="flex items-center gap-4">
+                {profile?.logoUrl && (
+                  <img src={profile.logoUrl} alt="Logo" className="h-12 w-12 object-contain rounded-xl border border-slate-100 dark:border-slate-800 bg-white" />
+                )}
+                <div>
+                  <h1 className="text-2xl font-black uppercase text-slate-800 dark:text-white tracking-tight">Propuesta de Contrato</h1>
+                  <p className="text-xs text-slate-400 font-mono mt-1">ID: {contract.id.substring(0, 18)}</p>
+                </div>
               </div>
               <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold uppercase ring-1 ring-inset ${
                 contract.status === 'accepted'
@@ -322,15 +354,22 @@ export default function ClientContractView() {
 
             {/* 2. Freelancer counter-signature details if present */}
             {(contract.status === 'accepted' || contract.status === 'completed') && contract.freelancerAcceptedAt ? (
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-xs flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
-                  <ShieldCheck className="h-4 w-4" />
-                  <span>Verificado y Contra-firmado por el Freelancer</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-500 dark:text-slate-400 mt-1 font-light">
-                  <p>Validador: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedByName}</span></p>
-                  <p>Dirección IP: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedIp}</span></p>
-                  <p>Fecha/Hora: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedAt ? new Date(contract.freelancerAcceptedAt).toLocaleString('es-MX') : ''}</span></p>
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-xs flex flex-col gap-3">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>Verificado y Contra-firmado por el Freelancer</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-500 dark:text-slate-400 mt-1 font-light">
+                      <p>Validador: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedByName}</span></p>
+                      <p>Dirección IP: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedIp}</span></p>
+                      <p>Fecha/Hora: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedAt ? new Date(contract.freelancerAcceptedAt).toLocaleString('es-MX') : ''}</span></p>
+                    </div>
+                  </div>
+                  {profile?.signatureUrl && (
+                    <img src={profile.signatureUrl} alt="Firma Freelancer" className="max-h-12 object-contain bg-white rounded-lg p-1 border border-slate-100 dark:border-slate-800 dark:bg-slate-900/50" />
+                  )}
                 </div>
               </div>
             ) : contract.status === 'client_signed' ? (
@@ -679,40 +718,76 @@ export default function ClientContractView() {
             </p>
 
             <form onSubmit={handleAcceptContract} className="mt-6 flex flex-col gap-4">
-              <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Nombre completo del Firmante</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Escribe tu nombre y apellido"
-                  value={signerName}
-                  onChange={(e) => setSignerName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-                />
-              </div>
+              {acceptStep === 'name' ? (
+                <div>
+                  <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Nombre completo del Firmante</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Escribe tu nombre y apellido"
+                    value={signerName}
+                    onChange={(e) => setSignerName(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {debugOtp && (
+                    <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 p-3 rounded-xl text-3xs text-indigo-700 dark:text-indigo-400 font-semibold leading-relaxed">
+                      💡 <strong>Demo Debug Info:</strong> El código de firma enviado al cliente es: <span className="font-extrabold underline text-sm tracking-widest">{debugOtp}</span>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Código de Firma Electrónica (OTP de 6 dígitos)</label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      required
+                      placeholder="Ej. 123456"
+                      value={otpInput}
+                      onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm font-bold text-center tracking-widest focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
+                  {otpError && (
+                    <span className="text-3xs text-red-500 font-semibold">{otpError}</span>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-3 justify-end mt-2">
                 <button
                   type="button"
-                  onClick={() => setShowAcceptModal(false)}
+                  onClick={() => {
+                    if (acceptStep === 'otp') {
+                      setAcceptStep('name');
+                    } else {
+                      setShowAcceptModal(false);
+                    }
+                  }}
                   className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                 >
-                  Cancelar
+                  {acceptStep === 'otp' ? "Atrás" : "Cancelar"}
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || !signerName}
+                  disabled={loading || (acceptStep === 'name' ? !signerName : otpInput.length < 6)}
                   className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
                       <Clock className="h-4 w-4 animate-spin" />
-                      Firmando...
+                      Procesando...
+                    </>
+                  ) : acceptStep === 'name' ? (
+                    <>
+                      <ShieldCheck className="h-4 w-4" />
+                      Enviar Código de Firma
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="h-4 w-4" />
-                      Aceptar y Firmar
+                      Verificar y Firmar
                     </>
                   )}
                 </button>

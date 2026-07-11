@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { 
   ArrowLeft, 
@@ -20,9 +20,12 @@ import {
 import { MOCK_CLAUSES, CONTRACT_TEMPLATES } from "@/lib/mockData";
 import { getProfile, saveContract, saveMilestones } from "@/lib/storageClient";
 import { Contract, Milestone, Profile } from "@/lib/types";
+import { validateRFC } from "@/lib/rfcValidator";
 
-export default function NewContract() {
+function NewContractForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const templateParam = searchParams.get("template");
   const [profile, setProfile] = useState<Profile | null>(null);
 
   // Stepper state
@@ -39,6 +42,9 @@ export default function NewContract() {
   const [totalAmount, setTotalAmount] = useState<number>(30000);
   const [currency, setCurrency] = useState<'MXN' | 'USD'>("MXN");
   const [selectedTemplate, setSelectedTemplate] = useState<'general' | 'design' | 'development' | 'consulting'>("general");
+  const [retencionIsr, setRetencionIsr] = useState(false);
+  const [retencionIva, setRetencionIva] = useState(false);
+  const [clientRfcError, setClientRfcError] = useState("");
 
   // Dynamic Milestones
   const [milestones, setMilestones] = useState([
@@ -73,8 +79,21 @@ export default function NewContract() {
     loadProfile();
   }, []);
 
+  const handleClientRfcBlur = () => {
+    if (!clientRfc) {
+      setClientRfcError("");
+      return;
+    }
+    const check = validateRFC(clientRfc);
+    if (!check.isValid) {
+      setClientRfcError(check.error || "RFC inválido");
+    } else {
+      setClientRfcError("");
+    }
+  };
+
   // Update clause selection when template changes
-  const handleTemplateChange = (tmplKey: 'general' | 'design' | 'development' | 'consulting') => {
+  const handleTemplateChange = useCallback((tmplKey: 'general' | 'design' | 'development' | 'consulting') => {
     setSelectedTemplate(tmplKey);
     setSelectedClauses(CONTRACT_TEMPLATES[tmplKey].defaultClauses);
 
@@ -103,7 +122,14 @@ export default function NewContract() {
       ];
     }
     setMilestones(newMilestones);
-  };
+  }, [totalAmount]);
+
+  useEffect(() => {
+    if (templateParam && ["general", "design", "development", "consulting"].includes(templateParam)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      handleTemplateChange(templateParam as 'general' | 'design' | 'development' | 'consulting');
+    }
+  }, [templateParam, handleTemplateChange]);
 
   // Recalculate milestone values based on total amount
   const handleTotalAmountChange = (amount: number) => {
@@ -193,6 +219,13 @@ export default function NewContract() {
       freelancerRfc: freelancerRfc || undefined,
       freelancerRegimen: freelancerRegimen || undefined,
       freelancerPostal: freelancerPostal || undefined,
+      
+      retencionIsr,
+      retencionIva,
+      taxWithholdingAmount: (retencionIsr ? totalAmount * 0.10 : 0) + (retencionIva ? totalAmount * 0.16 * (2 / 3) : 0),
+      ivaAmount: totalAmount * 0.16,
+      subtotalAmount: totalAmount,
+      clientOtpVerified: false,
       
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -292,7 +325,7 @@ export default function NewContract() {
                   placeholder="Ej. Sofía Garza, S.A. de C.V."
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                 />
               </div>
               
@@ -304,13 +337,13 @@ export default function NewContract() {
                   placeholder="sofia@empresa.com"
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                 />
               </div>
             </div>
 
             {/* Client MX Fiscal details (RFC, Regimen, CP) */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col gap-4 bg-slate-50/20">
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800/80 p-5 flex flex-col gap-4 bg-slate-50/20 dark:bg-slate-900/10">
               <h3 className="text-xs font-extrabold text-slate-500 flex items-center gap-1.5 uppercase tracking-wider">
                 <Building className="h-4 w-4 text-slate-400" />
                 Datos Fiscales del Cliente (Para la factura / CFDI)
@@ -325,8 +358,14 @@ export default function NewContract() {
                     placeholder="Opcional (Ej. GAF1203058X4)"
                     value={clientRfc}
                     onChange={(e) => setClientRfc(e.target.value.toUpperCase())}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    onBlur={handleClientRfcBlur}
+                    className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:ring-1 focus:outline-none transition-all shadow-inner uppercase font-mono ${
+                      clientRfcError ? "border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-500/5" : "border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 focus:border-indigo-500 focus:ring-indigo-500"
+                    }`}
                   />
+                  {clientRfcError && (
+                    <span className="text-3xs text-red-500 font-semibold mt-1 block">{clientRfcError}</span>
+                  )}
                 </div>
                 
                 <div>
@@ -334,7 +373,7 @@ export default function NewContract() {
                   <select
                     value={clientRegimen}
                     onChange={(e) => setClientRegimen(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner dark:bg-slate-900"
                   >
                     <option value="">Opcional (Selecciona Régimen)</option>
                     <option value="601 - General de Ley Personas Morales">601 - General de Ley Personas Morales</option>
@@ -354,7 +393,7 @@ export default function NewContract() {
                     placeholder="Opcional (5 dígitos)"
                     value={clientPostal}
                     onChange={(e) => setClientPostal(e.target.value.replace(/\D/g, ""))}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                   />
                 </div>
               </div>
@@ -368,15 +407,25 @@ export default function NewContract() {
                 placeholder="Describe detalladamente los entregables del proyecto. Escribe un texto claro y preciso sobre lo que el cliente va a recibir..."
                 value={scopeDescription}
                 onChange={(e) => setScopeDescription(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white leading-relaxed"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner leading-relaxed"
               />
             </div>
 
             <div className="flex justify-end mt-4">
               <button
                 type="button"
-                onClick={() => setStep(2)}
-                disabled={!clientName || !clientEmail || !scopeDescription}
+                onClick={() => {
+                  if (clientRfc) {
+                    const check = validateRFC(clientRfc);
+                    if (!check.isValid) {
+                      setClientRfcError(check.error || "RFC inválido");
+                      return;
+                    }
+                  }
+                  setClientRfcError("");
+                  setStep(2);
+                }}
+                disabled={!clientName || !clientEmail || !scopeDescription || !!clientRfcError}
                 className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-6 py-2.5 text-sm font-semibold text-white transition-colors"
               >
                 Siguiente Paso
@@ -394,39 +443,68 @@ export default function NewContract() {
               Presupuesto e Hitos de Cobro
             </h2>
 
-            {/* Total Budget */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Moneda del Contrato</label>
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value as 'MXN' | 'USD')}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-                >
-                  <option value="MXN">Peso Mexicano (MXN)</option>
-                  <option value="USD">Dólar Americano (USD)</option>
-                </select>
-              </div>
+            {/* Total Budget Row */}
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Moneda del Contrato</label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value as 'MXN' | 'USD')}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner dark:bg-slate-900"
+                  >
+                    <option value="MXN">Peso Mexicano (MXN)</option>
+                    <option value="USD">Dólar Americano (USD)</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Monto Total del Proyecto</label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
-                  <input
-                    type="number"
-                    required
-                    min={100}
-                    value={totalAmount}
-                    onChange={(e) => handleTotalAmountChange(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent pl-8 pr-4 py-2.5 text-sm font-bold focus:border-indigo-500 focus:outline-none dark:text-white"
-                  />
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Monto Total del Proyecto</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                    <input
+                      type="number"
+                      name="totalAmount"
+                      required
+                      min={100}
+                      value={totalAmount === 0 ? "" : totalAmount}
+                      onChange={(e) => handleTotalAmountChange(Number(e.target.value))}
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 pl-8 pr-4 py-2.5 text-sm font-bold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="text-xs text-slate-400 leading-normal pb-2 flex items-center gap-1.5">
-                <Info className="h-4 w-4 text-indigo-500 flex-shrink-0" />
+              {/* Withholdings Toggles for Mexico (ISR/IVA) */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800/80 p-4 bg-slate-50/10 dark:bg-slate-900/5 flex flex-col gap-3 mt-1">
+                <span className="text-2xs font-extrabold text-slate-400 uppercase tracking-wider block">Retenciones Fiscales (Personas Morales)</span>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={retencionIsr}
+                      onChange={(e) => setRetencionIsr(e.target.checked)}
+                      className="rounded border-slate-350 dark:border-slate-800 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                    />
+                    Retener ISR (10%)
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={retencionIva}
+                      onChange={(e) => setRetencionIva(e.target.checked)}
+                      className="rounded border-slate-350 dark:border-slate-800 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                    />
+                    Retener IVA (10.667% / 2/3 partes)
+                  </label>
+                </div>
+              </div>
+
+              {/* Full-width Tip card */}
+              <div className="rounded-xl border border-indigo-500/10 bg-indigo-550/5 dark:bg-indigo-500/5 p-4 text-xs text-slate-550 dark:text-slate-350 leading-relaxed flex items-center gap-2">
+                <Info className="h-4.5 w-4.5 text-indigo-500 flex-shrink-0" />
                 <span>
-                  Tip: El primer hito suele ser un **Anticipo** (30% - 50%) cobrado antes de iniciar labores.
+                  Tip: El primer hito suele ser un <strong>Anticipo</strong> (30% - 50%) cobrado antes de iniciar labores.
                 </span>
               </div>
             </div>
@@ -441,14 +519,14 @@ export default function NewContract() {
                 <>
                   <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-emerald-500" />
                   <div>
-                    <span className="font-bold">¡Balance Correcto!</span> La suma de los hitos es exactamente igual al total del contrato: **{formatMoney(getMilestoneSum(), currency)}** ({getMilestonePctSum()}%).
+                    <span className="font-bold">¡Balance Correcto!</span> La suma de los hitos es exactamente igual al total del contrato: <strong>{formatMoney(getMilestoneSum(), currency)}</strong> ({getMilestonePctSum()}%).
                   </div>
                 </>
               ) : (
                 <>
                   <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500" />
                   <div>
-                    <span className="font-bold">Suma Incorrecta:</span> La suma de los hitos es **{formatMoney(getMilestoneSum(), currency)}** ({getMilestonePctSum()}%). Falta o excede **{formatMoney(Math.abs(totalAmount - getMilestoneSum()), currency)}** para coincidir exactamente con el total de **{formatMoney(totalAmount, currency)}**.
+                    <span className="font-bold">Suma Incorrecta:</span> La suma de los hitos es <strong>{formatMoney(getMilestoneSum(), currency)}</strong> ({getMilestonePctSum()}%). Falta o excede <strong>{formatMoney(Math.abs(totalAmount - getMilestoneSum()), currency)}</strong> para coincidir exactamente con el total de <strong>{formatMoney(totalAmount, currency)}</strong>.
                   </div>
                 </>
               )}
@@ -485,7 +563,7 @@ export default function NewContract() {
                             return updated;
                           });
                         }}
-                        className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                       />
                     </div>
                     
@@ -497,32 +575,33 @@ export default function NewContract() {
                           required
                           min={0}
                           max={100}
-                          value={milestone.pct}
+                          step="any"
+                          value={milestone.pct === 0 ? "" : milestone.pct}
                           onChange={(e) => handleMilestonePctChange(index, Number(e.target.value))}
-                          className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent pl-3 pr-6 py-1.5 text-sm font-bold focus:border-indigo-500 focus:outline-none dark:text-white"
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 pl-4 pr-8 py-2 text-sm font-bold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                         />
-                        <Percent className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                        <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                       </div>
                     </div>
 
                     <div className="md:col-span-2">
                       <label className="block text-2xs font-semibold text-slate-400 uppercase mb-1">Monto calculado</label>
                       <div className="relative">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
                         <input
                           type="number"
                           required
-                          value={milestone.amount}
+                          value={milestone.amount === 0 ? "" : milestone.amount}
                           onChange={(e) => {
                             const val = Number(e.target.value);
                             setMilestones(prev => {
                               const updated = [...prev];
                               updated[index].amount = val;
-                              updated[index].pct = Math.round((val / totalAmount) * 100);
+                              updated[index].pct = totalAmount > 0 ? Math.round((val / totalAmount) * 1000) / 10 : 0;
                               return updated;
                             });
                           }}
-                          className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent pl-6 pr-3 py-1.5 text-sm font-bold focus:border-indigo-500 focus:outline-none dark:text-white"
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 pl-7 pr-4 py-2 text-sm font-bold focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                         />
                       </div>
                     </div>
@@ -541,7 +620,7 @@ export default function NewContract() {
                             return updated;
                           });
                         }}
-                        className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                       />
                     </div>
 
@@ -557,6 +636,39 @@ export default function NewContract() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Tax breakdown summary card */}
+            <div className="glass p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80 bg-slate-50/10 dark:bg-slate-900/5 flex flex-col gap-3">
+              <span className="text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Desglose Fiscal Estimado (SAT México)</span>
+              
+              <div className="flex flex-col gap-2 text-xs">
+                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                  <span>Subtotal (Honorarios brutos)</span>
+                  <span className="font-semibold">{formatMoney(totalAmount, currency)}</span>
+                </div>
+                <div className="flex justify-between text-slate-650 dark:text-slate-400">
+                  <span>+ IVA Trasladado (16%)</span>
+                  <span className="font-semibold">{formatMoney(totalAmount * 0.16, currency)}</span>
+                </div>
+                {retencionIsr && (
+                  <div className="flex justify-between text-red-650 dark:text-red-400">
+                    <span>- Retención ISR (10% Ley de ISR)</span>
+                    <span className="font-semibold">-{formatMoney(totalAmount * 0.10, currency)}</span>
+                  </div>
+                )}
+                {retencionIva && (
+                  <div className="flex justify-between text-red-650 dark:text-red-400">
+                    <span>- Retención IVA (2/3 de IVA - 10.667%)</span>
+                    <span className="font-semibold">-{formatMoney(totalAmount * 0.16 * (2 / 3), currency)}</span>
+                  </div>
+                )}
+                <div className="border-t border-slate-200 dark:border-slate-800 my-1.5" />
+                <div className="flex justify-between text-sm font-black text-slate-900 dark:text-white">
+                  <span>Total Neto Recibido (Estimado)</span>
+                  <span className="text-indigo-650 dark:text-indigo-400">{formatMoney(totalAmount + (totalAmount * 0.16) - (retencionIsr ? totalAmount * 0.10 : 0) - (retencionIva ? totalAmount * 0.16 * (2 / 3) : 0), currency)}</span>
+                </div>
               </div>
             </div>
 
@@ -651,7 +763,7 @@ export default function NewContract() {
                     required
                     value={beneficiaryName}
                     onChange={(e) => setBeneficiaryName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                   />
                 </div>
                 <div>
@@ -662,7 +774,7 @@ export default function NewContract() {
                     maxLength={18}
                     value={clabe}
                     onChange={(e) => setClabe(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                   />
                 </div>
                 <div>
@@ -672,7 +784,7 @@ export default function NewContract() {
                     required
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                   />
                 </div>
                 <div>
@@ -683,7 +795,7 @@ export default function NewContract() {
                     maxLength={13}
                     value={freelancerRfc}
                     onChange={(e) => setFreelancerRfc(e.target.value.toUpperCase())}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                   />
                 </div>
                 <div className="sm:col-span-2">
@@ -693,7 +805,7 @@ export default function NewContract() {
                     required
                     value={freelancerRegimen}
                     onChange={(e) => setFreelancerRegimen(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                   />
                 </div>
               </div>
@@ -719,6 +831,18 @@ export default function NewContract() {
         )}
       </form>
     </div>
+  );
+}
+
+export default function NewContract() {
+  return (
+    <Suspense fallback={
+      <div className="flex-grow flex items-center justify-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-indigo-500" />
+      </div>
+    }>
+      <NewContractForm />
+    </Suspense>
   );
 }
 
