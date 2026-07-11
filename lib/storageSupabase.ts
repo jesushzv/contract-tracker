@@ -270,11 +270,45 @@ export async function updateMilestoneStatus(
   milestoneId: string,
   status: MilestoneStatus
 ): Promise<Milestone | null> {
-  const updates: { status: MilestoneStatus; marked_paid_at?: string; confirmed_at?: string } = { status };
+  const updates: { 
+    status: MilestoneStatus; 
+    marked_paid_at: string | null; 
+    confirmed_at: string | null; 
+    tracking_reference: string | null;
+    transferred_amount: number | null;
+    receipt_url: string | null;
+  } = { 
+    status,
+    marked_paid_at: null,
+    confirmed_at: null,
+    tracking_reference: null,
+    transferred_amount: null,
+    receipt_url: null
+  };
+
+  const current = await supabase
+    .from("milestones")
+    .select("status, marked_paid_at, confirmed_at, tracking_reference, transferred_amount, receipt_url")
+    .eq("id", milestoneId)
+    .single();
+
+  const oldStatus = current.data?.status as MilestoneStatus || "pending";
+
   if (status === "marked_paid") {
     updates.marked_paid_at = new Date().toISOString();
+    if (current.data) {
+      updates.tracking_reference = current.data.tracking_reference;
+      updates.transferred_amount = current.data.transferred_amount ? Number(current.data.transferred_amount) : null;
+      updates.receipt_url = current.data.receipt_url;
+    }
   } else if (status === "confirmed") {
     updates.confirmed_at = new Date().toISOString();
+    if (current.data) {
+      updates.marked_paid_at = current.data.marked_paid_at;
+      updates.tracking_reference = current.data.tracking_reference;
+      updates.transferred_amount = current.data.transferred_amount ? Number(current.data.transferred_amount) : null;
+      updates.receipt_url = current.data.receipt_url;
+    }
   }
 
   const { data, error } = await supabase
@@ -293,42 +327,74 @@ export async function updateMilestoneStatus(
     amount: Number(data.amount),
     dueDate: data.due_date,
     status: data.status as MilestoneStatus,
-    markedPaidAt: data.marked_paid_at,
-    confirmedAt: data.confirmed_at,
-    trackingReference: data.tracking_reference,
+    markedPaidAt: data.marked_paid_at || undefined,
+    confirmedAt: data.confirmed_at || undefined,
+    trackingReference: data.tracking_reference || undefined,
     transferredAmount: data.transferred_amount ? Number(data.transferred_amount) : undefined,
+    receiptUrl: data.receipt_url || undefined,
     created_at: data.created_at
   };
 
   await checkAndUpdateContractStatus(milestone.contractId);
   
   // Log milestone status events
-  if (status === "requested") {
-    await addAuditLog({
-      contractId: milestone.contractId,
-      action: "milestone_requested",
-      actor: "freelancer",
-      details: `Cobro solicitado para el hito: "${milestone.label}" (Monto: $${milestone.amount}).`
-    });
-  } else if (status === "confirmed") {
-    await addAuditLog({
-      contractId: milestone.contractId,
-      action: "milestone_confirmed",
-      actor: "freelancer",
-      details: `Pago confirmado y recibido para el hito: "${milestone.label}".`
-    });
+  if (status !== oldStatus) {
+    const isRollback = 
+      (oldStatus === "confirmed") ||
+      (oldStatus === "marked_paid" && status !== "confirmed") ||
+      (oldStatus === "requested" && status === "pending");
+
+    if (isRollback) {
+      await addAuditLog({
+        contractId: milestone.contractId,
+        action: "milestone_requested",
+        actor: "freelancer",
+        details: `El freelancer revirtió el hito "${milestone.label}" de ${translateStatus(oldStatus)} a ${translateStatus(status)}.`
+      });
+    } else {
+      if (status === "requested") {
+        await addAuditLog({
+          contractId: milestone.contractId,
+          action: "milestone_requested",
+          actor: "freelancer",
+          details: `Cobro solicitado para el hito: "${milestone.label}" (Monto: $${milestone.amount}).`
+        });
+      } else if (status === "confirmed") {
+        await addAuditLog({
+          contractId: milestone.contractId,
+          action: "milestone_confirmed",
+          actor: "freelancer",
+          details: `Pago confirmado y recibido para el hito: "${milestone.label}".`
+        });
+      }
+    }
   }
 
   return milestone;
+}
+
+function translateStatus(s: string): string {
+  if (s === "pending") return "Pendiente";
+  if (s === "requested") return "Solicitado";
+  if (s === "marked_paid") return "Transferido (Verificando)";
+  if (s === "confirmed") return "Confirmado";
+  return s;
 }
 
 // SERVER ACTION: Record client transfer reference and mark milestone as paid
 export async function markMilestoneAsTransferred(
   milestoneId: string,
   trackingReference: string,
-  transferredAmount?: number
+  transferredAmount?: number,
+  receiptUrl?: string
 ): Promise<Milestone | null> {
-  const updates: { status: MilestoneStatus; marked_paid_at: string; tracking_reference: string; transferred_amount?: number } = {
+  const updates: { 
+    status: MilestoneStatus; 
+    marked_paid_at: string; 
+    tracking_reference: string; 
+    transferred_amount?: number;
+    receipt_url?: string;
+  } = {
     status: "marked_paid",
     marked_paid_at: new Date().toISOString(),
     tracking_reference: trackingReference
@@ -336,6 +402,9 @@ export async function markMilestoneAsTransferred(
   if (transferredAmount !== undefined) {
     updates.transferred_amount = transferredAmount;
   }
+  if (receiptUrl !== undefined) {
+    updates.receipt_url = receiptUrl;
+  }
 
   const { data, error } = await supabase
     .from("milestones")
@@ -353,10 +422,11 @@ export async function markMilestoneAsTransferred(
     amount: Number(data.amount),
     dueDate: data.due_date,
     status: data.status as MilestoneStatus,
-    markedPaidAt: data.marked_paid_at,
-    confirmedAt: data.confirmed_at,
-    trackingReference: data.tracking_reference,
+    markedPaidAt: data.marked_paid_at || undefined,
+    confirmedAt: data.confirmed_at || undefined,
+    trackingReference: data.tracking_reference || undefined,
     transferredAmount: data.transferred_amount ? Number(data.transferred_amount) : undefined,
+    receiptUrl: data.receipt_url || undefined,
     created_at: data.created_at
   };
 
@@ -367,7 +437,7 @@ export async function markMilestoneAsTransferred(
     contractId: milestone.contractId,
     action: "milestone_transferred",
     actor: "client",
-    details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${trackingReference}).`
+    details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${trackingReference}${receiptUrl ? ', con recibo adjunto' : ''}).`
   });
 
   return milestone;
@@ -392,6 +462,20 @@ async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
         action: "milestone_confirmed",
         actor: "system",
         details: "Todos los hitos han sido liquidados. Contrato marcado como Completado."
+      });
+    }
+  } else if (!allPaid && contract.status === "completed") {
+    const { error } = await supabase
+      .from("contracts")
+      .update({ status: "accepted", updated_at: new Date().toISOString() })
+      .eq("id", contractId);
+
+    if (!error) {
+      await addAuditLog({
+        contractId: contractId,
+        action: "milestone_requested",
+        actor: "system",
+        details: "Un hito fue revertido. Contrato reactivado como Sellado."
       });
     }
   }

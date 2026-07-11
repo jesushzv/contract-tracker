@@ -11,7 +11,8 @@ import {
   AlertCircle,
   Briefcase,
   Printer,
-  CreditCard
+  CreditCard,
+  ExternalLink
 } from "lucide-react";
 import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
@@ -34,7 +35,7 @@ export default function ClientContractView() {
   const [paymentMilestone, setPaymentMilestone] = useState<Milestone | null>(null);
   const [trackingReference, setTrackingReference] = useState("");
   const [transferredAmount, setTransferredAmount] = useState<number>(0);
-  
+  const [receiptUrl, setReceiptUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [acceptedSuccess, setAcceptedSuccess] = useState(false);
 
@@ -97,29 +98,7 @@ export default function ClientContractView() {
     }
   };
 
-  const handleOpenPaymentModal = (milestone: Milestone) => {
-    setPaymentMilestone(milestone);
-    setTrackingReference("");
-    setTransferredAmount(milestone.amount);
-    setShowPaymentModal(true);
-  };
 
-  const handleMarkAsTransferred = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!paymentMilestone || !trackingReference) return;
-    
-    setLoading(true);
-    try {
-      await markMilestoneAsTransferred(paymentMilestone.id, trackingReference, transferredAmount);
-      await refreshData();
-      setShowPaymentModal(false);
-      setPaymentMilestone(null);
-    } catch (err) {
-      alert("Error al guardar referencia de transferencia: " + err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handlePrint = () => {
     window.print();
@@ -156,9 +135,37 @@ export default function ClientContractView() {
         </div>
       </div>
     );
-  }
+  };
 
-  // Find active requested payments
+  const handleOpenPaymentModal = (milestone: Milestone) => {
+    setPaymentMilestone(milestone);
+    setTrackingReference("");
+    setTransferredAmount(milestone.amount);
+    setReceiptUrl("");
+    setShowPaymentModal(true);
+  };
+
+  const handleMarkAsTransferred = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentMilestone || !trackingReference) return;
+    
+    setLoading(true);
+    try {
+      await markMilestoneAsTransferred(
+        paymentMilestone.id,
+        trackingReference,
+        transferredAmount,
+        receiptUrl || undefined
+      );
+      await refreshData();
+      setShowPaymentModal(false);
+      setPaymentMilestone(null);
+    } catch (err) {
+      alert("Error al guardar referencia de transferencia: " + err);
+    } finally {
+      setLoading(false);
+    }
+  };  // Find active requested payments
   const activePayment = milestones.find(m => m.status === 'requested');
 
   return (
@@ -541,7 +548,21 @@ export default function ClientContractView() {
                         )}
                       </h5>
                       <span className="text-3xs text-slate-400">Hito #{idx + 1} • Vence: {new Date(m.dueDate).toLocaleDateString('es-MX')}</span>
+                      {m.receiptUrl && (
+                        <div className="mt-1.5 flex items-center gap-1.5 print:hidden">
+                          <a 
+                            href={m.receiptUrl.startsWith('http') ? m.receiptUrl : `https://${m.receiptUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-3xs font-bold text-indigo-500 hover:text-indigo-600 transition-colors"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Ver comprobante
+                          </a>
+                        </div>
+                      )}
                     </div>
+
                     <div className="text-right">
                       <p className="font-bold text-xs text-slate-800 dark:text-slate-200">{formatMoney(m.amount, contract.currency)}</p>
                       <span className={`text-4xs font-bold uppercase ${
@@ -595,6 +616,17 @@ export default function ClientContractView() {
                     className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent pl-7 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-bold"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Comprobante de Pago (Enlace o Nombre de Archivo)</label>
+                <input
+                  type="text"
+                  placeholder="Ej. https://dropbox.com/s/recibo.pdf o captura.png"
+                  value={receiptUrl}
+                  onChange={(e) => setReceiptUrl(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                />
               </div>
 
               <div className="flex gap-3 justify-end mt-4">

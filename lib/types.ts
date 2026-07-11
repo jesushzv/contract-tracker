@@ -67,6 +67,7 @@ export interface Milestone {
   confirmedAt?: string;
   trackingReference?: string; // SPEI Clave de Rastreo
   transferredAmount?: number; // Exact amount paid by client
+  receiptUrl?: string; // Attachment receipt URL/text
   created_at: string;
 }
 

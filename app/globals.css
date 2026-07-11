@@ -106,3 +106,61 @@ body {
 .pulse-subtle {
   animation: pulse-subtle 3s infinite ease-in-out;
 }
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    background-image: none !important;
+  }
+  
+  .print\:hidden {
+    display: none !important;
+  }
+  
+  /* Force the contract paper layout to be full page width and hide shadows/borders */
+  .lg\:col-span-8 {
+    grid-column: span 12 / span 12 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .glass {
+    background: white !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Make sure dark mode color variables are overridden to light theme for printing */
+  :root {
+    --background: #ffffff !important;
+    --foreground: #000000 !important;
+  }
+  
+  * {
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Exceptions for colored elements we want to keep */
+  .text-indigo-500, .text-indigo-600 {
+    color: #4f46e5 !important;
+  }
+  .bg-indigo-500\/10 {
+    background-color: rgba(79, 70, 229, 0.1) !important;
+  }
+  .text-emerald-500, .text-emerald-600 {
+    color: #059669 !important;
+  }
+  .bg-emerald-500\/10 {
+    background-color: rgba(5, 150, 105, 0.1) !important;
+  }
+}

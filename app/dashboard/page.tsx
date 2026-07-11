@@ -16,7 +16,8 @@ import {
   Settings, 
   ExternalLink,
   ShieldCheck,
-  Briefcase
+  Briefcase,
+  RotateCcw
 } from "lucide-react";
 import { 
   getContracts, 
@@ -29,6 +30,7 @@ import {
   vetAndAcceptContract
 } from "@/lib/storageClient";
 import { Contract, Milestone, Profile, AuditLog } from "@/lib/types";
+import { MOCK_CLAUSES } from "@/lib/mockData";
 
 export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -40,9 +42,9 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'all' | 'draft' | 'sent' | 'client_signed' | 'accepted' | 'completed' | 'overdue'>('all');
   const [searchTerm, setSearchTerm] = useState("");
   const [allMilestones, setAllMilestones] = useState<Milestone[]>([]);
-  
-  // Settings profile form
   const [showSettings, setShowSettings] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+
   const [fullName, setFullName] = useState("");
   const [clabe, setClabe] = useState("");
   const [bankName, setBankName] = useState("");
@@ -583,6 +585,14 @@ export default function Dashboard() {
                     <MessageCircle className="h-3.5 w-3.5" />
                     Enviar WhatsApp
                   </a>
+                  
+                  <button
+                    onClick={() => setShowPreviewModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-900 transition-colors"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Ver Contrato
+                  </button>
                   <Link
                     href={`/c/${selectedContract.id}`}
                     target="_blank"
@@ -735,7 +745,7 @@ export default function Dashboard() {
                                 <p>Monto Declarado: <span className="font-bold text-slate-700 dark:text-slate-350">{formatMoney(milestone.transferredAmount, selectedContract.currency)}</span></p>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-emerald-500/10">
+                            <div className="flex items-center gap-4 mt-2 pt-2 border-t border-emerald-500/10">
                               <a 
                                 href={`https://www.banxico.org.mx/cep/`}
                                 target="_blank"
@@ -745,6 +755,17 @@ export default function Dashboard() {
                                 Verificar CEP en Banxico
                                 <ExternalLink className="h-3 w-3" />
                               </a>
+                              {milestone.receiptUrl && (
+                                <a 
+                                  href={milestone.receiptUrl.startsWith('http') ? milestone.receiptUrl : `https://${milestone.receiptUrl}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300 font-semibold flex items-center gap-1 text-2xs transition-colors"
+                                >
+                                  Ver comprobante adjunto
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
                             </div>
                           </div>
                         )}
@@ -770,6 +791,13 @@ export default function Dashboard() {
                                 {milestone.status === 'requested' && (
                                   <div className="flex items-center gap-1.5">
                                     <button
+                                      onClick={() => handleUpdateMilestone(milestone.id, 'pending')}
+                                      title="Revertir a Pendiente"
+                                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 transition-colors"
+                                    >
+                                      <RotateCcw className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
                                       onClick={() => handleUpdateMilestone(milestone.id, 'marked_paid')}
                                       className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
                                     >
@@ -779,19 +807,49 @@ export default function Dashboard() {
                                 )}
                                 
                                 {milestone.status === 'marked_paid' && (
-                                  <button
-                                    onClick={() => handleUpdateMilestone(milestone.id, 'confirmed')}
-                                    className="bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors shadow-md shadow-indigo-500/10"
-                                  >
-                                    Confirmar Recepción
-                                  </button>
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      onClick={() => handleUpdateMilestone(milestone.id, 'requested')}
+                                      title="Revertir a Solicitado"
+                                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 transition-colors"
+                                    >
+                                      <RotateCcw className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleUpdateMilestone(milestone.id, 'confirmed')}
+                                      className="bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors shadow-md shadow-indigo-500/10"
+                                    >
+                                      Confirmar Recepción
+                                    </button>
+                                  </div>
                                 )}
-
                                 {(milestone.status === 'confirmed') && (
-                                  <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                                    <CheckCircle2 className="h-3.5 w-3.5 text-indigo-500" />
-                                    Cobro Listo
-                                  </span>
+                                  <div className="flex flex-col items-end gap-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        onClick={() => handleUpdateMilestone(milestone.id, 'marked_paid')}
+                                        title="Revertir a Reportado"
+                                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 transition-colors mr-1"
+                                      >
+                                        <RotateCcw className="h-3.5 w-3.5" />
+                                      </button>
+                                      <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                                        <CheckCircle2 className="h-3.5 w-3.5 text-indigo-500" />
+                                        Cobro Listo
+                                      </span>
+                                    </div>
+                                    {milestone.receiptUrl && (
+                                      <a 
+                                        href={milestone.receiptUrl.startsWith('http') ? milestone.receiptUrl : `https://${milestone.receiptUrl}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-3xs text-indigo-500 dark:text-indigo-400 hover:underline flex items-center gap-0.5 mt-0.5"
+                                      >
+                                        Ver recibo
+                                        <ExternalLink className="h-2.5 w-2.5" />
+                                      </a>
+                                    )}
+                                  </div>
                                 )}
                               </>
                             ) : (
@@ -888,6 +946,150 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {showPreviewModal && selectedContract && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm print:hidden overflow-y-auto">
+          <div className="bg-slate-50 dark:bg-slate-950 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl border border-indigo-500/20">
+            {/* Header toolbar */}
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900 sticky top-0 z-10 rounded-t-3xl">
+              <h3 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <FileText className="h-5 w-5 text-indigo-500" />
+                Vista Previa del Contrato
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold hover:bg-slate-50 transition-colors"
+                >
+                  Imprimir / PDF
+                </button>
+                <button
+                  onClick={() => setShowPreviewModal(false)}
+                  className="rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-bold transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+            {/* Paper content */}
+            <div className="p-8 flex flex-col gap-8 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-250 m-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 max-w-3xl mx-auto w-full">
+              {/* Proposal Header */}
+              <div className="text-center pb-6 border-b border-slate-150 dark:border-slate-800">
+                <h1 className="text-2xl font-extrabold text-indigo-500 uppercase tracking-wider">PROPUESTA DE SERVICIOS PROFESIONALES</h1>
+                <p className="text-xs text-slate-400 mt-1">ID Contrato: <span className="font-mono">{selectedContract.id}</span></p>
+              </div>
+
+              {/* Parties info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+                <div>
+                  <h3 className="text-3xs font-bold text-slate-400 uppercase tracking-widest mb-2">Prestador (Freelancer)</h3>
+                  <p className="font-bold text-slate-900 dark:text-white">{profile?.fullName || 'Héctor J. Guerrero'}</p>
+                  <p className="text-xs text-slate-500 mt-1">{profile?.email || 'hector@freelancemx.dev'}</p>
+                  {selectedContract.freelancerRfc && (
+                    <p className="text-2xs text-slate-400 mt-1">RFC: {selectedContract.freelancerRfc} • Régimen: {selectedContract.freelancerRegimen}</p>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-3xs font-bold text-slate-400 uppercase tracking-widest mb-2">Cliente Receptor</h3>
+                  <p className="font-bold text-slate-900 dark:text-white">{selectedContract.clientName}</p>
+                  <p className="text-xs text-slate-500 mt-1">{selectedContract.clientEmail}</p>
+                  {selectedContract.clientRfc && (
+                    <p className="text-2xs text-slate-400 mt-1">RFC: {selectedContract.clientRfc} • Régimen: {selectedContract.clientRegimen}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Scope of Work */}
+              <div>
+                <h3 className="text-3xs font-bold text-slate-400 uppercase tracking-widest mb-3">Concepto y Alcance</h3>
+                <div className="whitespace-pre-wrap text-sm leading-relaxed font-light text-slate-650 dark:text-slate-300">
+                  {selectedContract.scopeDescription}
+                </div>
+              </div>
+
+              {/* Scheme and Financials */}
+              <div>
+                <h3 className="text-3xs font-bold text-slate-400 uppercase tracking-widest mb-3">Esquema de Cobro y Entregables</h3>
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {milestones.map((m, idx) => (
+                    <div key={m.id} className="py-3 flex justify-between items-center text-sm">
+                      <div>
+                        <p className="font-bold text-slate-900 dark:text-white">{m.label}</p>
+                        <p className="text-2xs text-slate-400">Hito #{idx + 1} • Vence: {new Date(m.dueDate).toLocaleDateString('es-MX')}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-extrabold text-slate-900 dark:text-white">{formatMoney(m.amount, selectedContract.currency)}</p>
+                        <p className="text-2xs text-indigo-500 capitalize">{m.status === 'confirmed' ? 'Confirmado' : m.status === 'marked_paid' ? 'Reportado' : m.status === 'requested' ? 'Cobro Enviado' : 'Pendiente'}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-850 flex justify-between items-center text-base font-extrabold">
+                  <span>Monto Total de la Propuesta:</span>
+                  <span className="text-indigo-500">{formatMoney(selectedContract.totalAmount, selectedContract.currency)}</span>
+                </div>
+              </div>
+
+              {/* Legal Clauses */}
+              {MOCK_CLAUSES && MOCK_CLAUSES.length > 0 && (
+                <div>
+                  <h3 className="text-3xs font-bold text-slate-400 uppercase tracking-widest mb-3">Cláusulas de Acuerdo</h3>
+                  <div className="flex flex-col gap-4 text-xs font-light text-slate-500 dark:text-slate-400 leading-relaxed">
+                    {MOCK_CLAUSES.map((clause, idx) => (
+                      <div key={clause.id || idx}>
+                        <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{idx + 1}. {clause.title}</h4>
+                        <p>{clause.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Signatures & Seal Box */}
+              <div className="border-t border-slate-200 dark:border-slate-800 pt-6 flex flex-col gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-2xs leading-normal">
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+                    <p className="font-semibold text-slate-400 uppercase tracking-wider mb-2">Firma Digital (Cliente)</p>
+                    {selectedContract.acceptedByName ? (
+                      <div>
+                        <p className="font-bold text-slate-900 dark:text-white font-serif italic text-sm">{selectedContract.acceptedByName}</p>
+                        <p className="text-slate-400 mt-1">Fecha: {new Date(selectedContract.acceptedAt!).toLocaleString('es-MX')}</p>
+                        <p className="text-slate-400">IP: {selectedContract.acceptedIp}</p>
+                      </div>
+                    ) : (
+                      <p className="text-slate-400 italic">Pendiente de firma del cliente</p>
+                    )}
+                  </div>
+                  <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+                    <p className="font-semibold text-slate-400 uppercase tracking-wider mb-2">Contra-firma Digital (Freelancer)</p>
+                    {selectedContract.freelancerAcceptedByName ? (
+                      <div>
+                        <p className="font-bold text-slate-900 dark:text-white font-serif italic text-sm">{selectedContract.freelancerAcceptedByName}</p>
+                        <p className="text-slate-400 mt-1">Fecha: {new Date(selectedContract.freelancerAcceptedAt!).toLocaleString('es-MX')}</p>
+                        <p className="text-slate-400">IP: {selectedContract.freelancerAcceptedIp}</p>
+                      </div>
+                    ) : (
+                      <p className="text-slate-400 italic">Pendiente de contra-firma del freelancer</p>
+                    )}
+                  </div>
+                </div>
+
+                {selectedContract.contractHash && (
+                  <div className="rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-500/10 p-4 text-2xs leading-relaxed">
+                    <p className="font-semibold text-indigo-500 flex items-center gap-1">
+                      <ShieldCheck className="h-4 w-4" />
+                      Sello de Integridad del Contrato
+                    </p>
+                    <p className="font-mono text-slate-650 dark:text-slate-350 select-all mt-1 break-all bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg">{selectedContract.contractHash}</p>
+                    <p className="text-slate-400 mt-1 font-light">Este hash SHA-256 es un identificador inalterable que une el contenido de la propuesta, los hitos, y las firmas digitales de ambas partes.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

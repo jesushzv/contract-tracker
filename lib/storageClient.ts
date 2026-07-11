@@ -412,11 +412,20 @@ export async function updateMilestoneStatus(
     const milestone = allList[idx];
     const oldStatus = milestone.status;
     milestone.status = status;
+    
     if (status === "marked_paid") {
       milestone.markedPaidAt = new Date().toISOString();
+      milestone.confirmedAt = undefined;
     } else if (status === "confirmed") {
       milestone.confirmedAt = new Date().toISOString();
+    } else if (status === "pending" || status === "requested") {
+      milestone.markedPaidAt = undefined;
+      milestone.confirmedAt = undefined;
+      milestone.trackingReference = undefined;
+      milestone.transferredAmount = undefined;
+      milestone.receiptUrl = undefined;
     }
+    
     allList[idx] = milestone;
     localStorage.setItem(KEYS.MILESTONES, JSON.stringify(allList));
     
@@ -424,20 +433,34 @@ export async function updateMilestoneStatus(
 
     // Log milestone changes
     if (status !== oldStatus) {
-      if (status === "requested") {
+      const isRollback = 
+        (oldStatus === "confirmed") ||
+        (oldStatus === "marked_paid" && status !== "confirmed") ||
+        (oldStatus === "requested" && status === "pending");
+
+      if (isRollback) {
         await addAuditLog({
           contractId: milestone.contractId,
           action: "milestone_requested",
           actor: "freelancer",
-          details: `Cobro solicitado para el hito: "${milestone.label}" (Monto: $${milestone.amount}).`
+          details: `El freelancer revirtió el hito "${milestone.label}" de ${translateStatus(oldStatus)} a ${translateStatus(status)}.`
         });
-      } else if (status === "confirmed") {
-        await addAuditLog({
-          contractId: milestone.contractId,
-          action: "milestone_confirmed",
-          actor: "freelancer",
-          details: `Pago confirmado y recibido para el hito: "${milestone.label}".`
-        });
+      } else {
+        if (status === "requested") {
+          await addAuditLog({
+            contractId: milestone.contractId,
+            action: "milestone_requested",
+            actor: "freelancer",
+            details: `Cobro solicitado para el hito: "${milestone.label}" (Monto: $${milestone.amount}).`
+          });
+        } else if (status === "confirmed") {
+          await addAuditLog({
+            contractId: milestone.contractId,
+            action: "milestone_confirmed",
+            actor: "freelancer",
+            details: `Pago confirmado y recibido para el hito: "${milestone.label}".`
+          });
+        }
       }
     }
 
@@ -446,10 +469,19 @@ export async function updateMilestoneStatus(
   return serverActions.updateMilestoneStatus(milestoneId, status);
 }
 
+function translateStatus(s: string): string {
+  if (s === "pending") return "Pendiente";
+  if (s === "requested") return "Solicitado";
+  if (s === "marked_paid") return "Transferido (Verificando)";
+  if (s === "confirmed") return "Confirmado";
+  return s;
+}
+
 export async function markMilestoneAsTransferred(
   milestoneId: string,
   trackingReference: string,
-  transferredAmount?: number
+  transferredAmount?: number,
+  receiptUrl?: string
 ): Promise<Milestone | null> {
   if (isDemoMode()) {
     const data = localStorage.getItem(KEYS.MILESTONES);
@@ -465,6 +497,9 @@ export async function markMilestoneAsTransferred(
     if (transferredAmount !== undefined) {
       milestone.transferredAmount = transferredAmount;
     }
+    if (receiptUrl !== undefined) {
+      milestone.receiptUrl = receiptUrl;
+    }
     allList[idx] = milestone;
     localStorage.setItem(KEYS.MILESTONES, JSON.stringify(allList));
     
@@ -474,12 +509,12 @@ export async function markMilestoneAsTransferred(
       contractId: milestone.contractId,
       action: "milestone_transferred",
       actor: "client",
-      details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${trackingReference}).`
+      details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${trackingReference}${receiptUrl ? ', con recibo adjunto' : ''}).`
     });
 
     return milestone;
   }
-  return serverActions.markMilestoneAsTransferred(milestoneId, trackingReference, transferredAmount);
+  return serverActions.markMilestoneAsTransferred(milestoneId, trackingReference, transferredAmount, receiptUrl);
 }
 
 export async function acceptContract(
@@ -606,5 +641,11 @@ async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
   } else if (!allPaid && contract.status === "completed") {
     contract.status = "accepted";
     await saveContract(contract);
+    await addAuditLog({
+      contractId: contract.id,
+      action: "milestone_requested",
+      actor: "system",
+      details: "Un hito fue revertido. Contrato reactivado como Sellado."
+    });
   }
 }
