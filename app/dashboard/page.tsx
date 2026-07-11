@@ -35,7 +35,9 @@ export default function Dashboard() {
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'all' | 'draft' | 'sent' | 'accepted' | 'completed'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'draft' | 'sent' | 'accepted' | 'completed' | 'overdue'>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [allMilestones, setAllMilestones] = useState<Milestone[]>([]);
   
   // Settings profile form
   const [showSettings, setShowSettings] = useState(false);
@@ -76,9 +78,11 @@ export default function Dashboard() {
 
       const allContracts = await getContracts();
       setContracts(allContracts);
+      const allMData = await getMilestones();
+      setAllMilestones(allMData);
       if (allContracts.length > 0) {
         setSelectedContract(allContracts[0]);
-        const mList = await getMilestones(allContracts[0].id);
+        const mList = allMData.filter(m => m.contractId === allContracts[0].id);
         setMilestones(mList);
       }
     }
@@ -88,11 +92,13 @@ export default function Dashboard() {
   const refreshData = async () => {
     const allContracts = await getContracts();
     setContracts(allContracts);
+    const allMData = await getMilestones();
+    setAllMilestones(allMData);
     if (selectedContract) {
       const updated = allContracts.find(c => c.id === selectedContract.id) || null;
       setSelectedContract(updated);
       if (updated) {
-        const mList = await getMilestones(updated.id);
+        const mList = allMData.filter(m => m.contractId === updated.id);
         setMilestones(mList);
       }
     }
@@ -156,9 +162,31 @@ export default function Dashboard() {
     return `https://wa.me/?text=${encodeURIComponent(text)}`;
   };
 
+  // Helper to check if milestone is overdue
+  const isMilestoneOverdue = (milestone: Milestone) => {
+    if (milestone.status === 'marked_paid' || milestone.status === 'confirmed') return false;
+    const todayStr = new Date().toISOString().split('T')[0];
+    return milestone.dueDate < todayStr;
+  };
+
+  const isContractOverdue = (contractId: string) => {
+    const contractMilestones = allMilestones.filter(m => m.contractId === contractId);
+    return contractMilestones.some(m => isMilestoneOverdue(m));
+  };
+
   // Filtered contracts
   const filteredContracts = contracts.filter(c => {
+    const matchesSearch = 
+      c.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.clientEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.scopeDescription.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+
     if (activeTab === 'all') return true;
+    if (activeTab === 'overdue') {
+      return isContractOverdue(c.id);
+    }
     return c.status === activeTab;
   });
 
@@ -202,12 +230,7 @@ export default function Dashboard() {
     }).format(amount);
   };
 
-  // Helper to check if milestone is overdue
-  const isMilestoneOverdue = (milestone: Milestone) => {
-    if (milestone.status === 'marked_paid' || milestone.status === 'confirmed') return false;
-    const todayStr = new Date().toISOString().split('T')[0];
-    return milestone.dueDate < todayStr;
-  };
+
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-8">
@@ -423,6 +446,33 @@ export default function Dashboard() {
             </button>
           </div>
 
+          {/* Search bar */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Buscar por cliente, email o concepto..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:border-indigo-500 focus:outline-none dark:text-white"
+            />
+            <svg 
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {searchTerm && (
+              <button 
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-455 hover:text-slate-600 dark:hover:text-slate-200 text-xs"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
           {/* Filtering Tab buttons */}
           <div className="flex border-b border-slate-200 dark:border-slate-800 text-xs font-semibold gap-2 overflow-x-auto pb-1">
             <button
@@ -434,6 +484,16 @@ export default function Dashboard() {
               }`}
             >
               Todos
+            </button>
+            <button
+              onClick={() => setActiveTab('draft')}
+              className={`pb-2 px-1 border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === 'draft' 
+                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' 
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              Borradores
             </button>
             <button
               onClick={() => setActiveTab('sent')}
@@ -464,6 +524,27 @@ export default function Dashboard() {
               }`}
             >
               Completados
+            </button>
+            <button
+              onClick={() => setActiveTab('overdue')}
+              className={`pb-2 px-1 border-b-2 transition-colors whitespace-nowrap flex items-center gap-1 ${
+                activeTab === 'overdue' 
+                  ? 'border-red-500 text-red-600 dark:text-red-400' 
+                  : 'border-transparent text-slate-400 hover:text-red-500'
+              }`}
+            >
+              Atrasados
+              {allMilestones.filter(m => {
+                const todayStr = new Date().toISOString().split('T')[0];
+                return m.status !== 'marked_paid' && m.status !== 'confirmed' && m.dueDate < todayStr;
+              }).length > 0 && (
+                <span className="bg-red-500 text-white text-3xs px-1.5 py-0.5 rounded-full font-bold">
+                  {allMilestones.filter(m => {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    return m.status !== 'marked_paid' && m.status !== 'confirmed' && m.dueDate < todayStr;
+                  }).length}
+                </span>
+              )}
             </button>
           </div>
 

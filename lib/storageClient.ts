@@ -92,6 +92,59 @@ const seedSandboxIfNeeded = () => {
         beneficiaryName: "Héctor J. Guerrero",
         created_at: "2026-07-09T09:00:00Z",
         updated_at: "2026-07-09T09:00:00Z"
+      },
+      {
+        id: "c3-consultoria-resico",
+        freelancerId: "demo-freelancer-uuid",
+        clientName: "Carlos Martínez (Asesores S.C.)",
+        clientEmail: "carlos@asesores.mx",
+        scopeDescription: "Servicio de asesoría fiscal mensual y optimización para la transición al Régimen Simplificado de Confianza (RESICO).",
+        totalAmount: 15000,
+        currency: "MXN",
+        status: "completed",
+        clabe: "012180001509987654",
+        bankName: "BBVA México",
+        beneficiaryName: "Héctor J. Guerrero",
+        acceptedAt: "2026-06-14T10:00:00Z",
+        acceptedByName: "Carlos Martínez",
+        acceptedIp: "201.166.45.10",
+        contractHash: "6c5edf7f90f23028cd97818e698fb924a7ee41e4649b934ca495991b7852b861",
+        created_at: "2026-06-12T14:00:00Z",
+        updated_at: "2026-06-14T10:00:00Z"
+      },
+      {
+        id: "c4-desarrollo-ecommerce",
+        freelancerId: "demo-freelancer-uuid",
+        clientName: "Roberto Sánchez (E-Shop Mx)",
+        clientEmail: "roberto@eshop.mx",
+        scopeDescription: "Desarrollo de plataforma E-commerce con panel de administración autoadministrable, carrito de compras, catálogo dinámico e integración de pasarela de pagos en Next.js y Tailwind CSS.",
+        totalAmount: 90000,
+        currency: "MXN",
+        status: "accepted",
+        clabe: "012180001509987654",
+        bankName: "BBVA México",
+        beneficiaryName: "Héctor J. Guerrero",
+        acceptedAt: "2026-06-25T11:00:00Z",
+        acceptedByName: "Roberto Sánchez",
+        acceptedIp: "187.143.52.99",
+        contractHash: "9e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b810",
+        created_at: "2026-06-24T08:00:00Z",
+        updated_at: "2026-06-25T11:00:00Z"
+      },
+      {
+        id: "c5-draft-contrato",
+        freelancerId: "demo-freelancer-uuid",
+        clientName: "Valeria Gómez (Muebles de Madera)",
+        clientEmail: "valeria@mueblesmadera.mx",
+        scopeDescription: "Diseño y modelado 3D para catálogo interactivo de la línea de muebles para oficina corporativa 2026.",
+        totalAmount: 22000,
+        currency: "MXN",
+        status: "draft",
+        clabe: "012180001509987654",
+        bankName: "BBVA México",
+        beneficiaryName: "Héctor J. Guerrero",
+        created_at: "2026-07-09T17:00:00Z",
+        updated_at: "2026-07-09T17:00:00Z"
       }
     ];
     localStorage.setItem(KEYS.CONTRACTS, JSON.stringify(defaultContracts));
@@ -136,6 +189,64 @@ const seedSandboxIfNeeded = () => {
         dueDate: "2026-07-30",
         status: "pending",
         created_at: "2026-07-09T09:00:00Z"
+      },
+      {
+        id: "m3-1",
+        contractId: "c3-consultoria-resico",
+        label: "Pago único de honorarios (100%)",
+        amount: 15000,
+        dueDate: "2026-06-15",
+        status: "confirmed",
+        markedPaidAt: "2026-06-15T09:00:00Z",
+        confirmedAt: "2026-06-15T11:00:00Z",
+        created_at: "2026-06-12T14:00:00Z"
+      },
+      {
+        id: "m4-1",
+        contractId: "c4-desarrollo-ecommerce",
+        label: "Anticipo contra inicio (30%)",
+        amount: 27000,
+        dueDate: "2026-06-26",
+        status: "confirmed",
+        markedPaidAt: "2026-06-26T10:00:00Z",
+        confirmedAt: "2026-06-26T12:00:00Z",
+        created_at: "2026-06-24T08:00:00Z"
+      },
+      {
+        id: "m4-2",
+        contractId: "c4-desarrollo-ecommerce",
+        label: "Entrega de versión Beta funcional (40%)",
+        amount: 36000,
+        dueDate: "2026-07-09", // Overdue yesterday
+        status: "requested",
+        created_at: "2026-06-24T08:00:00Z"
+      },
+      {
+        id: "m4-3",
+        contractId: "c4-desarrollo-ecommerce",
+        label: "Despliegue a producción y finiquito (30%)",
+        amount: 27000,
+        dueDate: "2026-07-28",
+        status: "pending",
+        created_at: "2026-06-24T08:00:00Z"
+      },
+      {
+        id: "m5-1",
+        contractId: "c5-draft-contrato",
+        label: "Anticipo inicial (50%)",
+        amount: 11000,
+        dueDate: "2026-07-15",
+        status: "pending",
+        created_at: "2026-07-09T17:00:00Z"
+      },
+      {
+        id: "m5-2",
+        contractId: "c5-draft-contrato",
+        label: "Entrega y finiquito (50%)",
+        amount: 11000,
+        dueDate: "2026-07-31",
+        status: "pending",
+        created_at: "2026-07-09T17:00:00Z"
       }
     ];
     localStorage.setItem(KEYS.MILESTONES, JSON.stringify(defaultMilestones));

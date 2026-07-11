@@ -77,6 +77,32 @@ export default function NewContract() {
   const handleTemplateChange = (tmplKey: 'general' | 'design' | 'development' | 'consulting') => {
     setSelectedTemplate(tmplKey);
     setSelectedClauses(CONTRACT_TEMPLATES[tmplKey].defaultClauses);
+
+    // Dynamic milestones load based on selected template type
+    let newMilestones: Array<{ label: string; pct: number; amount: number; dueDate: string }> = [];
+    if (tmplKey === 'general') {
+      newMilestones = [
+        { label: "Anticipo inicial (50%)", pct: 50, amount: Math.round(totalAmount * 0.5), dueDate: "" },
+        { label: "Entrega y finiquito (50%)", pct: 50, amount: Math.round(totalAmount * 0.5), dueDate: "" }
+      ];
+    } else if (tmplKey === 'design') {
+      newMilestones = [
+        { label: "Anticipo contra firma (40%)", pct: 40, amount: Math.round(totalAmount * 0.4), dueDate: "" },
+        { label: "Entrega de propuestas conceptuales (30%)", pct: 30, amount: Math.round(totalAmount * 0.3), dueDate: "" },
+        { label: "Entrega final y finiquito (30%)", pct: 30, amount: Math.round(totalAmount * 0.3), dueDate: "" }
+      ];
+    } else if (tmplKey === 'development') {
+      newMilestones = [
+        { label: "Anticipo contra inicio (30%)", pct: 30, amount: Math.round(totalAmount * 0.3), dueDate: "" },
+        { label: "Entrega de versión Beta funcional (40%)", pct: 40, amount: Math.round(totalAmount * 0.4), dueDate: "" },
+        { label: "Despliegue a producción y finiquito (30%)", pct: 30, amount: Math.round(totalAmount * 0.3), dueDate: "" }
+      ];
+    } else if (tmplKey === 'consulting') {
+      newMilestones = [
+        { label: "Pago único de honorarios (100%)", pct: 100, amount: totalAmount, dueDate: "" }
+      ];
+    }
+    setMilestones(newMilestones);
   };
 
   // Recalculate milestone values based on total amount
@@ -243,10 +269,10 @@ export default function NewContract() {
                     <div
                       key={key}
                       onClick={() => handleTemplateChange(key)}
-                      className={`glass p-4 rounded-xl cursor-pointer transition-all text-left flex flex-col justify-between h-32 ${
+                      className={`glass p-4 rounded-xl cursor-pointer transition-all text-left flex flex-col justify-between h-32 border-2 ${
                         isSelected 
-                          ? "border-indigo-500 ring-2 ring-indigo-500/10 bg-indigo-500/5" 
-                          : "hover:border-slate-300 dark:hover:border-slate-700"
+                          ? "border-indigo-500 bg-indigo-500/5 shadow-md shadow-indigo-500/5 ring-2 ring-indigo-500/10" 
+                          : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
                       }`}
                     >
                       <h3 className="font-bold text-sm text-slate-800 dark:text-white">{item.name}</h3>
