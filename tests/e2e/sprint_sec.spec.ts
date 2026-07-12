@@ -34,7 +34,7 @@ test.describe("Sprint SEC: Security Hardening E2E Integration Suite", () => {
     const newContractId = await page.evaluate(() => {
       const data = localStorage.getItem("sandbox_contracts");
       const list = data ? JSON.parse(data) : [];
-      const newContract = list.find((c: any) => c.clientName === "Sofía Garza");
+      const newContract = list.find((c: { clientName?: string; id?: string }) => c.clientName === "Sofía Garza");
       return newContract ? newContract.id : null;
     });
     
