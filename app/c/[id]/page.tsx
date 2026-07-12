@@ -14,7 +14,7 @@ import {
   CreditCard,
   ExternalLink
 } from "lucide-react";
-import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision } from "@/lib/storageClient";
+import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision, uploadReceiptFile } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 import { Contract, Milestone, AuditLog, Profile } from "@/lib/types";
 
@@ -47,6 +47,11 @@ export default function ClientContractView() {
   const [receiptUrl, setReceiptUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [acceptedSuccess, setAcceptedSuccess] = useState(false);
+  const [receiptFileType, setReceiptFileType] = useState<'file' | 'url'>('file');
+  const [receiptFileBase64, setReceiptFileBase64] = useState("");
+  const [receiptFileName, setReceiptFileName] = useState("");
+  const [receiptFileMimeType, setReceiptFileMimeType] = useState("");
+  const [modalError, setModalError] = useState("");
 
   useEffect(() => {
     async function loadData() {
@@ -219,11 +224,48 @@ export default function ClientContractView() {
     );
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setModalError("");
+    if (!file) {
+      setReceiptFileBase64("");
+      setReceiptFileName("");
+      setReceiptFileMimeType("");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setModalError("El archivo excede el límite de tamaño de 5MB.");
+      return;
+    }
+
+    const allowedMimeTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+    if (!allowedMimeTypes.includes(file.type)) {
+      setModalError("Solo se permiten archivos PDF o imágenes (PNG, JPG).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const base64Data = result.split(",")[1];
+      setReceiptFileBase64(base64Data);
+      setReceiptFileName(file.name);
+      setReceiptFileMimeType(file.type);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleOpenPaymentModal = (milestone: Milestone) => {
     setPaymentMilestone(milestone);
     setTrackingReference("");
     setTransferredAmount(milestone.amount);
     setReceiptUrl("");
+    setReceiptFileType("file");
+    setReceiptFileBase64("");
+    setReceiptFileName("");
+    setReceiptFileMimeType("");
+    setModalError("");
     setShowPaymentModal(true);
   };
 
@@ -232,18 +274,34 @@ export default function ClientContractView() {
     if (!paymentMilestone || !trackingReference) return;
     
     setLoading(true);
+    setModalError("");
     try {
+      let resolvedReceiptUrl = undefined;
+      if (receiptFileType === 'file') {
+        if (!receiptFileBase64) {
+          throw new Error("Por favor, seleccione un archivo de comprobante de pago.");
+        }
+        resolvedReceiptUrl = await uploadReceiptFile(
+          receiptFileName,
+          receiptFileMimeType,
+          receiptFileBase64
+        );
+      } else {
+        resolvedReceiptUrl = receiptUrl || undefined;
+      }
+
       await markMilestoneAsTransferred(
         paymentMilestone.id,
         trackingReference,
         transferredAmount,
-        receiptUrl || undefined
+        resolvedReceiptUrl
       );
       await refreshData();
       setShowPaymentModal(false);
       setPaymentMilestone(null);
     } catch (err) {
-      alert("Error al guardar referencia de transferencia: " + err);
+      const msg = err instanceof Error ? err.message : "Error al guardar referencia de transferencia.";
+      setModalError(msg);
     } finally {
       setLoading(false);
     }
@@ -758,15 +816,68 @@ export default function ClientContractView() {
               </div>
 
               <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Comprobante de Pago (Enlace o Nombre de Archivo)</label>
-                <input
-                  type="text"
-                  placeholder="Ej. https://dropbox.com/s/recibo.pdf o captura.png"
-                  value={receiptUrl}
-                  onChange={(e) => setReceiptUrl(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-                />
+                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Método de Comprobante
+                </label>
+                <div className="flex gap-4 mb-3">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="receiptFileType"
+                      checked={receiptFileType === 'file'}
+                      onChange={() => setReceiptFileType('file')}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    Subir Archivo (PDF, PNG, JPG)
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="receiptFileType"
+                      checked={receiptFileType === 'url'}
+                      onChange={() => setReceiptFileType('url')}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    Enlace URL
+                  </label>
+                </div>
+
+                {receiptFileType === 'file' ? (
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="file"
+                      id="receipt-file-input"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={handleFileChange}
+                      className="block w-full text-xs text-slate-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-xl file:border-0
+                        file:text-xs file:font-semibold
+                        file:bg-indigo-50 file:text-indigo-700
+                        hover:file:bg-indigo-100
+                        dark:file:bg-indigo-950/30 dark:file:text-indigo-400"
+                    />
+                    <p className="text-3xs text-slate-400">
+                      Formatos permitidos: PDF, PNG, JPG. Máx. 5MB.
+                    </p>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Ej. https://dropbox.com/s/recibo.pdf o captura.png"
+                    value={receiptUrl}
+                    onChange={(e) => setReceiptUrl(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                )}
               </div>
+
+              {modalError && (
+                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-3 text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{modalError}</span>
+                </div>
+              )}
 
               <div className="flex gap-3 justify-end mt-4">
                 <button

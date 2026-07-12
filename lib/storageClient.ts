@@ -752,3 +752,36 @@ export async function loadSampleData(): Promise<boolean> {
   }
   return false;
 }
+
+export async function uploadReceiptFile(
+  fileName: string,
+  mimeType: string,
+  fileBase64: string
+): Promise<string> {
+  if (isDemoMode()) {
+    // In Demo mode, we validate the file, then return a fake/mock URL to save space
+    // to avoid overloading localStorage
+    const buffer = Buffer.from(fileBase64, "base64");
+    if (buffer.length > 5 * 1024 * 1024) {
+      throw new Error("El archivo excede el límite de tamaño de 5MB.");
+    }
+    const allowedMimeTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+    if (!allowedMimeTypes.includes(mimeType)) {
+      throw new Error("Tipo de archivo no permitido. Solo se permiten PDFs e imágenes (PNG, JPEG).");
+    }
+    
+    // Magic bytes verification
+    const hex = buffer.toString("hex", 0, 8).toUpperCase();
+    let isValidMagic = false;
+    if (mimeType === "application/pdf" && hex.startsWith("25504446")) isValidMagic = true;
+    else if (mimeType === "image/png" && hex.startsWith("89504E470D0A1A0A")) isValidMagic = true;
+    else if ((mimeType === "image/jpeg" || mimeType === "image/jpg") && hex.startsWith("FFD8FF")) isValidMagic = true;
+
+    if (!isValidMagic) {
+      throw new Error("Firma de archivo inválida. El contenido del archivo no coincide con su extensión.");
+    }
+
+    return `https://demo-mode-receipts.local/${fileName}`;
+  }
+  return serverActions.uploadReceiptFile(fileName, mimeType, fileBase64);
+}

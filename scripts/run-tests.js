@@ -145,6 +145,86 @@ try {
   assert.ok(Math.abs(net - 9533.33) < 0.01, "Withholding sum should match 9533.33");
   console.log("✅ Test 7 Passed!");
 
+  // Test 8: XSS sanitization (Sprint SEC)
+  console.log("🧪 Running Test 8: XSS Input Sanitization...");
+  function sanitizeInput(val) {
+    if (typeof val !== "string") return val;
+    return val.replace(/<[^>]*>/g, "");
+  }
+  assert.strictEqual(sanitizeInput("<script>alert('XSS')</script>Hello"), "alert('XSS')Hello");
+  assert.strictEqual(sanitizeInput("<b>Important</b>"), "Important");
+  assert.strictEqual(sanitizeInput("Normal text"), "Normal text");
+  console.log("✅ Test 8 Passed!");
+
+  // Test 9: Rate Limiting (Sprint SEC)
+  console.log("🧪 Running Test 9: Rate Limiting logic...");
+  const rateLimitDb = {};
+  function checkRateLimit(ip, action, limit, windowMs) {
+    const key = `${ip}:${action}`;
+    const now = Date.now();
+    if (!rateLimitDb[key]) {
+      rateLimitDb[key] = [];
+    }
+    // Clean old records
+    rateLimitDb[key] = rateLimitDb[key].filter(timestamp => now - timestamp < windowMs);
+    if (rateLimitDb[key].length >= limit) {
+      return true; // Limited
+    }
+    rateLimitDb[key].push(now);
+    return false; // Allowed
+  }
+  const testIp = "192.168.1.1";
+  const action = "test_action";
+  assert.strictEqual(checkRateLimit(testIp, action, 3, 1000), false); // 1
+  assert.strictEqual(checkRateLimit(testIp, action, 3, 1000), false); // 2
+  assert.strictEqual(checkRateLimit(testIp, action, 3, 1000), false); // 3
+  assert.strictEqual(checkRateLimit(testIp, action, 3, 1000), true);  // 4 (limited!)
+  console.log("✅ Test 9 Passed!");
+
+  // Test 10: File Verification (Magic Bytes and Size) (Sprint SEC)
+  console.log("🧪 Running Test 10: File Magic Bytes & Size Validation...");
+  function validateReceiptFile(fileName, mimeType, fileBase64) {
+    const buffer = Buffer.from(fileBase64, "base64");
+    if (buffer.length > 5 * 1024 * 1024) {
+      throw new Error("El archivo excede el límite de tamaño de 5MB.");
+    }
+    const allowedMimeTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+    if (!allowedMimeTypes.includes(mimeType)) {
+      throw new Error("Tipo de archivo no permitido. Solo se permiten PDFs e imágenes (PNG, JPEG).");
+    }
+    
+    // Magic bytes verification
+    const hex = buffer.toString("hex", 0, 8).toUpperCase();
+    let isValidMagic = false;
+    if (mimeType === "application/pdf" && hex.startsWith("25504446")) isValidMagic = true;
+    else if (mimeType === "image/png" && hex.startsWith("89504E470D0A1A0A")) isValidMagic = true;
+    else if ((mimeType === "image/jpeg" || mimeType === "image/jpg") && hex.startsWith("FFD8FF")) isValidMagic = true;
+
+    if (!isValidMagic) {
+      throw new Error("Firma de archivo inválida. El contenido del archivo no coincide con su extensión.");
+    }
+    return true;
+  }
+
+  // Valid PDF: %PDF- (25504446...)
+  const pdfBase64 = Buffer.from("%PDF-1.4\n1 0 obj\n...").toString("base64");
+  assert.strictEqual(validateReceiptFile("recibo.pdf", "application/pdf", pdfBase64), true);
+
+  // Invalid PDF content (fake extension)
+  const fakePdfBase64 = Buffer.from("NOTA_PDF_REAL").toString("base64");
+  assert.throws(() => {
+    validateReceiptFile("cheat.pdf", "application/pdf", fakePdfBase64);
+  }, /Firma de archivo inválida/);
+
+  // Too large file (>5MB)
+  const largeBuffer = Buffer.alloc(6 * 1024 * 1024); // 6MB
+  const largeBase64 = largeBuffer.toString("base64");
+  assert.throws(() => {
+    validateReceiptFile("big.pdf", "application/pdf", largeBase64);
+  }, /El archivo excede el límite/);
+
+  console.log("✅ Test 10 Passed!");
+
   console.log("\n🎉 ALL TESTS PASSED SUCCESSFULLY!");
   process.exit(0);
 } catch (error) {

@@ -63,6 +63,7 @@ export interface Contract {
   // OTP Verification
   clientOtpCode?: string;
   clientOtpVerified?: boolean;
+  clientOtpAttempts?: number;
   
   created_at: string;
   updated_at: string;

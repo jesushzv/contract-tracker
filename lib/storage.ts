@@ -15,6 +15,94 @@ interface DbSchema {
   auditLogs?: AuditLog[];
 }
 
+function sanitizeInput(text: string | undefined): string {
+  if (!text) return "";
+  return text.replace(/<\/?[^>]+(>|$)/g, "");
+}
+
+async function getClientIp(): Promise<string> {
+  try {
+    const headerList = await headers();
+    const forwardedFor = headerList.get("x-forwarded-for");
+    if (forwardedFor) {
+      return forwardedFor.split(",")[0].trim();
+    }
+    return headerList.get("x-real-ip") || "127.0.0.1";
+  } catch {
+    return "127.0.0.1";
+  }
+}
+
+const localRateLimits = new Map<string, { count: number; resetAt: number }>();
+
+export async function checkRateLimit(ip: string, action: string, limit: number, windowMs: number): Promise<boolean> {
+  const key = `${ip}:${action}`;
+  const now = Date.now();
+  const record = localRateLimits.get(key);
+
+  if (!record || now > record.resetAt) {
+    localRateLimits.set(key, {
+      count: 1,
+      resetAt: now + windowMs
+    });
+    return false;
+  }
+
+  if (record.count >= limit) {
+    return true;
+  }
+
+  record.count += 1;
+  localRateLimits.set(key, record);
+  return false;
+}
+
+export async function uploadReceiptFile(
+  fileName: string,
+  mimeType: string,
+  fileBase64: string
+): Promise<string> {
+  const buffer = Buffer.from(fileBase64, "base64");
+
+  // 1. File size validation (5MB)
+  if (buffer.length > 5 * 1024 * 1024) {
+    throw new Error("El archivo excede el límite de tamaño de 5MB.");
+  }
+
+  // 2. Mimetype whitelist validation
+  const allowedMimeTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+  if (!allowedMimeTypes.includes(mimeType)) {
+    throw new Error("Tipo de archivo no permitido. Solo se permiten PDFs e imágenes (PNG, JPEG).");
+  }
+
+  // 3. Magic bytes verification
+  const hex = buffer.toString("hex", 0, 8).toUpperCase();
+  let isValidMagic = false;
+
+  if (mimeType === "application/pdf" && hex.startsWith("25504446")) {
+    isValidMagic = true;
+  } else if (mimeType === "image/png" && hex.startsWith("89504E470D0A1A0A")) {
+    isValidMagic = true;
+  } else if ((mimeType === "image/jpeg" || mimeType === "image/jpg") && hex.startsWith("FFD8FF")) {
+    isValidMagic = true;
+  }
+
+  if (!isValidMagic) {
+    throw new Error("Firma de archivo inválida. El contenido del archivo no coincide con su extensión.");
+  }
+
+  // Sanitize filename to prevent path traversal
+  const sanitizedName = path.basename(fileName).replace(/[^a-zA-Z0-9.-]/g, "_");
+  const uniqueName = `${crypto.randomUUID()}-${sanitizedName}`;
+
+  // Local storage: write to public/uploads
+  const uploadDir = path.join(process.cwd(), "public", "uploads");
+  await fs.mkdir(uploadDir, { recursive: true });
+  await fs.writeFile(path.join(uploadDir, uniqueName), buffer);
+
+  return `/uploads/${uniqueName}`;
+}
+
 // Helper to read JSON file database
 async function readDb(): Promise<DbSchema> {
   try {
@@ -70,8 +158,14 @@ export async function addAuditLog(
   if (!db.auditLogs) {
     db.auditLogs = [];
   }
-  const newLog: AuditLog = {
+  const sanitizedLog = {
     ...log,
+    details: sanitizeInput(log.details),
+    ip: log.ip ? sanitizeInput(log.ip) : undefined,
+    signature: log.signature ? sanitizeInput(log.signature) : undefined
+  };
+  const newLog: AuditLog = {
+    ...sanitizedLog,
     id: "log-" + Math.random().toString(36).substring(2, 9),
     timestamp: new Date().toISOString(),
   };
@@ -87,9 +181,26 @@ export async function getProfile(): Promise<Profile> {
 
 export async function updateProfile(profile: Profile): Promise<Profile> {
   const db = await readDb();
-  db.profile = profile;
+  
+  const sanitizedProfile: Profile = {
+    ...profile,
+    fullName: sanitizeInput(profile.fullName),
+    email: sanitizeInput(profile.email),
+    rfc: profile.rfc ? sanitizeInput(profile.rfc) : undefined,
+    regimenFiscal: profile.regimenFiscal ? sanitizeInput(profile.regimenFiscal) : undefined,
+    codigoPostal: profile.codigoPostal ? sanitizeInput(profile.codigoPostal) : undefined,
+    logoUrl: profile.logoUrl ? sanitizeInput(profile.logoUrl) : undefined,
+    signatureUrl: profile.signatureUrl ? sanitizeInput(profile.signatureUrl) : undefined,
+    bankDetails: {
+      clabe: sanitizeInput(profile.bankDetails.clabe),
+      bankName: sanitizeInput(profile.bankDetails.bankName),
+      beneficiaryName: sanitizeInput(profile.bankDetails.beneficiaryName)
+    }
+  };
+
+  db.profile = sanitizedProfile;
   await writeDb(db);
-  return profile;
+  return sanitizedProfile;
 }
 
 export async function getContracts(): Promise<Contract[]> {
@@ -107,18 +218,38 @@ export async function saveContract(contract: Contract): Promise<Contract> {
   const contracts = db.contracts || [];
   const isNew = contracts.findIndex((c: Contract) => c.id === contract.id) < 0;
 
+  const sanitizedContract: Contract = {
+    ...contract,
+    clientName: sanitizeInput(contract.clientName),
+    clientEmail: sanitizeInput(contract.clientEmail),
+    clientRfc: contract.clientRfc ? sanitizeInput(contract.clientRfc) : undefined,
+    clientRegimen: contract.clientRegimen ? sanitizeInput(contract.clientRegimen) : undefined,
+    clientPostal: contract.clientPostal ? sanitizeInput(contract.clientPostal) : undefined,
+    scopeDescription: sanitizeInput(contract.scopeDescription),
+    clabe: contract.clabe ? sanitizeInput(contract.clabe) : undefined,
+    bankName: contract.bankName ? sanitizeInput(contract.bankName) : undefined,
+    beneficiaryName: contract.beneficiaryName ? sanitizeInput(contract.beneficiaryName) : undefined,
+    freelancerRfc: contract.freelancerRfc ? sanitizeInput(contract.freelancerRfc) : undefined,
+    freelancerRegimen: contract.freelancerRegimen ? sanitizeInput(contract.freelancerRegimen) : undefined,
+    freelancerPostal: contract.freelancerPostal ? sanitizeInput(contract.freelancerPostal) : undefined,
+    acceptedByName: contract.acceptedByName ? sanitizeInput(contract.acceptedByName) : undefined,
+    acceptedIp: contract.acceptedIp ? sanitizeInput(contract.acceptedIp) : undefined,
+    freelancerAcceptedByName: contract.freelancerAcceptedByName ? sanitizeInput(contract.freelancerAcceptedByName) : undefined,
+    freelancerAcceptedIp: contract.freelancerAcceptedIp ? sanitizeInput(contract.freelancerAcceptedIp) : undefined,
+  };
+
   // Snap freelancer's current fiscal info into the contract if not set
-  if (!contract.freelancerRfc || !contract.freelancerRegimen) {
-    contract.freelancerRfc = db.profile.rfc;
-    contract.freelancerRegimen = db.profile.regimenFiscal;
-    contract.freelancerPostal = db.profile.codigoPostal;
+  if (!sanitizedContract.freelancerRfc || !sanitizedContract.freelancerRegimen) {
+    sanitizedContract.freelancerRfc = sanitizeInput(db.profile.rfc);
+    sanitizedContract.freelancerRegimen = sanitizeInput(db.profile.regimenFiscal);
+    sanitizedContract.freelancerPostal = sanitizeInput(db.profile.codigoPostal);
   }
 
-  const index = contracts.findIndex((c: Contract) => c.id === contract.id);
+  const index = contracts.findIndex((c: Contract) => c.id === sanitizedContract.id);
   if (index >= 0) {
-    contracts[index] = contract;
+    contracts[index] = sanitizedContract;
   } else {
-    contracts.push(contract);
+    contracts.push(sanitizedContract);
   }
   
   db.contracts = contracts;
@@ -126,14 +257,14 @@ export async function saveContract(contract: Contract): Promise<Contract> {
 
   if (isNew) {
     await addAuditLog({
-      contractId: contract.id,
+      contractId: sanitizedContract.id,
       action: "created",
       actor: "freelancer",
-      details: `El contrato para "${contract.clientName}" fue creado y guardado como borrador.`
+      details: `El contrato para "${sanitizedContract.clientName}" fue creado y guardado como borrador.`
     });
   }
 
-  return contract;
+  return sanitizedContract;
 }
 
 export async function getMilestones(contractId?: string): Promise<Milestone[]> {
@@ -246,6 +377,13 @@ export async function markMilestoneAsTransferred(
   transferredAmount?: number,
   receiptUrl?: string
 ): Promise<Milestone | null> {
+  const ip = await getClientIp();
+  // Limit milestone payment reports to 5 per 15 minutes per IP
+  const isLimited = await checkRateLimit(ip, "milestone_pay", 5, 15 * 60 * 1000);
+  if (isLimited) {
+    throw new Error("Límite de notificaciones de pago superado. Por favor, intente más tarde.");
+  }
+
   const db = await readDb();
   const allMilestones: Milestone[] = db.milestones || [];
   const idx = allMilestones.findIndex((m) => m.id === milestoneId);
@@ -254,12 +392,12 @@ export async function markMilestoneAsTransferred(
   const milestone = allMilestones[idx];
   milestone.status = "marked_paid";
   milestone.markedPaidAt = new Date().toISOString();
-  milestone.trackingReference = trackingReference;
+  milestone.trackingReference = sanitizeInput(trackingReference);
   if (transferredAmount !== undefined) {
     milestone.transferredAmount = transferredAmount;
   }
   if (receiptUrl !== undefined) {
-    milestone.receiptUrl = receiptUrl;
+    milestone.receiptUrl = sanitizeInput(receiptUrl);
   }
   
   allMilestones[idx] = milestone;
@@ -274,7 +412,7 @@ export async function markMilestoneAsTransferred(
     contractId: milestone.contractId,
     action: "milestone_transferred",
     actor: "client",
-    details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${trackingReference}${receiptUrl ? ', con recibo adjunto' : ''}).`
+    details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${milestone.trackingReference}${milestone.receiptUrl ? ', con recibo adjunto' : ''}).`
   });
 
   return milestone;
@@ -313,12 +451,20 @@ async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
 }
 
 export async function generateClientOtp(contractId: string): Promise<string | null> {
+  const ip = await getClientIp();
+  // Limit to 5 OTP generations per 15 minutes per IP
+  const isLimited = await checkRateLimit(ip, "otp_generate", 5, 15 * 60 * 1000);
+  if (isLimited) {
+    throw new Error("Límite de solicitudes de OTP superado. Por favor, intente más tarde.");
+  }
+
   const db = await readDb();
   const contracts = db.contracts || [];
   const idx = contracts.findIndex(c => c.id === contractId);
   if (idx < 0) return null;
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
   contracts[idx].clientOtpCode = otpCode;
+  contracts[idx].clientOtpAttempts = 0; // Reset attempts on new OTP generation
   db.contracts = contracts;
   await writeDb(db);
   return otpCode;
@@ -330,13 +476,33 @@ export async function acceptContract(
   clientName: string,
   otpCode: string
 ): Promise<Contract | null> {
+  const ip = await getClientIp();
+  // Limit to 5 signing attempts per 15 minutes per IP
+  const isLimited = await checkRateLimit(ip, "contract_sign", 5, 15 * 60 * 1000);
+  if (isLimited) {
+    throw new Error("Límite de intentos de firma superado. Por favor, intente más tarde.");
+  }
+
   const db = await readDb();
   const contracts = db.contracts || [];
   const idx = contracts.findIndex(c => c.id === contractId);
   if (idx < 0) return null;
   const contract = contracts[idx];
 
+  // OTP attempts lockout guard
+  const attempts = contract.clientOtpAttempts || 0;
+  if (attempts >= 3) {
+    throw new Error("El código de verificación ha sido bloqueado por seguridad debido a demasiados intentos fallidos. Solicite un nuevo código.");
+  }
+
   if (!contract.clientOtpCode || contract.clientOtpCode !== otpCode) {
+    contract.clientOtpAttempts = attempts + 1;
+    db.contracts = contracts;
+    await writeDb(db);
+
+    if (contract.clientOtpAttempts >= 3) {
+      throw new Error("Código incorrecto. La verificación ha sido bloqueada debido a demasiados intentos fallidos. Solicite un nuevo código.");
+    }
     throw new Error("El código de verificación ingresado es incorrecto.");
   }
   
@@ -372,24 +538,25 @@ export async function acceptContract(
   // Update Contract status and client acceptance signatures
   contract.status = "client_signed";
   contract.acceptedAt = new Date().toISOString();
-  contract.acceptedByName = clientName;
+  contract.acceptedByName = sanitizeInput(clientName);
   contract.acceptedIp = clientIp;
   contract.contractHash = sha256Hash;
   contract.clientOtpCode = undefined;
   contract.clientOtpVerified = true;
+  contract.clientOtpAttempts = 0; // Reset attempts on success
   contract.updated_at = new Date().toISOString();
   
   // Save updated contracts array in memory db
   contracts[idx] = contract;
   db.contracts = contracts;
   await writeDb(db);
- 
+  
   // Write audit log entry
   await addAuditLog({
     contractId: contract.id,
     action: "client_signed",
     actor: "client",
-    details: `El cliente ${clientName} firmó el contrato digitalmente (Verificado con OTP).`,
+    details: `El cliente ${contract.acceptedByName} firmó el contrato digitalmente (Verificado con OTP).`,
     ip: clientIp,
     signature: sha256Hash
   });
