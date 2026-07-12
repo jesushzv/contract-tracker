@@ -24,7 +24,14 @@ const isDemoMode = (): boolean => {
     return true;
   }
   
-  return localStorage.getItem("demo_mode") === "true";
+  const hasDemoParam = new URLSearchParams(window.location.search).get("demo") === "true";
+  if (hasDemoParam) {
+    localStorage.setItem("demo_mode", "true");
+    return true;
+  }
+  
+  const hasDemoCookie = document.cookie.split("; ").some(row => row.trim().startsWith("demo_mode=true"));
+  return localStorage.getItem("demo_mode") === "true" || hasDemoCookie;
 };
 
 // Local storage keys for the browser sandbox
@@ -46,6 +53,7 @@ const seedSandboxIfNeeded = () => {
       rfc: "GUEH860710MX8",
       regimenFiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
       codigoPostal: "06700",
+      tier: "pro",
       bankDetails: {
         clabe: "012180001509987654",
         bankName: "BBVA México",
@@ -53,6 +61,14 @@ const seedSandboxIfNeeded = () => {
       }
     };
     localStorage.setItem(KEYS.PROFILE, JSON.stringify(defaultProfile));
+  } else {
+    try {
+      const prof = JSON.parse(localStorage.getItem(KEYS.PROFILE) || "{}");
+      if (!prof.tier || prof.tier === "free") {
+        prof.tier = "pro";
+        localStorage.setItem(KEYS.PROFILE, JSON.stringify(prof));
+      }
+    } catch {}
   }
 
   if (!localStorage.getItem(KEYS.CONTRACTS)) {
@@ -411,6 +427,14 @@ export async function updateMilestoneStatus(
     
     const milestone = allList[idx];
     const oldStatus = milestone.status;
+
+    if (status === "confirmed" && oldStatus !== "marked_paid") {
+      throw new Error("El hito debe haber sido reportado como transferido por el cliente antes de ser confirmado.");
+    }
+    if (status === "marked_paid" && oldStatus !== "requested") {
+      throw new Error("Un hito solo puede ser marcado como transferido si ha sido solicitado previamente.");
+    }
+
     milestone.status = status;
     
     if (status === "marked_paid") {
@@ -491,6 +515,11 @@ export async function markMilestoneAsTransferred(
     if (idx < 0) return null;
     
     const milestone = allList[idx];
+    const oldStatus = milestone.status;
+    if (oldStatus !== "requested") {
+      throw new Error("El hito debe estar en estado 'Solicitado' antes de que el cliente lo marque como transferido.");
+    }
+
     milestone.status = "marked_paid";
     milestone.markedPaidAt = new Date().toISOString();
     milestone.trackingReference = trackingReference;
@@ -518,6 +547,14 @@ export async function markMilestoneAsTransferred(
 }
 
 export async function generateClientOtp(contractId: string): Promise<string | null> {
+  if (isDemoMode()) {
+    const contract = await getContractById(contractId);
+    if (!contract) return null;
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    contract.clientOtpCode = otpCode;
+    await saveContract(contract);
+    return otpCode;
+  }
   return serverActions.generateClientOtp(contractId);
 }
 
@@ -526,6 +563,43 @@ export async function acceptContract(
   clientName: string,
   otpCode: string
 ): Promise<Contract | null> {
+  if (isDemoMode()) {
+    const contract = await getContractById(contractId);
+    if (!contract) return null;
+
+    if (contract.status !== "sent") {
+      throw new Error("Solo se pueden firmar contratos en estado 'Enviado'.");
+    }
+
+    if (!contract.clientOtpCode || contract.clientOtpCode !== otpCode) {
+      throw new Error("El código de verificación ingresado es incorrecto.");
+    }
+
+    const clientIp = "127.0.0.1";
+    const sha256Hash = Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join("");
+
+    contract.status = "client_signed";
+    contract.acceptedAt = new Date().toISOString();
+    contract.acceptedByName = clientName;
+    contract.acceptedIp = clientIp;
+    contract.contractHash = sha256Hash;
+    contract.clientOtpVerified = true;
+    contract.clientOtpCode = undefined;
+    contract.updated_at = new Date().toISOString();
+
+    await saveContract(contract);
+
+    await addAuditLog({
+      contractId: contract.id,
+      action: "client_signed",
+      actor: "client",
+      details: `El cliente ${clientName} firmó el contrato digitalmente (Verificado con OTP).`,
+      ip: clientIp,
+      signature: sha256Hash
+    });
+
+    return contract;
+  }
   return serverActions.acceptContract(contractId, clientName, otpCode);
 }
 
@@ -536,6 +610,11 @@ export async function vetAndAcceptContract(
   if (isDemoMode()) {
     const contract = await getContractById(contractId);
     if (!contract) return null;
+
+    if (contract.status !== "client_signed") {
+      throw new Error("El contrato debe estar firmado por el cliente para poder validarlo y contra-firmarlo.");
+    }
+
     const milestones = await getMilestones(contractId);
 
     const sandboxIp = "189.144.22.84";
@@ -564,6 +643,40 @@ export async function vetAndAcceptContract(
     return contract;
   }
   return serverActions.vetAndAcceptContract(contractId, freelancerName);
+}
+
+export async function proposeContractRevision(
+  contractId: string,
+  reason: string
+): Promise<Contract | null> {
+  if (isDemoMode()) {
+    const contract = await getContractById(contractId);
+    if (!contract) return null;
+
+    contract.status = "draft";
+    contract.acceptedAt = undefined;
+    contract.acceptedByName = undefined;
+    contract.acceptedIp = undefined;
+    contract.freelancerAcceptedAt = undefined;
+    contract.freelancerAcceptedByName = undefined;
+    contract.freelancerAcceptedIp = undefined;
+    contract.contractHash = undefined;
+    contract.clientOtpVerified = false;
+    contract.clientOtpCode = undefined;
+    contract.updated_at = new Date().toISOString();
+
+    await saveContract(contract);
+
+    await addAuditLog({
+      contractId: contractId,
+      action: "revision_proposed",
+      actor: "system",
+      details: `Se solicitó revisión del contrato. Motivo: ${reason}`
+    });
+
+    return contract;
+  }
+  return serverActions.proposeContractRevision(contractId, reason);
 }
 
 export async function getAuditLogs(contractId?: string): Promise<AuditLog[]> {

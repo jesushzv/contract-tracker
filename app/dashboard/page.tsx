@@ -273,6 +273,7 @@ export default function Dashboard() {
   const handleSignOut = async () => {
     try {
       localStorage.removeItem("demo_mode");
+      document.cookie = "demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       await supabase.auth.signOut();
       window.location.href = "/login";
     } catch (err) {
@@ -1162,15 +1163,30 @@ export default function Dashboard() {
 
               {/* Status workflow banner */}
               {selectedContract.status === 'draft' && (
-                <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-800 dark:text-amber-400 flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold">Estado: Borrador</span>. Este contrato aún no ha sido compartido oficialmente. Puedes realizar cambios o marcarlo como enviado para activar las solicitudes de anticipos.
+                <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-850 dark:text-amber-400 flex flex-col gap-2.5">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Estado: Borrador</span>. Este contrato aún no ha sido compartido oficialmente. Puedes realizar cambios o marcarlo como enviado para activar las solicitudes de anticipos.
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
                     <button
                       onClick={() => handleUpdateContractStatus('sent')}
-                      className="mt-3 block bg-amber-600 hover:bg-amber-500 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
+                      className="bg-amber-600 hover:bg-amber-500 text-white rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
                     >
                       Marcar como Enviado
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditScopeDescription(selectedContract.scopeDescription);
+                        setEditTotalAmount(selectedContract.totalAmount);
+                        setEditMilestones(milestones.map(m => ({ ...m })));
+                        setIsEditingContract(true);
+                      }}
+                      className="border border-amber-300 dark:border-amber-700 bg-white/20 dark:bg-slate-900/20 hover:bg-white dark:hover:bg-slate-900 text-amber-800 dark:text-amber-400 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      Modificar Propuesta
                     </button>
                   </div>
                 </div>

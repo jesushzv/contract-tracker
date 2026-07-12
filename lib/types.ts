@@ -7,6 +7,7 @@ export interface Profile {
   codigoPostal?: string;
   logoUrl?: string;
   signatureUrl?: string;
+  tier?: 'free' | 'pro';
   bankDetails: {
     clabe: string;
     bankName: string;
@@ -94,7 +95,7 @@ export interface ClauseTemplate {
 export interface AuditLog {
   id: string;
   contractId: string;
-  action: 'created' | 'client_signed' | 'freelancer_accepted' | 'milestone_requested' | 'milestone_transferred' | 'milestone_confirmed' | 'modified';
+  action: 'created' | 'client_signed' | 'freelancer_accepted' | 'milestone_requested' | 'milestone_transferred' | 'milestone_confirmed' | 'modified' | 'revision_proposed';
   actor: 'freelancer' | 'client' | 'system';
   details: string;
   timestamp: string;

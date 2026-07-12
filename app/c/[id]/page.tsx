@@ -14,7 +14,7 @@ import {
   CreditCard,
   ExternalLink
 } from "lucide-react";
-import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp } from "@/lib/storageClient";
+import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 import { Contract, Milestone, AuditLog, Profile } from "@/lib/types";
 
@@ -35,6 +35,10 @@ export default function ClientContractView() {
   const [otpInput, setOtpInput] = useState("");
   const [debugOtp, setDebugOtp] = useState<string | null>(null);
   const [otpError, setOtpError] = useState("");
+  const [otpAttempts, setOtpAttempts] = useState(0);
+  const [showRevisionModal, setShowRevisionModal] = useState(false);
+  const [revisionReason, setRevisionReason] = useState("");
+  const [revisionSuccess, setRevisionSuccess] = useState(false);
   
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMilestone, setPaymentMilestone] = useState<Milestone | null>(null);
@@ -94,10 +98,14 @@ export default function ClientContractView() {
         if (otp) {
           setDebugOtp(otp);
           setAcceptStep('otp');
+          setOtpAttempts(0);
         } else {
           alert("Error al generar el código de verificación OTP.");
         }
       } else {
+        if (otpAttempts >= 3) {
+          throw new Error("Límite de intentos OTP excedido. Genera un nuevo código.");
+        }
         const updated = await acceptContract(contractId, signerName, otpInput);
         if (updated) {
           setContract(updated);
@@ -110,16 +118,63 @@ export default function ClientContractView() {
           setOtpInput("");
           setDebugOtp(null);
           setShowAcceptModal(false);
-          setTimeout(() => setAcceptedSuccess(false), 5000);
+          setOtpAttempts(0);
+          setTimeout(() => setAcceptedSuccess(false), 5050);
         }
       }
     } catch (err) {
       const error = err as Error;
       if (acceptStep === 'otp') {
-        setOtpError(error.message || "Código de verificación incorrecto.");
+        const nextAttempts = otpAttempts + 1;
+        setOtpAttempts(nextAttempts);
+        if (nextAttempts >= 3) {
+          setOtpError("Has alcanzado el límite de 3 intentos fallidos. Por motivos de seguridad, este intento se ha bloqueado. Por favor, genera un nuevo código OTP.");
+        } else {
+          setOtpError(`${error.message || "Código incorrecto."} Intentos restantes: ${3 - nextAttempts}`);
+        }
       } else {
         alert("Error al firmar el contrato: " + error.message);
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegenerateOtp = async () => {
+    setLoading(true);
+    setOtpError("");
+    try {
+      const otp = await generateClientOtp(contractId);
+      if (otp) {
+        setDebugOtp(otp);
+        setOtpAttempts(0);
+        setOtpInput("");
+      } else {
+        alert("Error al generar el código de verificación OTP.");
+      }
+    } catch (err) {
+      alert("Error al regenerar OTP: " + err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProposeRevision = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contractId || !revisionReason) return;
+    setLoading(true);
+    try {
+      const updated = await proposeContractRevision(contractId, revisionReason);
+      if (updated) {
+        setContract(updated);
+        await refreshData();
+        setShowRevisionModal(false);
+        setRevisionReason("");
+        setRevisionSuccess(true);
+        setTimeout(() => setRevisionSuccess(false), 5050);
+      }
+    } catch (err) {
+      alert("Error al solicitar revisión: " + err);
     } finally {
       setLoading(false);
     }
@@ -211,13 +266,21 @@ export default function ClientContractView() {
           </button>
           
           {contract.status === 'sent' && (
-            <button
-              onClick={() => setShowAcceptModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md hover:bg-indigo-500 transition-colors"
-            >
-              <ShieldCheck className="h-4 w-4" />
-              Revisar y Firmar Aceptación
-            </button>
+            <>
+              <button
+                onClick={() => setShowAcceptModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md hover:bg-indigo-500 transition-colors cursor-pointer"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Revisar y Firmar Aceptación
+              </button>
+              <button
+                onClick={() => setShowRevisionModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
+              >
+                Solicitar Revisión
+              </button>
+            </>
           )}
 
           {contract.status === 'client_signed' && (
@@ -237,6 +300,19 @@ export default function ClientContractView() {
             <span className="font-bold">¡Contrato firmado exitosamente!</span>
             <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
               Hemos registrado tu firma electrónica. El contrato se encuentra ahora en revisión final por parte del freelancer.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Revision proposed success banner */}
+      {revisionSuccess && (
+        <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-805 dark:text-amber-400 flex items-start gap-3 print:hidden animate-in zoom-in-95 duration-200">
+          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 animate-pulse" />
+          <div>
+            <span className="font-bold">Solicitud de revisión enviada</span>
+            <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
+              Hemos notificado al freelancer. El contrato ha vuelto a estado de borrador para su edición.
             </p>
           </div>
         </div>
@@ -455,19 +531,43 @@ export default function ClientContractView() {
 
           {/* Printable signature lines */}
           <div className="hidden print:grid grid-cols-2 gap-16 mt-20 pt-8 border-t border-slate-200">
-            <div className="text-center">
-              <div className="h-16"></div>
-              <div className="border-t border-slate-300 pt-2 text-xs">
+            <div className="text-center flex flex-col items-center justify-between min-h-[90px]">
+              <div className="h-12 flex items-center justify-center">
+                {contract.freelancerAcceptedAt ? (
+                  profile?.signatureUrl ? (
+                    <img src={profile.signatureUrl} alt="Firma Freelancer" className="max-h-12 object-contain" />
+                  ) : (
+                    <div className="text-[#10b981] text-3xs font-mono leading-tight">
+                      [VALIDADO DIGITALMENTE]<br />
+                      FECHA: {new Date(contract.freelancerAcceptedAt).toLocaleDateString('es-MX')}<br />
+                      IP: {contract.freelancerAcceptedIp}
+                    </div>
+                  )
+                ) : (
+                  <span className="text-3xs text-slate-300 italic">Pendiente de firma del Prestador</span>
+                )}
+              </div>
+              <div className="w-full border-t border-slate-300 pt-2 text-xs">
                 <p className="font-bold text-slate-700">{contract.beneficiaryName}</p>
                 {contract.freelancerRfc && <p className="text-slate-400 font-mono text-3xs">RFC: {contract.freelancerRfc}</p>}
                 <p className="text-slate-400">Prestador de Servicios</p>
               </div>
             </div>
-            <div className="text-center">
-              <div className="h-16 flex items-center justify-center text-purple-500 text-xs font-mono">
-                {contract.status !== 'draft' && contract.status !== 'sent' && `FIRMADO CLIENTE - IP: ${contract.acceptedIp}`}
+
+            <div className="text-center flex flex-col items-center justify-between min-h-[90px]">
+              <div className="h-12 flex items-center justify-center">
+                {contract.acceptedAt ? (
+                  <div className="text-[#6366f1] text-3xs font-mono leading-tight">
+                    [FIRMADO ELECTRÓNICAMENTE]<br />
+                    FECHA: {new Date(contract.acceptedAt).toLocaleDateString('es-MX')}<br />
+                    IP: {contract.acceptedIp}<br />
+                    HASH: {contract.contractHash?.substring(0, 16)}...
+                  </div>
+                ) : (
+                  <span className="text-3xs text-slate-300 italic">Pendiente de firma del Cliente</span>
+                )}
               </div>
-              <div className="border-t border-slate-300 pt-2 text-xs">
+              <div className="w-full border-t border-slate-300 pt-2 text-xs">
                 <p className="font-bold text-slate-700">{contract.acceptedByName || contract.clientName}</p>
                 {contract.clientRfc && <p className="text-slate-400 font-mono text-3xs">RFC: {contract.clientRfc}</p>}
                 <p className="text-slate-400">Cliente</p>
@@ -743,14 +843,24 @@ export default function ClientContractView() {
                       type="text"
                       maxLength={6}
                       required
+                      disabled={otpAttempts >= 3}
                       placeholder="Ej. 123456"
                       value={otpInput}
                       onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm font-bold text-center tracking-widest focus:border-indigo-500 focus:outline-none dark:text-white"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm font-bold text-center tracking-widest focus:border-indigo-500 focus:outline-none dark:text-white disabled:opacity-50"
                     />
                   </div>
                   {otpError && (
                     <span className="text-3xs text-red-500 font-semibold">{otpError}</span>
+                  )}
+                  {otpAttempts >= 3 && (
+                    <button
+                      type="button"
+                      onClick={handleRegenerateOtp}
+                      className="text-xs font-bold text-indigo-500 hover:text-indigo-400 text-left underline focus:outline-none"
+                    >
+                      Generar un nuevo código OTP
+                    </button>
                   )}
                 </div>
               )}
@@ -771,7 +881,7 @@ export default function ClientContractView() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || (acceptStep === 'name' ? !signerName : otpInput.length < 6)}
+                  disabled={loading || (acceptStep === 'name' ? !signerName : (otpInput.length < 6 || otpAttempts >= 3))}
                   className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                 >
                   {loading ? (
@@ -790,6 +900,52 @@ export default function ClientContractView() {
                       Verificar y Firmar
                     </>
                   )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Revision Modal Dialog */}
+      {showRevisionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
+          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-red-500/20">
+            <h3 className="text-xl font-bold flex items-center gap-2 text-red-500">
+              <AlertCircle className="h-6 w-6" />
+              Solicitar Revisión de la Propuesta
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+              ¿Hay algún cambio que desees realizar antes de firmar? Describe el motivo para que el freelancer pueda corregir el documento y volver a enviártelo. El contrato volverá a estado de **Borrador**.
+            </p>
+
+            <form onSubmit={handleProposeRevision} className="mt-6 flex flex-col gap-4">
+              <div>
+                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Comentarios o Motivo de la Revisión</label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Ej. Favor de corregir el monto del segundo hito..."
+                  value={revisionReason}
+                  onChange={(e) => setRevisionReason(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-red-500 focus:outline-none dark:text-white"
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRevisionModal(false)}
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || !revisionReason}
+                  className="rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  {loading ? "Procesando..." : "Enviar Solicitud"}
                 </button>
               </div>
             </form>

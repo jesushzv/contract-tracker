@@ -15,18 +15,33 @@ import {
   Calendar,
   Layers,
   Percent,
-  Building
+  Building,
+  ShieldAlert,
+  Loader2
 } from "lucide-react";
 import { MOCK_CLAUSES, CONTRACT_TEMPLATES } from "@/lib/mockData";
-import { getProfile, saveContract, saveMilestones } from "@/lib/storageClient";
+import { getProfile, saveContract, saveMilestones, getContracts, updateProfile } from "@/lib/storageClient";
 import { Contract, Milestone, Profile } from "@/lib/types";
 import { validateRFC } from "@/lib/rfcValidator";
+
+function generateUUID(): string {
+  if (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 
 function NewContractForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const templateParam = searchParams.get("template");
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [contractsCount, setContractsCount] = useState(0);
+  const [isUpgradeLoading, setIsUpgradeLoading] = useState(false);
 
   // Stepper state
   const [step, setStep] = useState(1);
@@ -65,8 +80,22 @@ function NewContractForm() {
   const [freelancerRegimen, setFreelancerRegimen] = useState("");
   const [freelancerPostal, setFreelancerPostal] = useState("");
 
+  const handleUpgradeToPro = async () => {
+    if (!profile) return;
+    setIsUpgradeLoading(true);
+    try {
+      const updated = { ...profile, tier: "pro" as const };
+      await updateProfile(updated);
+      setProfile(updated);
+    } catch (err) {
+      alert("Error al actualizar a Pro: " + err);
+    } finally {
+      setIsUpgradeLoading(false);
+    }
+  };
+
   useEffect(() => {
-    async function loadProfile() {
+    async function loadData() {
       const prof = await getProfile();
       setProfile(prof);
       setClabe(prof.bankDetails.clabe);
@@ -75,8 +104,12 @@ function NewContractForm() {
       setFreelancerRfc(prof.rfc || "");
       setFreelancerRegimen(prof.regimenFiscal || "");
       setFreelancerPostal(prof.codigoPostal || "");
+
+      const contracts = await getContracts();
+      const userContracts = contracts.filter(c => c.freelancerId === prof.id);
+      setContractsCount(userContracts.length);
     }
-    loadProfile();
+    loadData();
   }, []);
 
   const handleClientRfcBlur = () => {
@@ -196,7 +229,7 @@ function NewContractForm() {
       return;
     }
 
-    const contractId = `c-${Date.now()}`;
+    const contractId = generateUUID();
     
     // 2. Save Contract Server Action
     const contractObj: Contract = {
@@ -234,7 +267,7 @@ function NewContractForm() {
 
     // 3. Save Milestones Server Action
     const milestoneObjs: Milestone[] = milestones.map((m, idx) => ({
-      id: `m-${contractId}-${idx}`,
+      id: generateUUID(),
       contractId: contractId,
       label: m.label,
       amount: m.amount,
@@ -246,6 +279,68 @@ function NewContractForm() {
 
     router.push("/dashboard");
   };
+
+  // Enforce Free tier contract cap
+  if (profile && (!profile.tier || profile.tier === "free") && contractsCount >= 3) {
+    return (
+      <div className="mx-auto w-full max-w-lg px-4 py-16 text-center flex-grow flex items-center justify-center min-h-[70vh]">
+        <div className="glass rounded-3xl p-8 border border-indigo-500/20 shadow-2xl relative overflow-hidden text-left flex flex-col gap-6 w-full">
+          {/* Alert Glow */}
+          <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-indigo-500/10 blur-3xl animate-pulse" />
+          
+          <div className="flex items-center gap-3.5 border-b border-slate-100 dark:border-slate-850 pb-5">
+            <div className="h-10 w-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
+              <ShieldAlert className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Límite del Plan Alcanzado</h1>
+              <p className="text-xs text-slate-400 mt-0.5">Límite de contratos para el Plan Gratuito</p>
+            </div>
+          </div>
+
+          <div className="text-sm leading-relaxed text-slate-500 dark:text-slate-400 flex flex-col gap-3 font-light">
+            <p>
+              Has alcanzado el límite máximo de **3 contratos** permitidos en tu **Plan Gratuito**.
+            </p>
+            <p>
+              Para crear más acuerdos de servicio con tus clientes y habilitar la personalización de logotipos y firmas, te invitamos a actualizar al **Plan Pro**.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 p-5 flex justify-between items-center mt-2">
+            <div>
+              <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Pro</span>
+              <p className="text-3xs text-slate-400 mt-0.5">Contratos ilimitados + Branding</p>
+            </div>
+            <span className="text-xs font-black text-emerald-500">$199 MXN/mes</span>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-850 pt-5 mt-2">
+            <Link
+              href="/dashboard"
+              className="rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-650 dark:text-slate-400 px-5 py-2.5 text-xs font-bold transition-all cursor-pointer"
+            >
+              Volver al Panel
+            </Link>
+            <button
+              onClick={handleUpgradeToPro}
+              disabled={isUpgradeLoading}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 text-xs transition-all shadow-md shadow-indigo-500/10 cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {isUpgradeLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Actualizando...
+                </>
+              ) : (
+                "Actualizar a Pro"
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6">
@@ -302,10 +397,10 @@ function NewContractForm() {
                     <div
                       key={key}
                       onClick={() => handleTemplateChange(key)}
-                      className={`glass p-4 rounded-xl cursor-pointer transition-all text-left flex flex-col justify-between h-32 border-2 ${
+                      className={`glass p-4 rounded-xl cursor-pointer transition-all text-left flex flex-col justify-between min-h-36 md:min-h-32 py-4 border-2! ${
                         isSelected 
-                          ? "border-indigo-500 bg-indigo-500/5 shadow-md shadow-indigo-500/5 ring-2 ring-indigo-500/10" 
-                          : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
+                          ? "border-indigo-500! bg-indigo-500/5! shadow-md shadow-indigo-500/5 ring-2! ring-indigo-500/10!" 
+                          : "border-slate-200! dark:border-slate-800! hover:border-slate-300 dark:hover:border-slate-700 bg-white/40 dark:bg-slate-900/40"
                       }`}
                     >
                       <h3 className="font-bold text-sm text-slate-800 dark:text-white">{item.name}</h3>

@@ -4,8 +4,10 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const { cookies, nextUrl } = request;
 
-  // Check if we are bypassing auth for staging preview or if ?demo=true is present
-  const isDemo = nextUrl.searchParams.get("demo") === "true";
+  // Check if we are bypassing auth if ?demo=true is present or if demo_mode=true cookie exists
+  const hasDemoParam = nextUrl.searchParams.get("demo") === "true";
+  const hasDemoCookie = cookies.get("demo_mode")?.value === "true";
+  const isDemo = hasDemoParam || hasDemoCookie;
 
   // Find any Supabase auth token cookie
   const hasAuthCookie = cookies.getAll().some((cookie) => 
@@ -23,7 +25,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+
+  // If the request had ?demo=true and the cookie is not set, set it
+  if (hasDemoParam && !hasDemoCookie) {
+    response.cookies.set("demo_mode", "true", { path: "/" });
+  }
+
+  return response;
 }
 
 export const config = {

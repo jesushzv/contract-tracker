@@ -19,6 +19,7 @@ export default function OnboardingPage() {
   const [clabe, setClabe] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [signatureUrl, setSignatureUrl] = useState("");
+  const [tier, setTier] = useState<'free' | 'pro'>("free");
   
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,7 +27,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     async function checkSession() {
-      const isDemo = new URLSearchParams(window.location.search).get("demo") === "true";
+      const isDemo = new URLSearchParams(window.location.search).get("demo") === "true" || localStorage.getItem("demo_mode") === "true";
       if (isDemo) {
         setEmail("hector@freelancemx.dev");
         setSessionCheckLoading(false);
@@ -73,22 +74,28 @@ export default function OnboardingPage() {
     setLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setError("La sesión ha expirado. Inicia sesión de nuevo.");
-        setLoading(false);
-        return;
+      const isDemo = new URLSearchParams(window.location.search).get("demo") === "true" || localStorage.getItem("demo_mode") === "true";
+      let userId = "demo-freelancer-uuid";
+      if (!isDemo) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setError("La sesión ha expirado. Inicia sesión de nuevo.");
+          setLoading(false);
+          return;
+        }
+        userId = session.user.id;
       }
 
       const newProfile: Profile = {
-        id: session.user.id,
+        id: userId,
         email,
         fullName,
         rfc: rfc || undefined,
         regimenFiscal: regimenFiscal || undefined,
         codigoPostal: codigoPostal || undefined,
-        logoUrl: logoUrl || undefined,
-        signatureUrl: signatureUrl || undefined,
+        logoUrl: tier === "pro" ? (logoUrl || undefined) : undefined,
+        signatureUrl: tier === "pro" ? (signatureUrl || undefined) : undefined,
+        tier,
         bankDetails: {
           clabe,
           bankName,
@@ -141,8 +148,48 @@ export default function OnboardingPage() {
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
           
-          {/* Section: Fiscal Details */}
+          {/* Section: Plan Selection */}
           <div className="md:col-span-2">
+            <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-3">Selecciona tu Plan</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div 
+                onClick={() => setTier("free")}
+                className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
+                  tier === "free" 
+                    ? "border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20" 
+                    : "border-slate-200 dark:border-slate-800 hover:border-slate-350 bg-white/40 dark:bg-slate-900/40"
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Gratuito</span>
+                  <span className="text-2xs font-extrabold text-indigo-500">$0 MXN</span>
+                </div>
+                <p className="text-3xs text-slate-400 mt-1 leading-normal">
+                  Ideal para empezar. Límite de 3 contratos y carga de identidad de marca (logo/firma) bloqueados.
+                </p>
+              </div>
+
+              <div 
+                onClick={() => setTier("pro")}
+                className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
+                  tier === "pro" 
+                    ? "border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20" 
+                    : "border-slate-200 dark:border-slate-800 hover:border-slate-350 bg-white/40 dark:bg-slate-900/40"
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Pro</span>
+                  <span className="text-2xs font-extrabold text-emerald-500">$199 MXN/mes</span>
+                </div>
+                <p className="text-3xs text-slate-400 mt-1 leading-normal">
+                  Contratos ilimitados, logotipo y firma digital personalizados para una apariencia premium.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Fiscal Details */}
+          <div className="md:col-span-2 border-t border-slate-100 dark:border-slate-850 pt-4">
             <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-3">Datos Fiscales</h3>
           </div>
 
@@ -236,28 +283,35 @@ export default function OnboardingPage() {
 
           {/* Section: Custom Branding (Optional) */}
           <div className="md:col-span-2 border-t border-slate-100 dark:border-slate-850 pt-4">
-            <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-3">Identidad de Marca (Opcional)</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-3">Identidad de Marca (Opcional)</h3>
+              {tier === "free" && (
+                <span className="text-3xs font-bold bg-amber-500/10 text-amber-600 rounded-md px-1.5 py-0.5 border border-amber-500/20">Requiere Plan Pro</span>
+              )}
+            </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 relative">
             <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Logo de tu Empresa (URL de Imagen)</label>
             <input
               type="text"
-              placeholder="https://tudominio.com/logo.png"
-              value={logoUrl}
+              disabled={tier === "free"}
+              placeholder={tier === "free" ? "🔒 Carga de logo deshabilitada en Plan Gratuito" : "https://tudominio.com/logo.png"}
+              value={tier === "free" ? "" : logoUrl}
               onChange={(e) => setLogoUrl(e.target.value)}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 relative">
             <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Tu Firma Digital (URL de Imagen)</label>
             <input
               type="text"
-              placeholder="https://tudominio.com/firma.png"
-              value={signatureUrl}
+              disabled={tier === "free"}
+              placeholder={tier === "free" ? "🔒 Carga de firma deshabilitada en Plan Gratuito" : "https://tudominio.com/firma.png"}
+              value={tier === "free" ? "" : signatureUrl}
               onChange={(e) => setSignatureUrl(e.target.value)}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
 

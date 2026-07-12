@@ -30,6 +30,7 @@ async function readDb(): Promise<DbSchema> {
         rfc: "GUEH860710MX8",
         regimenFiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
         codigoPostal: "06700",
+        tier: "free",
         bankDetails: {
           clabe: "012180001509987654",
           bankName: "BBVA México",
@@ -460,6 +461,41 @@ export async function vetAndAcceptContract(
   if (milestones.length > 0 && milestones[0].status === "pending") {
     await updateMilestoneStatus(milestones[0].id, "requested");
   }
+
+  return contract;
+}
+
+export async function proposeContractRevision(
+  contractId: string,
+  reason: string
+): Promise<Contract | null> {
+  const db = await readDb();
+  const contracts = db.contracts || [];
+  const idx = contracts.findIndex((c) => c.id === contractId);
+  if (idx < 0) return null;
+
+  const contract = contracts[idx];
+  contract.status = "draft";
+  contract.acceptedAt = undefined;
+  contract.acceptedByName = undefined;
+  contract.acceptedIp = undefined;
+  contract.freelancerAcceptedAt = undefined;
+  contract.freelancerAcceptedByName = undefined;
+  contract.freelancerAcceptedIp = undefined;
+  contract.contractHash = undefined;
+  contract.clientOtpVerified = false;
+  contract.clientOtpCode = undefined;
+  contract.updated_at = new Date().toISOString();
+
+  contracts[idx] = contract;
+  await writeDb(db);
+
+  await addAuditLog({
+    contractId: contractId,
+    action: "revision_proposed",
+    actor: "system",
+    details: `Se solicitó revisión del contrato. Motivo: ${reason}`
+  });
 
   return contract;
 }

@@ -108,6 +108,7 @@ export async function getProfile(): Promise<Profile> {
       codigoPostal: "06700",
       logoUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&h=120&fit=crop&auto=format",
       signatureUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3a/John_Hancock_signature.svg",
+      tier: "free",
       bankDetails: {
         clabe: "012180001509987654",
         bankName: "BBVA México",
@@ -125,6 +126,7 @@ export async function getProfile(): Promise<Profile> {
     codigoPostal: data.codigo_postal,
     logoUrl: data.logo_url || undefined,
     signatureUrl: data.signature_url || undefined,
+    tier: data.tier || "free",
     bankDetails: {
       clabe: data.bank_details.clabe,
       bankName: data.bank_details.bankName,
@@ -155,6 +157,7 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
         codigo_postal: profile.codigoPostal,
         logo_url: profile.logoUrl || null,
         signature_url: profile.signatureUrl || null,
+        tier: profile.tier || "free",
         bank_details: profile.bankDetails,
         updated_at: new Date().toISOString()
       })
@@ -174,6 +177,7 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
         codigo_postal: profile.codigoPostal,
         logo_url: profile.logoUrl || null,
         signature_url: profile.signatureUrl || null,
+        tier: profile.tier || "free",
         bank_details: profile.bankDetails
       });
 
@@ -338,6 +342,14 @@ export async function updateMilestoneStatus(
 
   const oldStatus = current.data?.status as MilestoneStatus || "pending";
 
+  if (status === "confirmed" && oldStatus !== "marked_paid") {
+    throw new Error("El hito debe haber sido reportado como transferido por el cliente antes de ser confirmado.");
+  }
+
+  if (status === "marked_paid" && oldStatus !== "requested") {
+    throw new Error("Un hito solo puede ser marcado como transferido si ha sido solicitado previamente.");
+  }
+
   if (status === "marked_paid") {
     updates.marked_paid_at = new Date().toISOString();
     if (current.data) {
@@ -432,6 +444,17 @@ export async function markMilestoneAsTransferred(
   transferredAmount?: number,
   receiptUrl?: string
 ): Promise<Milestone | null> {
+  const current = await supabase
+    .from("milestones")
+    .select("status")
+    .eq("id", milestoneId)
+    .single();
+
+  const oldStatus = current.data?.status as MilestoneStatus || "pending";
+  if (oldStatus !== "requested") {
+    throw new Error("El hito debe estar en estado 'Solicitado' antes de que el cliente lo marque como transferido.");
+  }
+
   const updates: { 
     status: MilestoneStatus; 
     marked_paid_at: string; 
@@ -548,6 +571,10 @@ export async function acceptContract(
   const contract = await getContractById(contractId);
   if (!contract) return null;
 
+  if (contract.status !== "sent") {
+    throw new Error("Solo se pueden firmar contratos en estado 'Enviado'.");
+  }
+
   if (!contract.clientOtpCode || contract.clientOtpCode !== otpCode) {
     throw new Error("El código de verificación ingresado es incorrecto.");
   }
@@ -617,6 +644,11 @@ export async function vetAndAcceptContract(
 ): Promise<Contract | null> {
   const contract = await getContractById(contractId);
   if (!contract) return null;
+
+  if (contract.status !== "client_signed") {
+    throw new Error("El contrato debe estar firmado por el cliente para poder validarlo y contra-firmarlo.");
+  }
+
   const milestones = await getMilestones(contractId);
 
   const headerList = await headers();
@@ -815,4 +847,42 @@ export async function loadSampleData(): Promise<boolean> {
   });
 
   return true;
+}
+
+export async function proposeContractRevision(
+  contractId: string,
+  reason: string
+): Promise<Contract | null> {
+  const contract = await getContractById(contractId);
+  if (!contract) return null;
+
+  const { data, error } = await supabase
+    .from("contracts")
+    .update({
+      status: "draft",
+      accepted_at: null,
+      accepted_by_name: null,
+      accepted_ip: null,
+      freelancer_accepted_at: null,
+      freelancer_accepted_by_name: null,
+      freelancer_accepted_ip: null,
+      contract_hash: null,
+      client_otp_verified: false,
+      client_otp_code: null,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", contractId)
+    .select()
+    .single();
+
+  if (error || !data) return null;
+
+  await addAuditLog({
+    contractId: contractId,
+    action: "revision_proposed",
+    actor: "system",
+    details: `Se solicitó revisión del contrato. Motivo: ${reason}`
+  });
+
+  return mapContractFromDb(data);
 }
