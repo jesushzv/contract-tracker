@@ -52,6 +52,7 @@ function NewContractForm() {
   const [clientRfc, setClientRfc] = useState("");
   const [clientRegimen, setClientRegimen] = useState("");
   const [clientPostal, setClientPostal] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
   
   const [scopeDescription, setScopeDescription] = useState("");
   const [totalAmount, setTotalAmount] = useState<number>(30000);
@@ -240,6 +241,7 @@ function NewContractForm() {
       clientRfc: clientRfc || undefined,
       clientRegimen: clientRegimen || undefined,
       clientPostal: clientPostal || undefined,
+      clientPhone: clientPhone || undefined,
       
       scopeDescription,
       totalAmount,
@@ -411,7 +413,7 @@ function NewContractForm() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Nombre del Cliente o Razón Social</label>
                 <input
@@ -432,6 +434,17 @@ function NewContractForm() {
                   placeholder="sofia@empresa.com"
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Teléfono del Cliente (WhatsApp)</label>
+                <input
+                  type="tel"
+                  placeholder="Ej. +525512345678"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
                 />
               </div>

@@ -1,6 +1,6 @@
 import * as localActions from "./storage";
 import * as supabaseActions from "./storageSupabase";
-import { Contract, Milestone, Profile, MilestoneStatus, AuditLog } from "./types";
+import { Contract, Milestone, Profile, MilestoneStatus, AuditLog, ContractVersion } from "./types";
 
 // Determine if we should use the cloud Supabase database
 const shouldUseSupabase = (): boolean => {
@@ -39,7 +39,8 @@ const KEYS = {
   PROFILE: "sandbox_profile",
   CONTRACTS: "sandbox_contracts",
   MILESTONES: "sandbox_milestones",
-  AUDIT_LOGS: "sandbox_audit_logs"
+  AUDIT_LOGS: "sandbox_audit_logs",
+  CONTRACT_VERSIONS: "sandbox_contract_versions"
 };
 
 // Seed standard mock data in browser sandbox if empty
@@ -363,6 +364,32 @@ export async function saveContract(contract: Contract): Promise<Contract> {
     const isNew = index < 0;
 
     if (index >= 0) {
+      const oldContract = contracts[index];
+      const hasChanges = oldContract.scopeDescription !== contract.scopeDescription ||
+                         oldContract.totalAmount !== contract.totalAmount ||
+                         oldContract.currency !== contract.currency;
+      if (hasChanges) {
+        const verData = localStorage.getItem(KEYS.CONTRACT_VERSIONS);
+        const verList: ContractVersion[] = verData ? JSON.parse(verData) : [];
+        const versions = verList.filter(v => v.contractId === oldContract.id);
+        const nextVer = versions.length > 0 ? Math.max(...versions.map(v => v.versionNumber)) + 1 : 1;
+        
+        const newVersion: ContractVersion = {
+          id: "ver-" + Math.random().toString(36).substring(2, 9),
+          contractId: oldContract.id,
+          versionNumber: nextVer,
+          scopeDescription: oldContract.scopeDescription,
+          totalAmount: oldContract.totalAmount,
+          currency: oldContract.currency,
+          taxWithholdingAmount: oldContract.taxWithholdingAmount,
+          ivaAmount: oldContract.ivaAmount,
+          subtotalAmount: oldContract.subtotalAmount,
+          modifiedAt: new Date().toISOString(),
+          reason: oldContract.status === "draft" ? "Reversión a borrador" : "Modificación de propuesta"
+        };
+        verList.push(newVersion);
+        localStorage.setItem(KEYS.CONTRACT_VERSIONS, JSON.stringify(verList));
+      }
       contracts[index] = contract;
     } else {
       contracts.push(contract);
@@ -505,7 +532,9 @@ export async function markMilestoneAsTransferred(
   milestoneId: string,
   trackingReference: string,
   transferredAmount?: number,
-  receiptUrl?: string
+  receiptUrl?: string,
+  exchangeRate?: number,
+  mxnAmount?: number
 ): Promise<Milestone | null> {
   if (isDemoMode()) {
     const data = localStorage.getItem(KEYS.MILESTONES);
@@ -520,7 +549,11 @@ export async function markMilestoneAsTransferred(
       throw new Error("El hito debe estar en estado 'Solicitado' antes de que el cliente lo marque como transferido.");
     }
 
-    milestone.status = "marked_paid";
+    const cleanRef = trackingReference.toUpperCase().trim();
+    const isRejected = cleanRef.includes("REJECT") || cleanRef.includes("INVALID") || cleanRef.length < 5;
+    const targetStatus = !isRejected ? "confirmed" : "marked_paid";
+
+    milestone.status = targetStatus;
     milestone.markedPaidAt = new Date().toISOString();
     milestone.trackingReference = trackingReference;
     if (transferredAmount !== undefined) {
@@ -529,21 +562,43 @@ export async function markMilestoneAsTransferred(
     if (receiptUrl !== undefined) {
       milestone.receiptUrl = receiptUrl;
     }
+    if (exchangeRate !== undefined) {
+      milestone.exchangeRate = exchangeRate;
+    }
+    if (mxnAmount !== undefined) {
+      milestone.mxnAmount = mxnAmount;
+    }
+    if (!isRejected) {
+      milestone.confirmedAt = new Date().toISOString();
+    }
     allList[idx] = milestone;
     localStorage.setItem(KEYS.MILESTONES, JSON.stringify(allList));
     
     await checkAndUpdateContractStatus(milestone.contractId);
 
-    await addAuditLog({
-      contractId: milestone.contractId,
-      action: "milestone_transferred",
-      actor: "client",
-      details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${trackingReference}${receiptUrl ? ', con recibo adjunto' : ''}).`
-    });
+    const profData = localStorage.getItem(KEYS.PROFILE);
+    const profile: Profile | null = profData ? JSON.parse(profData) : null;
+    const lastDigits = profile?.bankDetails?.clabe ? profile.bankDetails.clabe.slice(-4) : "8765";
+
+    if (!isRejected) {
+      await addAuditLog({
+        contractId: milestone.contractId,
+        action: "milestone_confirmed",
+        actor: "system",
+        details: `Reconciliación automática SPEI: CEP validado con éxito. Clave de rastreo: ${trackingReference}. Banco Emisor: BBVA México, Beneficiario: CLABE terminada en ${lastDigits}. Estado: LIQUIDADO.`
+      });
+    } else {
+      await addAuditLog({
+        contractId: milestone.contractId,
+        action: "milestone_transferred",
+        actor: "client",
+        details: `Fallo de reconciliación automática CEP: Clave de rastreo ${trackingReference} no encontrada o rechazada en Banco de México.`
+      });
+    }
 
     return milestone;
   }
-  return serverActions.markMilestoneAsTransferred(milestoneId, trackingReference, transferredAmount, receiptUrl);
+  return serverActions.markMilestoneAsTransferred(milestoneId, trackingReference, transferredAmount, receiptUrl, exchangeRate, mxnAmount);
 }
 
 export async function generateClientOtp(contractId: string): Promise<string | null> {
@@ -751,6 +806,46 @@ export async function loadSampleData(): Promise<boolean> {
     return supabaseActions.loadSampleData();
   }
   return false;
+}
+
+export async function getContractVersions(contractId: string): Promise<ContractVersion[]> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem(KEYS.CONTRACT_VERSIONS);
+    const list: ContractVersion[] = data ? JSON.parse(data) : [];
+    return list
+      .filter((v) => v.contractId === contractId)
+      .sort((a, b) => b.versionNumber - a.versionNumber);
+  }
+  return serverActions.getContractVersions(contractId);
+}
+
+export async function saveContractVersion(
+  version: Omit<ContractVersion, "id" | "modifiedAt">
+): Promise<ContractVersion> {
+  if (isDemoMode()) {
+    const verData = localStorage.getItem(KEYS.CONTRACT_VERSIONS);
+    const verList: ContractVersion[] = verData ? JSON.parse(verData) : [];
+    const versions = verList.filter(v => v.contractId === version.contractId);
+    const nextVer = versions.length > 0 ? Math.max(...versions.map(v => v.versionNumber)) + 1 : 1;
+
+    const newVersion: ContractVersion = {
+      id: "ver-" + Math.random().toString(36).substring(2, 9),
+      contractId: version.contractId,
+      versionNumber: nextVer,
+      scopeDescription: version.scopeDescription,
+      totalAmount: version.totalAmount,
+      currency: version.currency,
+      taxWithholdingAmount: version.taxWithholdingAmount,
+      ivaAmount: version.ivaAmount,
+      subtotalAmount: version.subtotalAmount,
+      modifiedAt: new Date().toISOString(),
+      reason: version.reason || undefined
+    };
+    verList.push(newVersion);
+    localStorage.setItem(KEYS.CONTRACT_VERSIONS, JSON.stringify(verList));
+    return newVersion;
+  }
+  return serverActions.saveContractVersion(version);
 }
 
 export async function uploadReceiptFile(

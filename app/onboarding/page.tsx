@@ -19,7 +19,8 @@ export default function OnboardingPage() {
   const [clabe, setClabe] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [signatureUrl, setSignatureUrl] = useState("");
-  const [tier, setTier] = useState<'free' | 'pro'>("free");
+  const [tier, setTier] = useState<'free' | 'starter' | 'pro'>("free");
+  const [phone, setPhone] = useState("");
   
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -93,9 +94,10 @@ export default function OnboardingPage() {
         rfc: rfc || undefined,
         regimenFiscal: regimenFiscal || undefined,
         codigoPostal: codigoPostal || undefined,
-        logoUrl: tier === "pro" ? (logoUrl || undefined) : undefined,
-        signatureUrl: tier === "pro" ? (signatureUrl || undefined) : undefined,
+        logoUrl: tier !== "free" ? (logoUrl || undefined) : undefined,
+        signatureUrl: tier !== "free" ? (signatureUrl || undefined) : undefined,
         tier,
+        phone: phone || undefined,
         bankDetails: {
           clabe,
           bankName,
@@ -151,7 +153,7 @@ export default function OnboardingPage() {
           {/* Section: Plan Selection */}
           <div className="md:col-span-2">
             <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-3">Selecciona tu Plan</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div 
                 onClick={() => setTier("free")}
                 className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
@@ -165,7 +167,24 @@ export default function OnboardingPage() {
                   <span className="text-2xs font-extrabold text-indigo-500">$0 MXN</span>
                 </div>
                 <p className="text-3xs text-slate-400 mt-1 leading-normal">
-                  Ideal para empezar. Límite de 3 contratos y carga de identidad de marca (logo/firma) bloqueados.
+                  Ideal para empezar. Máx. 3 contratos. Branding personalizado bloqueado.
+                </p>
+              </div>
+
+              <div 
+                onClick={() => setTier("starter")}
+                className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
+                  tier === "starter" 
+                    ? "border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20" 
+                    : "border-slate-200 dark:border-slate-800 hover:border-slate-350 bg-white/40 dark:bg-slate-900/40"
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Starter</span>
+                  <span className="text-2xs font-extrabold text-indigo-500">$99 MXN</span>
+                </div>
+                <p className="text-3xs text-slate-400 mt-1 leading-normal">
+                  Límite de 10 contratos. Identidad de marca (logo/firma) desbloqueada.
                 </p>
               </div>
 
@@ -179,10 +198,10 @@ export default function OnboardingPage() {
               >
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Pro</span>
-                  <span className="text-2xs font-extrabold text-emerald-500">$199 MXN/mes</span>
+                  <span className="text-2xs font-extrabold text-emerald-500">$199 MXN</span>
                 </div>
                 <p className="text-3xs text-slate-400 mt-1 leading-normal">
-                  Contratos ilimitados, logotipo y firma digital personalizados para una apariencia premium.
+                  Contratos ilimitados, branding desbloqueado y características premium.
                 </p>
               </div>
             </div>
@@ -245,6 +264,17 @@ export default function OnboardingPage() {
               placeholder="Ej. 06700"
               value={codigoPostal}
               onChange={(e) => setCodigoPostal(e.target.value)}
+              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Teléfono (WhatsApp)</label>
+            <input
+              type="tel"
+              placeholder="Ej. +525512345678"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
             />
           </div>

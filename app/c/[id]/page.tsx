@@ -52,6 +52,7 @@ export default function ClientContractView() {
   const [receiptFileName, setReceiptFileName] = useState("");
   const [receiptFileMimeType, setReceiptFileMimeType] = useState("");
   const [modalError, setModalError] = useState("");
+  const [overrideExchangeRate, setOverrideExchangeRate] = useState("20.15");
 
   useEffect(() => {
     async function loadData() {
@@ -266,6 +267,7 @@ export default function ClientContractView() {
     setReceiptFileName("");
     setReceiptFileMimeType("");
     setModalError("");
+    setOverrideExchangeRate("20.15");
     setShowPaymentModal(true);
   };
 
@@ -290,11 +292,16 @@ export default function ClientContractView() {
         resolvedReceiptUrl = receiptUrl || undefined;
       }
 
+      const fxRate = parseFloat(overrideExchangeRate) || 20.15;
+      const mxnSum = contract.currency === "USD" ? (transferredAmount * fxRate) : undefined;
+
       await markMilestoneAsTransferred(
         paymentMilestone.id,
         trackingReference,
         transferredAmount,
-        resolvedReceiptUrl
+        resolvedReceiptUrl,
+        contract.currency === "USD" ? fxRate : undefined,
+        mxnSum
       );
       await refreshData();
       setShowPaymentModal(false);
@@ -814,6 +821,36 @@ export default function ClientContractView() {
                   />
                 </div>
               </div>
+              {contract.currency === "USD" && (
+                <>
+                  <div>
+                    <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tipo de Cambio (Banxico sugerido: 20.15)</label>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      required
+                      value={overrideExchangeRate}
+                      onChange={(e) => setOverrideExchangeRate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                    />
+                  </div>
+
+                  <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-3.5 text-xs flex flex-col gap-1.5">
+                    <div className="flex justify-between text-slate-400 font-medium">
+                      <span>Monto en USD:</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">${transferredAmount.toFixed(2)} USD</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 font-medium">
+                      <span>Tipo de Cambio:</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">${(parseFloat(overrideExchangeRate) || 20.15).toFixed(4)} MXN</span>
+                    </div>
+                    <div className="flex justify-between text-indigo-500 font-bold border-t border-slate-200 dark:border-slate-800/80 pt-2">
+                      <span>Total a Transferir:</span>
+                      <span>${(transferredAmount * (parseFloat(overrideExchangeRate) || 20.15)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">

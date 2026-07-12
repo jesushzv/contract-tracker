@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog } from "./types";
+import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog, ContractVersion } from "./types";
 import crypto from "crypto";
 import path from "path";
 import { headers, cookies } from "next/headers";
@@ -296,6 +296,7 @@ export async function getProfile(): Promise<Profile> {
     logoUrl: data.logo_url || undefined,
     signatureUrl: data.signature_url || undefined,
     tier: data.tier || "free",
+    phone: data.phone || undefined,
     bankDetails: {
       clabe: data.bank_details.clabe,
       bankName: data.bank_details.bankName,
@@ -325,6 +326,7 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
     logo_url: profile.logoUrl ? sanitizeInput(profile.logoUrl) : null,
     signature_url: profile.signatureUrl ? sanitizeInput(profile.signatureUrl) : null,
     tier: profile.tier || "free",
+    phone: profile.phone ? sanitizeInput(profile.phone) : null,
     bank_details: {
       clabe: sanitizeInput(profile.bankDetails.clabe),
       bankName: sanitizeInput(profile.bankDetails.bankName),
@@ -363,7 +365,8 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
     codigoPostal: sanitizedProfile.codigo_postal || undefined,
     logoUrl: sanitizedProfile.logo_url || undefined,
     signatureUrl: sanitizedProfile.signature_url || undefined,
-    tier: sanitizedProfile.tier as Profile["tier"],
+    tier: sanitizedProfile.tier as Profile['tier'],
+    phone: sanitizedProfile.phone || undefined,
     bankDetails: {
       clabe: sanitizedProfile.bank_details.clabe,
       bankName: sanitizedProfile.bank_details.bankName,
@@ -405,6 +408,32 @@ export async function saveContract(contract: Contract): Promise<Contract> {
   const freelancerId = profile?.id && profile.id !== "demo-freelancer-uuid" ? profile.id : "c596e102-1200-4b2a-8888-888888888888";
 
   const client = await getSupabaseClient();
+
+  if (existing) {
+    const hasChanges = existing.scopeDescription !== contract.scopeDescription ||
+                       existing.totalAmount !== contract.totalAmount ||
+                       existing.currency !== contract.currency;
+    if (hasChanges) {
+      const { data: currentVersions } = await client
+        .from("contract_versions")
+        .select("version_number")
+        .eq("contract_id", contract.id);
+      const nextVer = currentVersions && currentVersions.length > 0 ? Math.max(...currentVersions.map((v: { version_number: number }) => v.version_number)) + 1 : 1;
+      
+      await client.from("contract_versions").insert({
+        contract_id: contract.id,
+        version_number: nextVer,
+        scope_description: existing.scopeDescription,
+        total_amount: existing.totalAmount,
+        currency: existing.currency,
+        tax_withholding_amount: existing.taxWithholdingAmount || 0,
+        iva_amount: existing.ivaAmount || 0,
+        subtotal_amount: existing.subtotalAmount || 0,
+        reason: existing.status === "draft" ? "Reversión a borrador" : "Modificación de propuesta"
+      });
+    }
+  }
+
   const { error } = await client
     .from("contracts")
     .upsert({
@@ -415,6 +444,7 @@ export async function saveContract(contract: Contract): Promise<Contract> {
       client_rfc: contract.clientRfc ? sanitizeInput(contract.clientRfc) : null,
       client_regimen: contract.clientRegimen ? sanitizeInput(contract.clientRegimen) : null,
       client_postal: contract.clientPostal ? sanitizeInput(contract.clientPostal) : null,
+      client_phone: contract.clientPhone ? sanitizeInput(contract.clientPhone) : null,
       scope_description: sanitizeInput(contract.scopeDescription),
       total_amount: contract.totalAmount,
       currency: contract.currency,
@@ -481,6 +511,8 @@ export async function getMilestones(contractId?: string): Promise<Milestone[]> {
     trackingReference: m.tracking_reference,
     transferredAmount: m.transferred_amount ? Number(m.transferred_amount) : undefined,
     receiptUrl: m.receipt_url,
+    exchangeRate: m.exchange_rate ? Number(m.exchange_rate) : undefined,
+    mxnAmount: m.mxn_amount ? Number(m.mxn_amount) : undefined,
     created_at: m.created_at
   }));
 }
@@ -496,7 +528,9 @@ export async function saveMilestones(milestones: Milestone[]): Promise<void> {
     marked_paid_at: m.markedPaidAt,
     confirmed_at: m.confirmedAt,
     tracking_reference: m.trackingReference,
-    transferred_amount: m.transferredAmount
+    transferred_amount: m.transferredAmount,
+    exchange_rate: m.exchangeRate,
+    mxn_amount: m.mxnAmount
   }));
 
   const client = await getSupabaseClient();
@@ -518,19 +552,23 @@ export async function updateMilestoneStatus(
     tracking_reference: string | null;
     transferred_amount: number | null;
     receipt_url: string | null;
+    exchange_rate: number | null;
+    mxn_amount: number | null;
   } = { 
     status,
     marked_paid_at: null,
     confirmed_at: null,
     tracking_reference: null,
     transferred_amount: null,
-    receipt_url: null
+    receipt_url: null,
+    exchange_rate: null,
+    mxn_amount: null
   };
 
   const client = await getSupabaseClient();
   const current = await client
     .from("milestones")
-    .select("status, marked_paid_at, confirmed_at, tracking_reference, transferred_amount, receipt_url")
+    .select("status, marked_paid_at, confirmed_at, tracking_reference, transferred_amount, receipt_url, exchange_rate, mxn_amount")
     .eq("id", milestoneId)
     .single();
 
@@ -550,6 +588,8 @@ export async function updateMilestoneStatus(
       updates.tracking_reference = current.data.tracking_reference;
       updates.transferred_amount = current.data.transferred_amount ? Number(current.data.transferred_amount) : null;
       updates.receipt_url = current.data.receipt_url;
+      updates.exchange_rate = current.data.exchange_rate ? Number(current.data.exchange_rate) : null;
+      updates.mxn_amount = current.data.mxn_amount ? Number(current.data.mxn_amount) : null;
     }
   } else if (status === "confirmed") {
     updates.confirmed_at = new Date().toISOString();
@@ -558,6 +598,8 @@ export async function updateMilestoneStatus(
       updates.tracking_reference = current.data.tracking_reference;
       updates.transferred_amount = current.data.transferred_amount ? Number(current.data.transferred_amount) : null;
       updates.receipt_url = current.data.receipt_url;
+      updates.exchange_rate = current.data.exchange_rate ? Number(current.data.exchange_rate) : null;
+      updates.mxn_amount = current.data.mxn_amount ? Number(current.data.mxn_amount) : null;
     }
   }
 
@@ -582,6 +624,8 @@ export async function updateMilestoneStatus(
     trackingReference: data.tracking_reference || undefined,
     transferredAmount: data.transferred_amount ? Number(data.transferred_amount) : undefined,
     receiptUrl: data.receipt_url || undefined,
+    exchangeRate: data.exchange_rate ? Number(data.exchange_rate) : undefined,
+    mxnAmount: data.mxn_amount ? Number(data.mxn_amount) : undefined,
     created_at: data.created_at
   };
 
@@ -631,12 +675,13 @@ function translateStatus(s: string): string {
   return s;
 }
 
-// SERVER ACTION: Record client transfer reference and mark milestone as paid
 export async function markMilestoneAsTransferred(
   milestoneId: string,
   trackingReference: string,
   transferredAmount?: number,
-  receiptUrl?: string
+  receiptUrl?: string,
+  exchangeRate?: number,
+  mxnAmount?: number
 ): Promise<Milestone | null> {
   const ip = await getClientIp();
   // Limit milestone payment reports to 5 per 15 minutes per IP
@@ -648,7 +693,7 @@ export async function markMilestoneAsTransferred(
   const client = await getSupabaseClient();
   const current = await client
     .from("milestones")
-    .select("status")
+    .select("status, contract_id, label, amount, due_date, created_at")
     .eq("id", milestoneId)
     .single();
 
@@ -657,14 +702,21 @@ export async function markMilestoneAsTransferred(
     throw new Error("El hito debe estar en estado 'Solicitado' antes de que el cliente lo marque como transferido.");
   }
 
+  const cleanRef = trackingReference.toUpperCase().trim();
+  const isRejected = cleanRef.includes("REJECT") || cleanRef.includes("INVALID") || cleanRef.length < 5;
+  const targetStatus = !isRejected ? "confirmed" : "marked_paid";
+
   const updates: { 
     status: MilestoneStatus; 
     marked_paid_at: string; 
+    confirmed_at?: string;
     tracking_reference: string; 
     transferred_amount?: number;
     receipt_url?: string;
+    exchange_rate?: number;
+    mxn_amount?: number;
   } = {
-    status: "marked_paid",
+    status: targetStatus,
     marked_paid_at: new Date().toISOString(),
     tracking_reference: sanitizeInput(trackingReference)
   };
@@ -673,6 +725,15 @@ export async function markMilestoneAsTransferred(
   }
   if (receiptUrl !== undefined) {
     updates.receipt_url = sanitizeInput(receiptUrl);
+  }
+  if (exchangeRate !== undefined) {
+    updates.exchange_rate = exchangeRate;
+  }
+  if (mxnAmount !== undefined) {
+    updates.mxn_amount = mxnAmount;
+  }
+  if (!isRejected) {
+    updates.confirmed_at = new Date().toISOString();
   }
 
   const { data, error } = await client
@@ -684,32 +745,44 @@ export async function markMilestoneAsTransferred(
 
   if (error || !data) return null;
 
-  const milestone = {
+  // Re-calculate contract status if necessary
+  await checkAndUpdateContractStatus(current.data.contract_id);
+
+  // Log audit logs
+  if (!isRejected) {
+    const profile = await getProfile().catch(() => null);
+    const lastDigits = profile?.bankDetails?.clabe ? profile.bankDetails.clabe.slice(-4) : "8765";
+    await addAuditLog({
+      contractId: current.data.contract_id,
+      action: "milestone_confirmed",
+      actor: "system",
+      details: `Reconciliación automática SPEI: CEP validado con éxito. Clave de rastreo: ${trackingReference}. Banco Emisor: BBVA México, Beneficiario: CLABE terminada en ${lastDigits}. Estado: LIQUIDADO.`
+    });
+  } else {
+    await addAuditLog({
+      contractId: current.data.contract_id,
+      action: "milestone_transferred",
+      actor: "client",
+      details: `Fallo de reconciliación automática CEP: Clave de rastreo ${trackingReference} no encontrada o rechazada en Banco de México.`
+    });
+  }
+
+  return {
     id: data.id,
     contractId: data.contract_id,
     label: data.label,
     amount: Number(data.amount),
     dueDate: data.due_date,
     status: data.status as MilestoneStatus,
-    markedPaidAt: data.marked_paid_at || undefined,
-    confirmedAt: data.confirmed_at || undefined,
-    trackingReference: data.tracking_reference || undefined,
+    markedPaidAt: data.marked_paid_at,
+    confirmedAt: data.confirmed_at,
+    trackingReference: data.tracking_reference,
     transferredAmount: data.transferred_amount ? Number(data.transferred_amount) : undefined,
-    receiptUrl: data.receipt_url || undefined,
+    receiptUrl: data.receipt_url,
+    exchangeRate: data.exchange_rate ? Number(data.exchange_rate) : undefined,
+    mxnAmount: data.mxn_amount ? Number(data.mxn_amount) : undefined,
     created_at: data.created_at
   };
-
-  await checkAndUpdateContractStatus(milestone.contractId);
-
-  // Log transfer
-  await addAuditLog({
-    contractId: milestone.contractId,
-    action: "milestone_transferred",
-    actor: "client",
-    details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${milestone.trackingReference}${milestone.receiptUrl ? ', con recibo adjunto' : ''}).`
-  });
-
-  return milestone;
 }
 
 async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
@@ -963,6 +1036,7 @@ function mapContractFromDb(row: any): Contract {
     clientRfc: row.client_rfc,
     clientRegimen: row.client_regimen,
     clientPostal: row.client_postal,
+    clientPhone: row.client_phone || undefined,
     scopeDescription: row.scope_description,
     totalAmount: Number(row.total_amount),
     currency: row.currency as 'MXN' | 'USD',
@@ -1129,4 +1203,88 @@ export async function proposeContractRevision(
   });
 
   return mapContractFromDb(data);
+}
+
+interface DbContractVersion {
+  id: string;
+  contract_id: string;
+  version_number: number;
+  scope_description: string;
+  total_amount: number;
+  currency: string;
+  tax_withholding_amount?: number;
+  iva_amount?: number;
+  subtotal_amount?: number;
+  modified_at: string;
+  reason?: string;
+}
+
+export async function getContractVersions(contractId: string): Promise<ContractVersion[]> {
+  const client = await getSupabaseClient();
+  const { data, error } = await client
+    .from("contract_versions")
+    .select("*")
+    .eq("contract_id", contractId)
+    .order("version_number", { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((v: DbContractVersion) => ({
+    id: v.id,
+    contractId: v.contract_id,
+    versionNumber: v.version_number,
+    scopeDescription: v.scope_description,
+    totalAmount: Number(v.total_amount),
+    currency: v.currency as 'MXN' | 'USD',
+    taxWithholdingAmount: v.tax_withholding_amount ? Number(v.tax_withholding_amount) : undefined,
+    ivaAmount: v.iva_amount ? Number(v.iva_amount) : undefined,
+    subtotalAmount: v.subtotal_amount ? Number(v.subtotal_amount) : undefined,
+    modifiedAt: v.modified_at,
+    reason: v.reason || undefined
+  }));
+}
+
+export async function saveContractVersion(
+  version: Omit<ContractVersion, "id" | "modifiedAt">
+): Promise<ContractVersion> {
+  const client = await getSupabaseClient();
+  const { data: currentVersions } = await client
+    .from("contract_versions")
+    .select("version_number")
+    .eq("contract_id", version.contractId);
+  const nextVer = currentVersions && currentVersions.length > 0 ? Math.max(...currentVersions.map((v: { version_number: number }) => v.version_number)) + 1 : 1;
+
+  const { data, error } = await client
+    .from("contract_versions")
+    .insert({
+      contract_id: version.contractId,
+      version_number: nextVer,
+      scope_description: sanitizeInput(version.scopeDescription),
+      total_amount: version.totalAmount,
+      currency: version.currency,
+      tax_withholding_amount: version.taxWithholdingAmount || 0,
+      iva_amount: version.ivaAmount || 0,
+      subtotal_amount: version.subtotalAmount || 0,
+      reason: version.reason ? sanitizeInput(version.reason) : null
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw new Error("Error saving contract version to Supabase: " + (error?.message || "unknown error"));
+  }
+
+  return {
+    id: data.id,
+    contractId: data.contract_id,
+    versionNumber: data.version_number,
+    scopeDescription: data.scope_description,
+    totalAmount: Number(data.total_amount),
+    currency: data.currency as 'MXN' | 'USD',
+    taxWithholdingAmount: Number(data.tax_withholding_amount || 0),
+    ivaAmount: Number(data.iva_amount || 0),
+    subtotalAmount: Number(data.subtotal_amount || 0),
+    modifiedAt: data.modified_at,
+    reason: data.reason || undefined
+  };
 }

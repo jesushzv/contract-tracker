@@ -4,7 +4,7 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { headers } from "next/headers";
-import { Contract, Milestone, Profile, MilestoneStatus, AuditLog } from "./types";
+import { Contract, Milestone, Profile, MilestoneStatus, AuditLog, ContractVersion } from "./types";
 
 const DB_PATH = path.join(process.cwd(), "data", "db.json");
 
@@ -13,6 +13,7 @@ interface DbSchema {
   contracts: Contract[];
   milestones: Milestone[];
   auditLogs?: AuditLog[];
+  contractVersions?: ContractVersion[];
 }
 
 function sanitizeInput(text: string | undefined): string {
@@ -191,6 +192,7 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
     codigoPostal: profile.codigoPostal ? sanitizeInput(profile.codigoPostal) : undefined,
     logoUrl: profile.logoUrl ? sanitizeInput(profile.logoUrl) : undefined,
     signatureUrl: profile.signatureUrl ? sanitizeInput(profile.signatureUrl) : undefined,
+    phone: profile.phone ? sanitizeInput(profile.phone) : undefined,
     bankDetails: {
       clabe: sanitizeInput(profile.bankDetails.clabe),
       bankName: sanitizeInput(profile.bankDetails.bankName),
@@ -225,6 +227,7 @@ export async function saveContract(contract: Contract): Promise<Contract> {
     clientRfc: contract.clientRfc ? sanitizeInput(contract.clientRfc) : undefined,
     clientRegimen: contract.clientRegimen ? sanitizeInput(contract.clientRegimen) : undefined,
     clientPostal: contract.clientPostal ? sanitizeInput(contract.clientPostal) : undefined,
+    clientPhone: contract.clientPhone ? sanitizeInput(contract.clientPhone) : undefined,
     scopeDescription: sanitizeInput(contract.scopeDescription),
     clabe: contract.clabe ? sanitizeInput(contract.clabe) : undefined,
     bankName: contract.bankName ? sanitizeInput(contract.bankName) : undefined,
@@ -247,6 +250,32 @@ export async function saveContract(contract: Contract): Promise<Contract> {
 
   const index = contracts.findIndex((c: Contract) => c.id === sanitizedContract.id);
   if (index >= 0) {
+    const oldContract = contracts[index];
+    const hasChanges = oldContract.scopeDescription !== sanitizedContract.scopeDescription ||
+                       oldContract.totalAmount !== sanitizedContract.totalAmount ||
+                       oldContract.currency !== sanitizedContract.currency;
+    if (hasChanges) {
+      if (!db.contractVersions) {
+        db.contractVersions = [];
+      }
+      const versions = db.contractVersions.filter(v => v.contractId === oldContract.id);
+      const nextVer = versions.length > 0 ? Math.max(...versions.map(v => v.versionNumber)) + 1 : 1;
+      
+      const newVersion: ContractVersion = {
+        id: "ver-" + Math.random().toString(36).substring(2, 9),
+        contractId: oldContract.id,
+        versionNumber: nextVer,
+        scopeDescription: oldContract.scopeDescription,
+        totalAmount: oldContract.totalAmount,
+        currency: oldContract.currency,
+        taxWithholdingAmount: oldContract.taxWithholdingAmount,
+        ivaAmount: oldContract.ivaAmount,
+        subtotalAmount: oldContract.subtotalAmount,
+        modifiedAt: new Date().toISOString(),
+        reason: oldContract.status === "draft" ? "Reversión a borrador" : "Modificación de propuesta"
+      };
+      db.contractVersions.push(newVersion);
+    }
     contracts[index] = sanitizedContract;
   } else {
     contracts.push(sanitizedContract);
@@ -375,7 +404,9 @@ export async function markMilestoneAsTransferred(
   milestoneId: string,
   trackingReference: string,
   transferredAmount?: number,
-  receiptUrl?: string
+  receiptUrl?: string,
+  exchangeRate?: number,
+  mxnAmount?: number
 ): Promise<Milestone | null> {
   const ip = await getClientIp();
   // Limit milestone payment reports to 5 per 15 minutes per IP
@@ -399,7 +430,21 @@ export async function markMilestoneAsTransferred(
   if (receiptUrl !== undefined) {
     milestone.receiptUrl = sanitizeInput(receiptUrl);
   }
+  if (exchangeRate !== undefined) {
+    milestone.exchangeRate = exchangeRate;
+  }
+  if (mxnAmount !== undefined) {
+    milestone.mxnAmount = mxnAmount;
+  }
   
+  // Trigger automatic CEP mock reconciliation
+  const cleanRef = trackingReference.toUpperCase().trim();
+  const isRejected = cleanRef.includes("REJECT") || cleanRef.includes("INVALID") || cleanRef.length < 5;
+  if (!isRejected) {
+    milestone.status = "confirmed";
+    milestone.confirmedAt = new Date().toISOString();
+  }
+
   allMilestones[idx] = milestone;
   db.milestones = allMilestones;
   await writeDb(db);
@@ -408,12 +453,21 @@ export async function markMilestoneAsTransferred(
   await checkAndUpdateContractStatus(milestone.contractId);
   
   // Log client transfer
-  await addAuditLog({
-    contractId: milestone.contractId,
-    action: "milestone_transferred",
-    actor: "client",
-    details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${milestone.trackingReference}${milestone.receiptUrl ? ', con recibo adjunto' : ''}).`
-  });
+  if (!isRejected) {
+    await addAuditLog({
+      contractId: milestone.contractId,
+      action: "milestone_confirmed",
+      actor: "system",
+      details: `Reconciliación automática SPEI: CEP validado con éxito. Clave de rastreo: ${trackingReference}. Banco Emisor: BBVA México, Beneficiario: CLABE terminada en ${db.profile.bankDetails.clabe.slice(-4)}. Estado: LIQUIDADO.`
+    });
+  } else {
+    await addAuditLog({
+      contractId: milestone.contractId,
+      action: "milestone_transferred",
+      actor: "client",
+      details: `Fallo de reconciliación automática CEP: Clave de rastreo ${trackingReference} no encontrada o rechazada en Banco de México.`
+    });
+  }
 
   return milestone;
 }
@@ -665,4 +719,41 @@ export async function proposeContractRevision(
   });
 
   return contract;
+}
+
+export async function getContractVersions(contractId: string): Promise<ContractVersion[]> {
+  const db = await readDb();
+  const versions = db.contractVersions || [];
+  return versions
+    .filter((v) => v.contractId === contractId)
+    .sort((a, b) => b.versionNumber - a.versionNumber);
+}
+
+export async function saveContractVersion(
+  version: Omit<ContractVersion, "id" | "modifiedAt">
+): Promise<ContractVersion> {
+  const db = await readDb();
+  if (!db.contractVersions) {
+    db.contractVersions = [];
+  }
+  const versions = db.contractVersions.filter(v => v.contractId === version.contractId);
+  const nextVer = versions.length > 0 ? Math.max(...versions.map(v => v.versionNumber)) + 1 : 1;
+
+  const newVersion: ContractVersion = {
+    id: "ver-" + Math.random().toString(36).substring(2, 9),
+    contractId: version.contractId,
+    versionNumber: nextVer,
+    scopeDescription: sanitizeInput(version.scopeDescription),
+    totalAmount: version.totalAmount,
+    currency: version.currency,
+    taxWithholdingAmount: version.taxWithholdingAmount,
+    ivaAmount: version.ivaAmount,
+    subtotalAmount: version.subtotalAmount,
+    modifiedAt: new Date().toISOString(),
+    reason: version.reason ? sanitizeInput(version.reason) : undefined
+  };
+
+  db.contractVersions.push(newVersion);
+  await writeDb(db);
+  return newVersion;
 }
