@@ -1,8 +1,10 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog } from "./types";
+import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog, ContractVersion } from "./types";
 import crypto from "crypto";
+import path from "path";
+import { sendSimulatedEmail } from "./emails";
 import { headers, cookies } from "next/headers";
 
 // Initialize Supabase Client
@@ -11,9 +13,173 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-// In server actions, we use the service role key to bypass RLS when performing admin or client signatures,
-// or we can use the default anon client. Let's create a client.
-const supabase = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey);
+// Default static client (will fallback to this when cookies are not available or not needed)
+
+function sanitizeInput(text: string | undefined): string {
+  if (!text) return "";
+  return text.replace(/<\/?[^>]+(>|$)/g, "");
+}
+
+async function getClientIp(): Promise<string> {
+  try {
+    const headerList = await headers();
+    const forwardedFor = headerList.get("x-forwarded-for");
+    if (forwardedFor) {
+      return forwardedFor.split(",")[0].trim();
+    }
+    return headerList.get("x-real-ip") || "127.0.0.1";
+  } catch {
+    return "127.0.0.1";
+  }
+}
+
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+export async function getSupabaseClient(useServiceRole = false): Promise<any> {
+  if (useServiceRole && supabaseServiceKey) {
+    return createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false }
+    });
+  }
+
+  const cookieStore = await cookies();
+  const authCookie = cookieStore.getAll().find((cookie) => 
+    cookie.name.startsWith("sb-") && cookie.name.endsWith("-auth-token")
+  );
+
+  if (authCookie) {
+    try {
+      const parsed = JSON.parse(authCookie.value);
+      if (parsed?.access_token) {
+        return createClient(supabaseUrl, supabaseAnonKey, {
+          global: {
+            headers: {
+              Authorization: `Bearer ${parsed.access_token}`
+            }
+          },
+          auth: { persistSession: false }
+        });
+      }
+    } catch (e) {
+      console.error("Error parsing auth token:", e);
+    }
+  }
+
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false }
+  });
+}
+
+export async function checkRateLimit(ip: string, action: string, limit: number, windowMs: number): Promise<boolean> {
+  const key = `${ip}:${action}`;
+  const now = new Date();
+  const client = await getSupabaseClient(true); // Bypass RLS for rate limits to ensure they write properly
+
+  const { data, error } = await client
+    .from("rate_limits")
+    .select("*")
+    .eq("key", key)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Rate limit check error:", error);
+    return false; // Fail open
+  }
+
+  if (!data) {
+    const resetAt = new Date(now.getTime() + windowMs);
+    const { error: insError } = await client.from("rate_limits").insert({
+      key,
+      count: 1,
+      reset_at: resetAt.toISOString()
+    });
+    if (insError) {
+      console.error("Rate limit insert error:", insError);
+    }
+    return false;
+  }
+
+  const resetAt = new Date(data.reset_at);
+  if (now > resetAt) {
+    const newResetAt = new Date(now.getTime() + windowMs);
+    await client
+      .from("rate_limits")
+      .update({
+        count: 1,
+        reset_at: newResetAt.toISOString()
+      })
+      .eq("key", key);
+    return false;
+  }
+
+  if (data.count >= limit) {
+    return true; // Limit exceeded
+  }
+
+  await client
+    .from("rate_limits")
+    .update({ count: data.count + 1 })
+    .eq("key", key);
+
+  return false;
+}
+
+export async function uploadReceiptFile(
+  fileName: string,
+  mimeType: string,
+  fileBase64: string
+): Promise<string> {
+  const buffer = Buffer.from(fileBase64, "base64");
+
+  // 1. File size check (5MB)
+  if (buffer.length > 5 * 1024 * 1024) {
+    throw new Error("El archivo excede el límite de tamaño de 5MB.");
+  }
+
+  // 2. Mimetype whitelist check
+  const allowedMimeTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+  if (!allowedMimeTypes.includes(mimeType)) {
+    throw new Error("Tipo de archivo no permitido. Solo se permiten PDFs e imágenes (PNG, JPEG).");
+  }
+
+  // 3. Magic bytes validation
+  const hex = buffer.toString("hex", 0, 8).toUpperCase();
+  let isValidMagic = false;
+
+  if (mimeType === "application/pdf" && hex.startsWith("25504446")) {
+    isValidMagic = true;
+  } else if (mimeType === "image/png" && hex.startsWith("89504E470D0A1A0A")) {
+    isValidMagic = true;
+  } else if ((mimeType === "image/jpeg" || mimeType === "image/jpg") && hex.startsWith("FFD8FF")) {
+    isValidMagic = true;
+  }
+
+  if (!isValidMagic) {
+    throw new Error("Firma de archivo inválida. El contenido del archivo no coincide con su extensión.");
+  }
+
+  // Sanitize filename
+  const sanitizedName = path.basename(fileName).replace(/[^a-zA-Z0-9.-]/g, "_");
+  const uniqueName = `${crypto.randomUUID()}-${sanitizedName}`;
+
+  // Upload to Supabase Storage
+  const client = await getSupabaseClient(true);
+  const { error } = await client.storage
+    .from("receipts")
+    .upload(uniqueName, buffer, {
+      contentType: mimeType,
+      upsert: true
+    });
+
+  if (error) {
+    throw new Error("Error subiendo el archivo a Supabase Storage: " + error.message);
+  }
+
+  const { data: urlData } = client.storage
+    .from("receipts")
+    .getPublicUrl(uniqueName);
+
+  return urlData.publicUrl;
+}
 
 async function getCurrentUserId(): Promise<string> {
   try {
@@ -38,14 +204,16 @@ async function getCurrentUserId(): Promise<string> {
 
 // SERVER ACTIONS FOR AUDIT LOGS
 export async function getAuditLogs(contractId?: string): Promise<AuditLog[]> {
-  let query = supabase.from("audit_logs").select("*");
+  const client = await getSupabaseClient();
+  let query = client.from("audit_logs").select("*");
   if (contractId) {
     query = query.eq("contract_id", contractId);
   }
   const { data, error } = await query.order("timestamp", { ascending: false });
   if (error || !data) return [];
   
-  return data.map((row) => ({
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  return data.map((row: any) => ({
     id: row.id,
     contractId: row.contract_id,
     action: row.action as AuditLog["action"],
@@ -60,15 +228,16 @@ export async function getAuditLogs(contractId?: string): Promise<AuditLog[]> {
 export async function addAuditLog(
   log: Omit<AuditLog, "id" | "timestamp">
 ): Promise<AuditLog> {
-  const { data, error } = await supabase
+  const client = await getSupabaseClient();
+  const { data, error } = await client
     .from("audit_logs")
     .insert({
       contract_id: log.contractId,
       action: log.action,
       actor: log.actor,
-      details: log.details,
-      ip: log.ip,
-      signature: log.signature
+      details: sanitizeInput(log.details),
+      ip: log.ip ? sanitizeInput(log.ip) : undefined,
+      signature: log.signature ? sanitizeInput(log.signature) : undefined
     })
     .select()
     .single();
@@ -91,7 +260,8 @@ export async function addAuditLog(
 
 export async function getProfile(): Promise<Profile> {
   const userId = await getCurrentUserId();
-  const { data, error } = await supabase
+  const client = await getSupabaseClient();
+  const { data, error } = await client
     .from("profiles")
     .select("*")
     .eq("id", userId)
@@ -108,6 +278,7 @@ export async function getProfile(): Promise<Profile> {
       codigoPostal: "06700",
       logoUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&h=120&fit=crop&auto=format",
       signatureUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3a/John_Hancock_signature.svg",
+      tier: "free",
       bankDetails: {
         clabe: "012180001509987654",
         bankName: "BBVA México",
@@ -125,6 +296,8 @@ export async function getProfile(): Promise<Profile> {
     codigoPostal: data.codigo_postal,
     logoUrl: data.logo_url || undefined,
     signatureUrl: data.signature_url || undefined,
+    tier: data.tier || "free",
+    phone: data.phone || undefined,
     bankDetails: {
       clabe: data.bank_details.clabe,
       bankName: data.bank_details.bankName,
@@ -138,24 +311,35 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
   const targetId = userId && userId !== "demo-freelancer-uuid" ? userId : (profile.id && profile.id !== "demo-freelancer-uuid" ? profile.id : "c596e102-1200-4b2a-8888-888888888888");
 
   // Check if profile exists first
-  const { data: existing } = await supabase
+  const client = await getSupabaseClient();
+  const { data: existing } = await client
     .from("profiles")
     .select("id")
     .eq("id", targetId)
     .maybeSingle();
 
+  const sanitizedProfile = {
+    email: sanitizeInput(profile.email),
+    full_name: sanitizeInput(profile.fullName),
+    rfc: profile.rfc ? sanitizeInput(profile.rfc) : null,
+    regimen_fiscal: profile.regimenFiscal ? sanitizeInput(profile.regimenFiscal) : null,
+    codigo_postal: profile.codigoPostal ? sanitizeInput(profile.codigoPostal) : null,
+    logo_url: profile.logoUrl ? sanitizeInput(profile.logoUrl) : null,
+    signature_url: profile.signatureUrl ? sanitizeInput(profile.signatureUrl) : null,
+    tier: profile.tier || "free",
+    phone: profile.phone ? sanitizeInput(profile.phone) : null,
+    bank_details: {
+      clabe: sanitizeInput(profile.bankDetails.clabe),
+      bankName: sanitizeInput(profile.bankDetails.bankName),
+      beneficiaryName: sanitizeInput(profile.bankDetails.beneficiaryName)
+    }
+  };
+
   if (existing) {
-    const { error } = await supabase
+    const { error } = await client
       .from("profiles")
       .update({
-        email: profile.email,
-        full_name: profile.fullName,
-        rfc: profile.rfc,
-        regimen_fiscal: profile.regimenFiscal,
-        codigo_postal: profile.codigoPostal,
-        logo_url: profile.logoUrl || null,
-        signature_url: profile.signatureUrl || null,
-        bank_details: profile.bankDetails,
+        ...sanitizedProfile,
         updated_at: new Date().toISOString()
       })
       .eq("id", targetId);
@@ -163,29 +347,39 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
     if (error) throw new Error("Error updating Supabase profile: " + error.message);
   } else {
     // Create new profile record
-    const { error } = await supabase
+    const { error } = await client
       .from("profiles")
       .insert({
         id: targetId,
-        email: profile.email,
-        full_name: profile.fullName,
-        rfc: profile.rfc,
-        regimen_fiscal: profile.regimenFiscal,
-        codigo_postal: profile.codigoPostal,
-        logo_url: profile.logoUrl || null,
-        signature_url: profile.signatureUrl || null,
-        bank_details: profile.bankDetails
+        ...sanitizedProfile
       });
 
     if (error) throw new Error("Error inserting Supabase profile: " + error.message);
   }
 
-  return { ...profile, id: targetId };
+  return { 
+    id: targetId,
+    email: sanitizedProfile.email,
+    fullName: sanitizedProfile.full_name,
+    rfc: sanitizedProfile.rfc || undefined,
+    regimenFiscal: sanitizedProfile.regimen_fiscal || undefined,
+    codigoPostal: sanitizedProfile.codigo_postal || undefined,
+    logoUrl: sanitizedProfile.logo_url || undefined,
+    signatureUrl: sanitizedProfile.signature_url || undefined,
+    tier: sanitizedProfile.tier as Profile['tier'],
+    phone: sanitizedProfile.phone || undefined,
+    bankDetails: {
+      clabe: sanitizedProfile.bank_details.clabe,
+      bankName: sanitizedProfile.bank_details.bankName,
+      beneficiaryName: sanitizedProfile.bank_details.beneficiaryName
+    }
+  };
 }
 
 export async function getContracts(): Promise<Contract[]> {
   const userId = await getCurrentUserId();
-  const { data, error } = await supabase
+  const client = await getSupabaseClient();
+  const { data, error } = await client
     .from("contracts")
     .select("*")
     .eq("freelancer_id", userId)
@@ -196,7 +390,8 @@ export async function getContracts(): Promise<Contract[]> {
 }
 
 export async function getContractById(id: string): Promise<Contract | null> {
-  const { data, error } = await supabase
+  const client = await getSupabaseClient();
+  const { data, error } = await client
     .from("contracts")
     .select("*")
     .eq("id", id)
@@ -207,40 +402,71 @@ export async function getContractById(id: string): Promise<Contract | null> {
 }
 
 export async function saveContract(contract: Contract): Promise<Contract> {
+  if (!contract.clientAccessToken) {
+    contract.clientAccessToken = crypto.randomUUID();
+  }
   const existing = await getContractById(contract.id);
   const isNew = !existing;
 
   const profile = await getProfile().catch(() => null);
   const freelancerId = profile?.id && profile.id !== "demo-freelancer-uuid" ? profile.id : "c596e102-1200-4b2a-8888-888888888888";
 
-  const { error } = await supabase
+  const client = await getSupabaseClient();
+
+  if (existing) {
+    const hasChanges = existing.scopeDescription !== contract.scopeDescription ||
+                       existing.totalAmount !== contract.totalAmount ||
+                       existing.currency !== contract.currency;
+    if (hasChanges) {
+      const { data: currentVersions } = await client
+        .from("contract_versions")
+        .select("version_number")
+        .eq("contract_id", contract.id);
+      const nextVer = currentVersions && currentVersions.length > 0 ? Math.max(...currentVersions.map((v: { version_number: number }) => v.version_number)) + 1 : 1;
+      
+      await client.from("contract_versions").insert({
+        contract_id: contract.id,
+        version_number: nextVer,
+        scope_description: existing.scopeDescription,
+        total_amount: existing.totalAmount,
+        currency: existing.currency,
+        tax_withholding_amount: existing.taxWithholdingAmount || 0,
+        iva_amount: existing.ivaAmount || 0,
+        subtotal_amount: existing.subtotalAmount || 0,
+        reason: existing.status === "draft" ? "Reversión a borrador" : "Modificación de propuesta"
+      });
+    }
+  }
+
+  const { error } = await client
     .from("contracts")
     .upsert({
       id: contract.id,
       freelancer_id: freelancerId,
-      client_name: contract.clientName,
-      client_email: contract.clientEmail,
-      client_rfc: contract.clientRfc,
-      client_regimen: contract.clientRegimen,
-      client_postal: contract.clientPostal,
-      scope_description: contract.scopeDescription,
+      client_name: sanitizeInput(contract.clientName),
+      client_email: sanitizeInput(contract.clientEmail),
+      client_rfc: contract.clientRfc ? sanitizeInput(contract.clientRfc) : null,
+      client_regimen: contract.clientRegimen ? sanitizeInput(contract.clientRegimen) : null,
+      client_postal: contract.clientPostal ? sanitizeInput(contract.clientPostal) : null,
+      client_phone: contract.clientPhone ? sanitizeInput(contract.clientPhone) : null,
+      scope_description: sanitizeInput(contract.scopeDescription),
       total_amount: contract.totalAmount,
       currency: contract.currency,
       status: contract.status,
       pdf_url: contract.pdfUrl,
       contract_hash: contract.contractHash,
       accepted_at: contract.acceptedAt,
-      accepted_by_name: contract.acceptedByName,
-      accepted_ip: contract.acceptedIp,
+      accepted_by_name: contract.acceptedByName ? sanitizeInput(contract.acceptedByName) : null,
+      accepted_ip: contract.acceptedIp ? sanitizeInput(contract.acceptedIp) : null,
       freelancer_accepted_at: contract.freelancerAcceptedAt,
-      freelancer_accepted_by_name: contract.freelancerAcceptedByName,
-      freelancer_accepted_ip: contract.freelancerAcceptedIp,
-      clabe: contract.clabe || profile?.bankDetails.clabe,
-      bank_name: contract.bankName || profile?.bankDetails.bankName,
-      beneficiary_name: contract.beneficiaryName || profile?.bankDetails.beneficiaryName,
-      freelancer_rfc: contract.freelancerRfc || profile?.rfc,
-      freelancer_regimen: contract.freelancerRegimen || profile?.regimenFiscal,
-      freelancer_postal: contract.freelancerPostal || profile?.codigoPostal,
+      freelancer_accepted_by_name: contract.freelancerAcceptedByName ? sanitizeInput(contract.freelancerAcceptedByName) : null,
+      freelancer_accepted_ip: contract.freelancerAcceptedIp ? sanitizeInput(contract.freelancerAcceptedIp) : null,
+      clabe: sanitizeInput(contract.clabe || profile?.bankDetails.clabe),
+      bank_name: sanitizeInput(contract.bankName || profile?.bankDetails.bankName),
+      beneficiary_name: sanitizeInput(contract.beneficiaryName || profile?.bankDetails.beneficiaryName),
+      freelancer_rfc: sanitizeInput(contract.freelancerRfc || profile?.rfc),
+      freelancer_regimen: sanitizeInput(contract.freelancerRegimen || profile?.regimenFiscal),
+      freelancer_postal: sanitizeInput(contract.freelancerPostal || profile?.codigoPostal),
       retencion_isr: contract.retencionIsr || false,
       retencion_iva: contract.retencionIva || false,
       tax_withholding_amount: contract.taxWithholdingAmount || 0,
@@ -248,6 +474,8 @@ export async function saveContract(contract: Contract): Promise<Contract> {
       subtotal_amount: contract.subtotalAmount || 0,
       client_otp_code: contract.clientOtpCode || null,
       client_otp_verified: contract.clientOtpVerified || false,
+      client_otp_attempts: contract.clientOtpAttempts || 0,
+      client_access_token: contract.clientAccessToken || null,
       updated_at: new Date().toISOString()
     });
 
@@ -262,11 +490,22 @@ export async function saveContract(contract: Contract): Promise<Contract> {
     });
   }
 
+  if (contract.status === "sent") {
+    const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+    const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+    sendSimulatedEmail({
+      to: contract.clientEmail,
+      subject: `Propuesta de Contrato de Servicios Profesionales - ${contract.clientName}`,
+      html: `<p>Hola ${contract.clientName},</p><p>Te han compartido una propuesta de contrato por ${contract.totalAmount} ${contract.currency}.</p><p>Puedes revisarlo y firmar aquí: <a href="${clientUrl}">${clientUrl}</a></p>`
+    }).catch(console.error);
+  }
+
   return contract;
 }
 
 export async function getMilestones(contractId?: string): Promise<Milestone[]> {
-  let query = supabase.from("milestones").select("*");
+  const client = await getSupabaseClient();
+  let query = client.from("milestones").select("*");
   if (contractId) {
     query = query.eq("contract_id", contractId);
   }
@@ -274,7 +513,8 @@ export async function getMilestones(contractId?: string): Promise<Milestone[]> {
   const { data, error } = await query.order("created_at", { ascending: true });
   if (error || !data) return [];
   
-  return data.map(m => ({
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  return data.map((m: any) => ({
     id: m.id,
     contractId: m.contract_id,
     label: m.label,
@@ -285,6 +525,9 @@ export async function getMilestones(contractId?: string): Promise<Milestone[]> {
     confirmedAt: m.confirmed_at,
     trackingReference: m.tracking_reference,
     transferredAmount: m.transferred_amount ? Number(m.transferred_amount) : undefined,
+    receiptUrl: m.receipt_url,
+    exchangeRate: m.exchange_rate ? Number(m.exchange_rate) : undefined,
+    mxnAmount: m.mxn_amount ? Number(m.mxn_amount) : undefined,
     created_at: m.created_at
   }));
 }
@@ -300,10 +543,13 @@ export async function saveMilestones(milestones: Milestone[]): Promise<void> {
     marked_paid_at: m.markedPaidAt,
     confirmed_at: m.confirmedAt,
     tracking_reference: m.trackingReference,
-    transferred_amount: m.transferredAmount
+    transferred_amount: m.transferredAmount,
+    exchange_rate: m.exchangeRate,
+    mxn_amount: m.mxnAmount
   }));
 
-  const { error } = await supabase
+  const client = await getSupabaseClient();
+  const { error } = await client
     .from("milestones")
     .upsert(records);
 
@@ -321,22 +567,35 @@ export async function updateMilestoneStatus(
     tracking_reference: string | null;
     transferred_amount: number | null;
     receipt_url: string | null;
+    exchange_rate: number | null;
+    mxn_amount: number | null;
   } = { 
     status,
     marked_paid_at: null,
     confirmed_at: null,
     tracking_reference: null,
     transferred_amount: null,
-    receipt_url: null
+    receipt_url: null,
+    exchange_rate: null,
+    mxn_amount: null
   };
 
-  const current = await supabase
+  const client = await getSupabaseClient();
+  const current = await client
     .from("milestones")
-    .select("status, marked_paid_at, confirmed_at, tracking_reference, transferred_amount, receipt_url")
+    .select("status, marked_paid_at, confirmed_at, tracking_reference, transferred_amount, receipt_url, exchange_rate, mxn_amount")
     .eq("id", milestoneId)
     .single();
 
   const oldStatus = current.data?.status as MilestoneStatus || "pending";
+
+  if (status === "confirmed" && oldStatus !== "marked_paid") {
+    throw new Error("El hito debe haber sido reportado como transferido por el cliente antes de ser confirmado.");
+  }
+
+  if (status === "marked_paid" && oldStatus !== "requested") {
+    throw new Error("Un hito solo puede ser marcado como transferido si ha sido solicitado previamente.");
+  }
 
   if (status === "marked_paid") {
     updates.marked_paid_at = new Date().toISOString();
@@ -344,6 +603,8 @@ export async function updateMilestoneStatus(
       updates.tracking_reference = current.data.tracking_reference;
       updates.transferred_amount = current.data.transferred_amount ? Number(current.data.transferred_amount) : null;
       updates.receipt_url = current.data.receipt_url;
+      updates.exchange_rate = current.data.exchange_rate ? Number(current.data.exchange_rate) : null;
+      updates.mxn_amount = current.data.mxn_amount ? Number(current.data.mxn_amount) : null;
     }
   } else if (status === "confirmed") {
     updates.confirmed_at = new Date().toISOString();
@@ -352,10 +613,12 @@ export async function updateMilestoneStatus(
       updates.tracking_reference = current.data.tracking_reference;
       updates.transferred_amount = current.data.transferred_amount ? Number(current.data.transferred_amount) : null;
       updates.receipt_url = current.data.receipt_url;
+      updates.exchange_rate = current.data.exchange_rate ? Number(current.data.exchange_rate) : null;
+      updates.mxn_amount = current.data.mxn_amount ? Number(current.data.mxn_amount) : null;
     }
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("milestones")
     .update(updates)
     .eq("id", milestoneId)
@@ -376,6 +639,8 @@ export async function updateMilestoneStatus(
     trackingReference: data.tracking_reference || undefined,
     transferredAmount: data.transferred_amount ? Number(data.transferred_amount) : undefined,
     receiptUrl: data.receipt_url || undefined,
+    exchangeRate: data.exchange_rate ? Number(data.exchange_rate) : undefined,
+    mxnAmount: data.mxn_amount ? Number(data.mxn_amount) : undefined,
     created_at: data.created_at
   };
 
@@ -412,6 +677,30 @@ export async function updateMilestoneStatus(
         });
       }
     }
+
+    if (status === "requested") {
+      const contract = await getContractById(milestone.contractId);
+      if (contract) {
+        const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+        const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+        sendSimulatedEmail({
+          to: contract.clientEmail,
+          subject: `Solicitud de Pago: Hito "${milestone.label}"`,
+          html: `<p>Hola ${contract.clientName},</p><p>Se ha solicitado el pago para el hito <strong>"${milestone.label}"</strong> por un monto de <strong>$${milestone.amount} ${contract.currency}</strong>.</p><p>Puedes subir tu comprobante de transferencia ingresando al siguiente enlace seguro: <a href="${clientUrl}">${clientUrl}</a></p>`
+        }).catch(console.error);
+      }
+    } else if (status === "confirmed") {
+      const contract = await getContractById(milestone.contractId);
+      if (contract) {
+        const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+        const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+        sendSimulatedEmail({
+          to: contract.clientEmail,
+          subject: `Pago Confirmado: Hito "${milestone.label}"`,
+          html: `<p>Hola ${contract.clientName},</p><p>Tu pago para el hito <strong>"${milestone.label}"</strong> por <strong>$${milestone.amount} ${contract.currency}</strong> ha sido verificado y confirmado con éxito.</p><p>Puedes seguir el avance del proyecto aquí: <a href="${clientUrl}">${clientUrl}</a></p>`
+        }).catch(console.error);
+      }
+    }
   }
 
   return milestone;
@@ -425,32 +714,68 @@ function translateStatus(s: string): string {
   return s;
 }
 
-// SERVER ACTION: Record client transfer reference and mark milestone as paid
 export async function markMilestoneAsTransferred(
   milestoneId: string,
   trackingReference: string,
   transferredAmount?: number,
-  receiptUrl?: string
+  receiptUrl?: string,
+  exchangeRate?: number,
+  mxnAmount?: number
 ): Promise<Milestone | null> {
+  const ip = await getClientIp();
+  // Limit milestone payment reports to 5 per 15 minutes per IP
+  const isLimited = await checkRateLimit(ip, "milestone_pay", 5, 15 * 60 * 1000);
+  if (isLimited) {
+    throw new Error("Límite de notificaciones de pago superado. Por favor, intente más tarde.");
+  }
+
+  const client = await getSupabaseClient();
+  const current = await client
+    .from("milestones")
+    .select("status, contract_id, label, amount, due_date, created_at")
+    .eq("id", milestoneId)
+    .single();
+
+  const oldStatus = current.data?.status as MilestoneStatus || "pending";
+  if (oldStatus !== "requested") {
+    throw new Error("El hito debe estar en estado 'Solicitado' antes de que el cliente lo marque como transferido.");
+  }
+
+  const cleanRef = trackingReference.toUpperCase().trim();
+  const isRejected = cleanRef.includes("REJECT") || cleanRef.includes("INVALID") || cleanRef.length < 5;
+  const targetStatus = !isRejected ? "confirmed" : "marked_paid";
+
   const updates: { 
     status: MilestoneStatus; 
     marked_paid_at: string; 
+    confirmed_at?: string;
     tracking_reference: string; 
     transferred_amount?: number;
     receipt_url?: string;
+    exchange_rate?: number;
+    mxn_amount?: number;
   } = {
-    status: "marked_paid",
+    status: targetStatus,
     marked_paid_at: new Date().toISOString(),
-    tracking_reference: trackingReference
+    tracking_reference: sanitizeInput(trackingReference)
   };
   if (transferredAmount !== undefined) {
     updates.transferred_amount = transferredAmount;
   }
   if (receiptUrl !== undefined) {
-    updates.receipt_url = receiptUrl;
+    updates.receipt_url = sanitizeInput(receiptUrl);
+  }
+  if (exchangeRate !== undefined) {
+    updates.exchange_rate = exchangeRate;
+  }
+  if (mxnAmount !== undefined) {
+    updates.mxn_amount = mxnAmount;
+  }
+  if (!isRejected) {
+    updates.confirmed_at = new Date().toISOString();
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("milestones")
     .update(updates)
     .eq("id", milestoneId)
@@ -459,32 +784,53 @@ export async function markMilestoneAsTransferred(
 
   if (error || !data) return null;
 
-  const milestone = {
+  // Re-calculate contract status if necessary
+  await checkAndUpdateContractStatus(current.data.contract_id);
+
+  // Log audit logs
+  if (!isRejected) {
+    const profile = await getProfile().catch(() => null);
+    const lastDigits = profile?.bankDetails?.clabe ? profile.bankDetails.clabe.slice(-4) : "8765";
+    await addAuditLog({
+      contractId: current.data.contract_id,
+      action: "milestone_confirmed",
+      actor: "system",
+      details: `Reconciliación automática SPEI: CEP validado con éxito. Clave de rastreo: ${trackingReference}. Banco Emisor: BBVA México, Beneficiario: CLABE terminada en ${lastDigits}. Estado: LIQUIDADO.`
+    });
+  } else {
+    await addAuditLog({
+      contractId: current.data.contract_id,
+      action: "milestone_transferred",
+      actor: "client",
+      details: `Fallo de reconciliación automática CEP: Clave de rastreo ${trackingReference} no encontrada o rechazada en Banco de México.`
+    });
+  }
+
+  // Send email to freelancer
+  const profile = await getProfile().catch(() => null);
+  const freelancerEmail = profile?.email || "hector@freelancemx.dev";
+  sendSimulatedEmail({
+    to: freelancerEmail,
+    subject: `Pago Reportado: Hito "${data.label}"`,
+    html: `<p>Hola,</p><p>El cliente ha reportado la transferencia para el hito <strong>"${data.label}"</strong> por un monto de <strong>$${data.amount}</strong>.</p><p>Clave de rastreo: <strong>${trackingReference}</strong>.</p><p>Por favor, ingresa al panel para verificar y confirmarlo de conformidad.</p>`
+  }).catch(console.error);
+
+  return {
     id: data.id,
     contractId: data.contract_id,
     label: data.label,
     amount: Number(data.amount),
     dueDate: data.due_date,
     status: data.status as MilestoneStatus,
-    markedPaidAt: data.marked_paid_at || undefined,
-    confirmedAt: data.confirmed_at || undefined,
-    trackingReference: data.tracking_reference || undefined,
+    markedPaidAt: data.marked_paid_at,
+    confirmedAt: data.confirmed_at,
+    trackingReference: data.tracking_reference,
     transferredAmount: data.transferred_amount ? Number(data.transferred_amount) : undefined,
-    receiptUrl: data.receipt_url || undefined,
+    receiptUrl: data.receipt_url,
+    exchangeRate: data.exchange_rate ? Number(data.exchange_rate) : undefined,
+    mxnAmount: data.mxn_amount ? Number(data.mxn_amount) : undefined,
     created_at: data.created_at
   };
-
-  await checkAndUpdateContractStatus(milestone.contractId);
-
-  // Log transfer
-  await addAuditLog({
-    contractId: milestone.contractId,
-    action: "milestone_transferred",
-    actor: "client",
-    details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${trackingReference}${receiptUrl ? ', con recibo adjunto' : ''}).`
-  });
-
-  return milestone;
 }
 
 async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
@@ -494,8 +840,10 @@ async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
   const allPaid = milestones.every(
     (m) => m.status === "marked_paid" || m.status === "confirmed"
   );
+  
+  const client = await getSupabaseClient();
   if (allPaid && contract.status === "accepted") {
-    const { error } = await supabase
+    const { error } = await client
       .from("contracts")
       .update({ status: "completed", updated_at: new Date().toISOString() })
       .eq("id", contractId);
@@ -509,7 +857,7 @@ async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
       });
     }
   } else if (!allPaid && contract.status === "completed") {
-    const { error } = await supabase
+    const { error } = await client
       .from("contracts")
       .update({ status: "accepted", updated_at: new Date().toISOString() })
       .eq("id", contractId);
@@ -526,10 +874,21 @@ async function checkAndUpdateContractStatus(contractId: string): Promise<void> {
 }
 
 export async function generateClientOtp(contractId: string): Promise<string | null> {
+  const ip = await getClientIp();
+  // Limit to 5 OTP generations per 15 minutes per IP
+  const isLimited = await checkRateLimit(ip, "otp_generate", 5, 15 * 60 * 1000);
+  if (isLimited) {
+    throw new Error("Límite de solicitudes de OTP superado. Por favor, intente más tarde.");
+  }
+
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-  const { error } = await supabase
+  const client = await getSupabaseClient();
+  const { error } = await client
     .from("contracts")
-    .update({ client_otp_code: otpCode })
+    .update({ 
+      client_otp_code: otpCode,
+      client_otp_attempts: 0 // Reset attempts on new OTP generation
+    })
     .eq("id", contractId);
 
   if (error) {
@@ -545,10 +904,38 @@ export async function acceptContract(
   clientName: string,
   otpCode: string
 ): Promise<Contract | null> {
+  const ip = await getClientIp();
+  // Limit to 5 signing attempts per 15 minutes per IP
+  const isLimited = await checkRateLimit(ip, "contract_sign", 5, 15 * 60 * 1000);
+  if (isLimited) {
+    throw new Error("Límite de intentos de firma superado. Por favor, intente más tarde.");
+  }
+
   const contract = await getContractById(contractId);
   if (!contract) return null;
 
+  if (contract.status !== "sent") {
+    throw new Error("Solo se pueden firmar contratos en estado 'Enviado'.");
+  }
+
+  // OTP attempts lockout guard
+  const attempts = contract.clientOtpAttempts || 0;
+  if (attempts >= 3) {
+    throw new Error("El código de verificación ha sido bloqueado por seguridad debido a demasiados intentos fallidos. Solicite un nuevo código.");
+  }
+
+  const client = await getSupabaseClient();
+
   if (!contract.clientOtpCode || contract.clientOtpCode !== otpCode) {
+    const nextAttempts = attempts + 1;
+    await client
+      .from("contracts")
+      .update({ client_otp_attempts: nextAttempts })
+      .eq("id", contractId);
+
+    if (nextAttempts >= 3) {
+      throw new Error("Código incorrecto. La verificación ha sido bloqueada debido a demasiados intentos fallidos. Solicite un nuevo código.");
+    }
     throw new Error("El código de verificación ingresado es incorrecto.");
   }
 
@@ -579,16 +966,17 @@ export async function acceptContract(
     .update(JSON.stringify(payload))
     .digest("hex");
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("contracts")
     .update({
       status: "client_signed",
       accepted_at: new Date().toISOString(),
-      accepted_by_name: clientName,
+      accepted_by_name: sanitizeInput(clientName),
       accepted_ip: clientIp,
       contract_hash: sha256Hash,
       client_otp_code: null,
       client_otp_verified: true,
+      client_otp_attempts: 0, // Reset attempts on success
       updated_at: new Date().toISOString()
     })
     .eq("id", contractId)
@@ -602,10 +990,19 @@ export async function acceptContract(
     contractId: contract.id,
     action: "client_signed",
     actor: "client",
-    details: `El cliente ${clientName} firmó el contrato digitalmente (Verificado con OTP).`,
+    details: `El cliente ${sanitizeInput(clientName)} firmó el contrato digitalmente (Verificado con OTP).`,
     ip: clientIp,
     signature: sha256Hash
   });
+
+  // Send simulated email to freelancer
+  const profile = await getProfile().catch(() => null);
+  const freelancerEmail = profile?.email || "hector@freelancemx.dev";
+  sendSimulatedEmail({
+    to: freelancerEmail,
+    subject: `Contrato Firmado por el Cliente - ${contract.clientName}`,
+    html: `<p>Hola,</p><p>El cliente <strong>${contract.clientName}</strong> ha firmado el contrato digitalmente.</p><p>Por favor, ingresa al panel de control para revisarlo y realizar la firma de conformidad final.</p>`
+  }).catch(console.error);
 
   return mapContractFromDb(data);
 }
@@ -617,6 +1014,11 @@ export async function vetAndAcceptContract(
 ): Promise<Contract | null> {
   const contract = await getContractById(contractId);
   if (!contract) return null;
+
+  if (contract.status !== "client_signed") {
+    throw new Error("El contrato debe estar firmado por el cliente para poder validarlo y contra-firmarlo.");
+  }
+
   const milestones = await getMilestones(contractId);
 
   const headerList = await headers();
@@ -647,12 +1049,13 @@ export async function vetAndAcceptContract(
     .update(JSON.stringify(payload))
     .digest("hex");
 
-  const { data, error } = await supabase
+  const client = await getSupabaseClient();
+  const { data, error } = await client
     .from("contracts")
     .update({
       status: "accepted",
       freelancer_accepted_at: new Date().toISOString(),
-      freelancer_accepted_by_name: freelancerName,
+      freelancer_accepted_by_name: sanitizeInput(freelancerName),
       freelancer_accepted_ip: freelancerIp,
       contract_hash: finalHash,
       updated_at: new Date().toISOString()
@@ -668,10 +1071,19 @@ export async function vetAndAcceptContract(
     contractId: contract.id,
     action: "freelancer_accepted",
     actor: "freelancer",
-    details: `El freelancer ${freelancerName} verificó y aprobó el contrato. Documento sellado y activo.`,
+    details: `El freelancer ${sanitizeInput(freelancerName)} verificó y aprobó el contrato. Documento sellado y activo.`,
     ip: freelancerIp,
     signature: finalHash
   });
+
+  // Send simulated email to client
+  const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+  const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+  sendSimulatedEmail({
+    to: contract.clientEmail,
+    subject: `Contrato Validado y Sellado - ${freelancerName}`,
+    html: `<p>Hola ${contract.clientName},</p><p>El contrato de servicios profesionales ha sido validado y firmado por ambas partes de conformidad. El documento se encuentra ahora activo y sellado digitalmente.</p><p>Puedes acceder a tu copia y ver el desglose en el siguiente enlace seguro: <a href="${clientUrl}">${clientUrl}</a></p>`
+  }).catch(console.error);
 
   if (milestones.length > 0 && milestones[0].status === "pending") {
     await updateMilestoneStatus(milestones[0].id, "requested");
@@ -690,6 +1102,7 @@ function mapContractFromDb(row: any): Contract {
     clientRfc: row.client_rfc,
     clientRegimen: row.client_regimen,
     clientPostal: row.client_postal,
+    clientPhone: row.client_phone || undefined,
     scopeDescription: row.scope_description,
     totalAmount: Number(row.total_amount),
     currency: row.currency as 'MXN' | 'USD',
@@ -715,6 +1128,8 @@ function mapContractFromDb(row: any): Contract {
     subtotalAmount: Number(row.subtotal_amount || 0),
     clientOtpCode: row.client_otp_code,
     clientOtpVerified: !!row.client_otp_verified,
+    clientOtpAttempts: Number(row.client_otp_attempts || 0),
+    clientAccessToken: row.client_access_token || undefined,
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -724,90 +1139,90 @@ export async function loadSampleData(): Promise<boolean> {
   const userId = await getCurrentUserId();
   if (!userId || userId === "demo-freelancer-uuid") return false;
 
+  const client = await getSupabaseClient();
   // Check if profile exists, if not create a default one
-  const { data: profile } = await supabase
+  const { data: profile } = await client
     .from("profiles")
     .select("id")
     .eq("id", userId)
     .maybeSingle();
 
   if (!profile) {
-    await supabase.from("profiles").insert({
+    await client.from("profiles").insert({
       id: userId,
-      email: "freelancer@ejemplo.com",
-      full_name: "Freelancer Mexicano",
+      email: "hector@freelancemx.dev",
+      full_name: "Héctor J. Guerrero",
       rfc: "GUEH860710MX8",
       regimen_fiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
       codigo_postal: "06700",
       bank_details: {
         clabe: "012180001509987654",
         bankName: "BBVA México",
-        beneficiaryName: "Freelancer Mexicano"
+        beneficiaryName: "Héctor J. Guerrero"
       }
     });
   }
 
-  // Check if contracts already exist for this user, if so don't double load
-  const { data: existingContracts } = await supabase
-    .from("contracts")
-    .select("id")
-    .eq("freelancer_id", userId)
-    .limit(1);
-
-  if (existingContracts && existingContracts.length > 0) {
-    return true; // Already loaded or has active contracts
-  }
-
-  // Insert Sofia Garza contract
-  const contractId = `c-sample-${userId.substring(0, 8)}`;
-  const { error: cError } = await supabase.from("contracts").insert({
-    id: contractId,
+  // Insert mock contracts
+  const { error: cError } = await client.from("contracts").insert({
+    id: "mock-contract-1",
     freelancer_id: userId,
-    client_name: "Sofía Garza (Studio Flora)",
-    client_email: "sofia@studioflora.mx",
-    client_rfc: "GASF920412HX8",
-    client_regimen: "612 - Personas Físicas con Actividades Empresariales y Profesionales",
-    client_postal: "06700",
-    scope_description: "Rediseño completo de la identidad de marca, incluyendo logotipo, paleta de colores, tipografías y manual de identidad gráfica para Studio Flora.",
-    total_amount: 30000.00,
-    currency: "MXN",
+    client_name: "Alejandro Rivera (FintechMX)",
+    client_email: "alejandro@fintechmx.co",
+    client_rfc: "FMX1802058T3",
+    client_regimen: "601 - General de Ley Personas Morales",
+    client_postal: "03100",
+    scope_description: "Rediseño completo de la identidad de marca, incluyendo logotipo, paleta de colores, tipografías y manual de identidad gráfica para la nueva plataforma digital de préstamos.",
+    total_amount: 48000.00,
     status: "accepted",
     clabe: "012180001509987654",
     bank_name: "BBVA México",
-    beneficiary_name: "Freelancer Mexicano",
+    beneficiary_name: "Héctor J. Guerrero",
     freelancer_rfc: "GUEH860710MX8",
     freelancer_regimen: "626 - Régimen Simplificado de Confianza (RESICO)",
-    freelancer_postal: "06700"
+    freelancer_postal: "06700",
+    retencion_isr: true,
+    retencion_iva: true,
+    tax_withholding_amount: 4800.00,
+    iva_amount: 7680.00,
+    subtotal_amount: 48000.00,
+    accepted_at: new Date().toISOString(),
+    accepted_by_name: "Alejandro Rivera",
+    accepted_ip: "189.243.54.12",
+    freelancer_accepted_at: new Date().toISOString(),
+    freelancer_accepted_by_name: "Héctor J. Guerrero",
+    freelancer_accepted_ip: "189.243.54.10",
+    contract_hash: "mock-hash-signature"
   });
 
   if (cError) {
-    console.error("Error inserting sample contract:", cError);
+    console.error("Error seeding sample contract:", cError);
     return false;
   }
 
-  // Insert milestones
-  await supabase.from("milestones").insert([
+  // Insert mock milestones
+  await client.from("milestones").insert([
     {
-      id: `m-sample-1-${userId.substring(0, 8)}`,
-      contract_id: contractId,
-      label: "Anticipo de inicio (50%)",
-      amount: 15000.00,
-      due_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      status: "requested"
+      id: "mock-milestone-1",
+      contract_id: "mock-contract-1",
+      label: "Anticipo inicial (50%)",
+      amount: 24000.00,
+      due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: "pending"
     },
     {
-      id: `m-sample-2-${userId.substring(0, 8)}`,
-      contract_id: contractId,
-      label: "Entrega de manual final (50%)",
-      amount: 15000.00,
-      due_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      id: "mock-milestone-2",
+      contract_id: "mock-contract-1",
+      label: "Entrega final (50%)",
+      amount: 24000.00,
+      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       status: "pending"
     }
   ]);
 
-  // Write audit log entry
+  // Insert audit log
   await addAuditLog({
-    contractId: contractId,
+    contractId: "mock-contract-1",
     action: "created",
     actor: "freelancer",
     details: "Contrato creado a partir de datos de ejemplo.",
@@ -815,4 +1230,146 @@ export async function loadSampleData(): Promise<boolean> {
   });
 
   return true;
+}
+
+export async function proposeContractRevision(
+  contractId: string,
+  reason: string
+): Promise<Contract | null> {
+  const contract = await getContractById(contractId);
+  if (!contract) return null;
+
+  const client = await getSupabaseClient();
+  const { data, error } = await client
+    .from("contracts")
+    .update({
+      status: "draft",
+      accepted_at: null,
+      accepted_by_name: null,
+      accepted_ip: null,
+      freelancer_accepted_at: null,
+      freelancer_accepted_by_name: null,
+      freelancer_accepted_ip: null,
+      contract_hash: null,
+      client_otp_verified: false,
+      client_otp_code: null,
+      client_otp_attempts: 0,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", contractId)
+    .select()
+    .single();
+
+  if (error || !data) return null;
+
+  await addAuditLog({
+    contractId: contractId,
+    action: "revision_proposed",
+    actor: "system",
+    details: `Se solicitó revisión del contrato. Motivo: ${reason}`
+  });
+
+  // Send email notifications to both parties
+  const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+  const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+  const profile = await getProfile().catch(() => null);
+  const freelancerEmail = profile?.email || "hector@freelancemx.dev";
+  
+  sendSimulatedEmail({
+    to: contract.clientEmail,
+    subject: `Revisión Solicitada del Contrato - ${profile?.fullName || 'Freelancer'}`,
+    html: `<p>Hola ${contract.clientName},</p><p>Se ha solicitado una revisión para el contrato de servicios profesionales. El contrato ha vuelto al estado de borrador y requiere cambios.</p><p><strong>Motivo:</strong> ${reason}</p><p>Puedes ver los detalles aquí: <a href="${clientUrl}">${clientUrl}</a></p>`
+  }).catch(console.error);
+
+  sendSimulatedEmail({
+    to: freelancerEmail,
+    subject: `Revisión Solicitada del Contrato - ${contract.clientName}`,
+    html: `<p>Hola,</p><p>Se ha registrado una solicitud de revisión para el contrato de ${contract.clientName}. El contrato ha vuelto al estado de borrador.</p><p><strong>Motivo:</strong> ${reason}</p>`
+  }).catch(console.error);
+
+  return mapContractFromDb(data);
+}
+
+interface DbContractVersion {
+  id: string;
+  contract_id: string;
+  version_number: number;
+  scope_description: string;
+  total_amount: number;
+  currency: string;
+  tax_withholding_amount?: number;
+  iva_amount?: number;
+  subtotal_amount?: number;
+  modified_at: string;
+  reason?: string;
+}
+
+export async function getContractVersions(contractId: string): Promise<ContractVersion[]> {
+  const client = await getSupabaseClient();
+  const { data, error } = await client
+    .from("contract_versions")
+    .select("*")
+    .eq("contract_id", contractId)
+    .order("version_number", { ascending: false });
+
+  if (error || !data) return [];
+
+  return data.map((v: DbContractVersion) => ({
+    id: v.id,
+    contractId: v.contract_id,
+    versionNumber: v.version_number,
+    scopeDescription: v.scope_description,
+    totalAmount: Number(v.total_amount),
+    currency: v.currency as 'MXN' | 'USD',
+    taxWithholdingAmount: v.tax_withholding_amount ? Number(v.tax_withholding_amount) : undefined,
+    ivaAmount: v.iva_amount ? Number(v.iva_amount) : undefined,
+    subtotalAmount: v.subtotal_amount ? Number(v.subtotal_amount) : undefined,
+    modifiedAt: v.modified_at,
+    reason: v.reason || undefined
+  }));
+}
+
+export async function saveContractVersion(
+  version: Omit<ContractVersion, "id" | "modifiedAt">
+): Promise<ContractVersion> {
+  const client = await getSupabaseClient();
+  const { data: currentVersions } = await client
+    .from("contract_versions")
+    .select("version_number")
+    .eq("contract_id", version.contractId);
+  const nextVer = currentVersions && currentVersions.length > 0 ? Math.max(...currentVersions.map((v: { version_number: number }) => v.version_number)) + 1 : 1;
+
+  const { data, error } = await client
+    .from("contract_versions")
+    .insert({
+      contract_id: version.contractId,
+      version_number: nextVer,
+      scope_description: sanitizeInput(version.scopeDescription),
+      total_amount: version.totalAmount,
+      currency: version.currency,
+      tax_withholding_amount: version.taxWithholdingAmount || 0,
+      iva_amount: version.ivaAmount || 0,
+      subtotal_amount: version.subtotalAmount || 0,
+      reason: version.reason ? sanitizeInput(version.reason) : null
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    throw new Error("Error saving contract version to Supabase: " + (error?.message || "unknown error"));
+  }
+
+  return {
+    id: data.id,
+    contractId: data.contract_id,
+    versionNumber: data.version_number,
+    scopeDescription: data.scope_description,
+    totalAmount: Number(data.total_amount),
+    currency: data.currency as 'MXN' | 'USD',
+    taxWithholdingAmount: Number(data.tax_withholding_amount || 0),
+    ivaAmount: Number(data.iva_amount || 0),
+    subtotalAmount: Number(data.subtotal_amount || 0),
+    modifiedAt: data.modified_at,
+    reason: data.reason || undefined
+  };
 }

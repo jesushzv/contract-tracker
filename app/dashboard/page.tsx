@@ -18,7 +18,8 @@ import {
   ShieldCheck, 
   Briefcase, 
   RotateCcw,
-  BarChart3
+  BarChart3,
+  Printer
 } from "lucide-react";
 import { 
   getContracts, 
@@ -31,9 +32,10 @@ import {
   getAuditLogs,
   vetAndAcceptContract,
   addAuditLog,
-  loadSampleData
+  loadSampleData,
+  getContractVersions
 } from "@/lib/storageClient";
-import { Contract, Milestone, Profile, AuditLog } from "@/lib/types";
+import { Contract, Milestone, Profile, AuditLog, ContractVersion } from "@/lib/types";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -66,6 +68,8 @@ export default function Dashboard() {
   const [signatureUrl, setSignatureUrl] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [contractVersions, setContractVersions] = useState<ContractVersion[]>([]);
 
   useEffect(() => {
     async function loadInitialData() {
@@ -93,6 +97,7 @@ export default function Dashboard() {
       setCodigoPostal(prof.codigoPostal || "");
       setLogoUrl(prof.logoUrl || "");
       setSignatureUrl(prof.signatureUrl || "");
+      setPhone(prof.phone || "");
 
       const allContracts = await getContracts();
       setContracts(allContracts);
@@ -110,16 +115,19 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    async function loadLogs() {
+    async function loadLogsAndVersions() {
       if (selectedContract) {
         const logs = await getAuditLogs(selectedContract.id);
         setSelectedContractLogs(logs);
+        const versions = await getContractVersions(selectedContract.id);
+        setContractVersions(versions);
       } else {
         setSelectedContractLogs([]);
+        setContractVersions([]);
       }
     }
-    loadLogs();
-  }, [selectedContract, selectedContract?.status]);
+    loadLogsAndVersions();
+  }, [selectedContract]);
 
   const refreshData = async () => {
     const allContracts = await getContracts();
@@ -253,6 +261,7 @@ export default function Dashboard() {
       codigoPostal: codigoPostal || undefined,
       logoUrl: logoUrl || undefined,
       signatureUrl: signatureUrl || undefined,
+      phone: phone || undefined,
       bankDetails: {
         clabe,
         bankName,
@@ -270,9 +279,84 @@ export default function Dashboard() {
     }
   };
 
+  const handleExportAuditLog = () => {
+    if (!selectedContract) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Por favor, permite las ventanas emergentes para exportar el registro de auditoría.");
+      return;
+    }
+
+    const logRows = selectedContractLogs
+      .map(
+        (log) => `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">${new Date(log.timestamp).toLocaleString("es-MX")}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>${log.actor.toUpperCase()}</strong></td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee;">${log.details}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #eee; font-family: monospace;">${log.ip || "N/A"}</td>
+      </tr>`
+      )
+      .join("");
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Certificado de Auditoría Digital - ${selectedContract.id}</title>
+          <style>
+            body { font-family: sans-serif; color: #333; margin: 40px; }
+            h1 { font-size: 20px; color: #4f46e5; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; }
+            .meta { margin-bottom: 30px; line-height: 1.6; }
+            .seal { background: #f5f3ff; border: 1px solid #e0e7ff; padding: 15px; border-radius: 8px; font-size: 13px; margin-bottom: 30px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th { text-align: left; background: #f8fafc; padding: 10px; border-bottom: 2px solid #e2e8f0; }
+          </style>
+        </head>
+        <body>
+          <h1>Certificado de Auditoría de Acuerdo Digital</h1>
+          <div class="meta">
+            <p><strong>ID de Contrato:</strong> ${selectedContract.id}</p>
+            <p><strong>Freelancer:</strong> ${selectedContract.beneficiaryName} (RFC: ${selectedContract.freelancerRfc || "N/A"})</p>
+            <p><strong>Cliente:</strong> ${selectedContract.clientName} (${selectedContract.clientEmail})</p>
+            <p><strong>Fecha de Emisión:</strong> ${new Date(selectedContract.created_at).toLocaleString("es-MX")}</p>
+            <p><strong>Monto Total:</strong> ${selectedContract.totalAmount} ${selectedContract.currency}</p>
+          </div>
+          ${
+            selectedContract.contractHash
+              ? `
+          <div class="seal">
+            <strong>Sello Digital SHA-256 de Integridad:</strong><br/>
+            <code style="word-break: break-all; font-family: monospace;">${selectedContract.contractHash}</code>
+          </div>`
+              : ""
+          }
+          <h2>Historial de Transacciones (Audit Trail)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha/Hora</th>
+                <th>Actor</th>
+                <th>Acción / Detalles</th>
+                <th>Dirección IP</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${logRows}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const handleSignOut = async () => {
     try {
       localStorage.removeItem("demo_mode");
+      document.cookie = "demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       await supabase.auth.signOut();
       window.location.href = "/login";
     } catch (err) {
@@ -301,7 +385,10 @@ export default function Dashboard() {
 
   const handleCopyLink = (contractId: string) => {
     if (typeof window === "undefined") return;
-    const clientUrl = `${window.location.origin}/c/${contractId}`;
+    const targetCon = contracts.find(c => c.id === contractId);
+    const tokenParam = targetCon?.clientAccessToken ? `?token=${targetCon.clientAccessToken}` : "";
+    const demoParam = isDemo ? `${tokenParam ? "&" : "?"}demo=true` : "";
+    const clientUrl = `${window.location.origin}/c/${contractId}${tokenParam}${demoParam}`;
     navigator.clipboard.writeText(clientUrl);
     setCopiedId(contractId);
     setTimeout(() => setCopiedId(null), 2500);
@@ -325,7 +412,6 @@ export default function Dashboard() {
     return contractMilestones.some(m => isMilestoneOverdue(m));
   };
 
-  // Filter logic matching search text & filter tabs trigger
   const filteredContracts = contracts.filter(c => {
     const matchesSearch = 
       c.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -343,8 +429,15 @@ export default function Dashboard() {
 
   const getWhatsAppShareLink = (c: Contract) => {
     if (typeof window === "undefined") return "";
-    const clientUrl = `${window.location.origin}/c/${c.id}`;
+    const tokenPart = c.clientAccessToken ? `?token=${c.clientAccessToken}` : "";
+    const demoPart = isDemo ? `${tokenPart ? "&" : "?"}demo=true` : "";
+    const clientUrl = `${window.location.origin}/c/${c.id}${tokenPart}${demoPart}`;
     const text = `Hola ${c.clientName}, te comparto la propuesta de contrato de servicios profesionales por un total de ${formatMoney(c.totalAmount, c.currency)}. Puedes revisarla y firmar de conformidad electrónicamente aquí: ${clientUrl}`;
+    
+    if (c.clientPhone) {
+      const cleanPhone = c.clientPhone.replace(/\D/g, "");
+      return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+    }
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   };
 
@@ -466,7 +559,6 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 text-slate-800 dark:text-slate-200">
-      {/* Dashboard Top Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
@@ -509,7 +601,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Quick-Start Templates Deck */}
       <div className="flex flex-col gap-3 text-left">
         <span className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Crear Nuevo desde Plantilla</span>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -548,7 +639,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Freelancer Analytics Summary View */}
       {showSummary && (
         <div className="glass rounded-3xl p-6 border-indigo-500/20 bg-white/50 dark:bg-slate-950/50 flex flex-col gap-6 text-left animate-in slide-in-from-top-4 duration-300">
           <div>
@@ -561,9 +651,7 @@ export default function Dashboard() {
             </p>
           </div>
 
-          {/* Financial Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Confirmed Earnings Card */}
             <div className="glass rounded-2xl p-5 border-emerald-500/20 bg-emerald-500/5 flex flex-col gap-1.5 shadow-sm">
               <span className="text-2xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
                 <CheckCircle2 className="h-3.5 w-3.5" />
@@ -583,7 +671,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* In Transit Card */}
             <div className="glass rounded-2xl p-5 border-amber-500/20 bg-amber-500/5 flex flex-col gap-1.5 shadow-sm">
               <span className="text-2xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5 animate-pulse" />
@@ -603,7 +690,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Projected Card */}
             <div className="glass rounded-2xl p-5 border-indigo-500/20 bg-indigo-500/5 flex flex-col gap-1.5 shadow-sm">
               <span className="text-2xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1">
                 <Briefcase className="h-3.5 w-3.5" />
@@ -624,11 +710,9 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* State-wise Distribution */}
           <div className="border-t border-slate-200 dark:border-slate-800/80 pt-5">
             <h4 className="text-2xs font-bold text-slate-400 uppercase tracking-widest mb-3">Distribución por Estado de Contrato</h4>
             <div className="flex flex-col gap-2">
-              {/* Progress bar stack */}
               <div className="h-3 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
                 {contractStateStats.total > 0 ? (
                   <>
@@ -663,7 +747,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Labels list */}
               <div className="flex flex-wrap gap-x-5 gap-y-2 text-3xs font-semibold text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider">
                 <span className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500" />
@@ -689,7 +772,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Timeline monthly view */}
           <div className="border-t border-slate-200 dark:border-slate-800/80 pt-5">
             <h4 className="text-2xs font-bold text-slate-400 uppercase tracking-widest mb-4">Cronograma Mensual de Cobros (Timeline)</h4>
             
@@ -702,7 +784,6 @@ export default function Dashboard() {
                     </div>
                     
                     <div className="sm:col-span-9 flex flex-col gap-2">
-                      {/* MXN Timeline Flow */}
                       {item.MXN.total > 0 && (
                         <div className="flex items-center gap-3 w-full">
                           <span className="text-3xs font-mono text-slate-400 dark:text-slate-500 w-24 text-left">MXN: {formatMoney(item.MXN.total, 'MXN')}</span>
@@ -732,7 +813,6 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {/* USD Timeline Flow */}
                       {item.USD.total > 0 && (
                         <div className="flex items-center gap-3 w-full">
                           <span className="text-3xs font-mono text-slate-400 dark:text-slate-500 w-24 text-left">USD: {formatMoney(item.USD.total, 'USD')}</span>
@@ -765,7 +845,6 @@ export default function Dashboard() {
                   </div>
                 ))}
                 
-                {/* Flow Legend */}
                 <div className="flex gap-4 text-3xs font-semibold text-slate-400 uppercase tracking-widest justify-end mt-2">
                   <span className="flex items-center gap-1">
                     <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -788,7 +867,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Fiscal settings toggle area */}
       {showSettings && (
         <div className="glass rounded-3xl p-6 border-indigo-550/20 bg-white/50 dark:bg-slate-950/50 flex flex-col gap-6 text-left animate-in slide-in-from-top-4 duration-300">
           <div>
@@ -847,6 +925,17 @@ export default function Dashboard() {
                 placeholder="Ej. 06700"
                 value={codigoPostal}
                 onChange={(e) => setCodigoPostal(e.target.value)}
+                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Teléfono (WhatsApp)</label>
+              <input
+                type="tel"
+                placeholder="Ej. +525512345678"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
               />
             </div>
@@ -925,12 +1014,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Main Grid: Left sidebar list & Right details panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Left Column: Contracts navigation list */}
         <div className="lg:col-span-1 flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            {/* Real-time search bar */}
             <input
               type="text"
               placeholder="Buscar cliente, email o alcance..."
@@ -939,7 +1025,6 @@ export default function Dashboard() {
               className="w-full rounded-xl border border-slate-300 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white placeholder:text-slate-400 shadow-sm"
             />
 
-            {/* Filter triggers list */}
             <div className="flex flex-wrap gap-1.5 mt-1">
               <button
                 onClick={() => setActiveTab('all')}
@@ -1019,7 +1104,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* List display */}
           <div className="flex flex-col gap-3 overflow-y-auto max-h-[70vh] pr-2">
             {contracts.length === 0 ? (
               <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/20 dark:bg-slate-950/20 p-8 text-center flex flex-col items-center gap-3.5 border-dashed">
@@ -1093,11 +1177,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right Column: Contract details tracker */}
         <div className="lg:col-span-2 flex flex-col gap-6">
           {selectedContract ? (
             <div className="glass rounded-3xl p-6 flex flex-col gap-6 text-left animate-in fade-in-50 duration-300">
-              {/* Detail Header */}
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b border-slate-100 dark:border-slate-800 pb-5">
                 <div>
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Detalles de Contrato</span>
@@ -1150,7 +1232,7 @@ export default function Dashboard() {
                     Ver Contrato
                   </button>
                   <Link
-                    href={`/c/${selectedContract.id}`}
+                    href={`/c/${selectedContract.id}?token=${selectedContract.clientAccessToken || ''}${isDemo ? '&demo=true' : ''}`}
                     target="_blank"
                     className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-colors"
                   >
@@ -1160,17 +1242,31 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Status workflow banner */}
               {selectedContract.status === 'draft' && (
-                <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-800 dark:text-amber-400 flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold">Estado: Borrador</span>. Este contrato aún no ha sido compartido oficialmente. Puedes realizar cambios o marcarlo como enviado para activar las solicitudes de anticipos.
+                <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-850 dark:text-amber-400 flex flex-col gap-2.5">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Estado: Borrador</span>. Este contrato aún no ha sido compartido oficialmente. Puedes realizar cambios o marcarlo como enviado para activar las solicitudes de anticipos.
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
                     <button
                       onClick={() => handleUpdateContractStatus('sent')}
-                      className="mt-3 block bg-amber-600 hover:bg-amber-500 text-white rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
+                      className="bg-amber-600 hover:bg-amber-500 text-white rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
                     >
                       Marcar como Enviado
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditScopeDescription(selectedContract.scopeDescription);
+                        setEditTotalAmount(selectedContract.totalAmount);
+                        setEditMilestones(milestones.map(m => ({ ...m })));
+                        setIsEditingContract(true);
+                      }}
+                      className="border border-amber-300 dark:border-amber-700 bg-white/20 dark:bg-slate-900/20 hover:bg-white dark:hover:bg-slate-900 text-amber-800 dark:text-amber-400 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      Modificar Propuesta
                     </button>
                   </div>
                 </div>
@@ -1261,7 +1357,136 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Scope Description */}
+              {selectedContractLogs.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Centro de Notificaciones & Alertas</span>
+                  <div className="flex flex-col gap-2">
+                    {(() => {
+                      const alerts: { text: string; type: 'success' | 'warning' | 'info'; actionLink?: string; actionText?: string }[] = [];
+                      
+                      const tokenPart = selectedContract.clientAccessToken ? `?token=${selectedContract.clientAccessToken}` : "";
+                      const demoPart = isDemo ? `${tokenPart ? "&" : "?"}demo=true` : "";
+                      const clientUrl = `${window.location.origin}/c/${selectedContract.id}${tokenPart}${demoPart}`;
+                      const cleanClientPhone = selectedContract.clientPhone ? selectedContract.clientPhone.replace(/\D/g, "") : "";
+                      
+                      const getWaLink = (phone: string, text: string) => {
+                        if (phone) return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+                        return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                      };
+
+                      // 1. Contract Status Alerts
+                      if (selectedContract.status === 'sent') {
+                        const text = `Hola ${selectedContract.clientName}, te comparto la propuesta de contrato de servicios profesionales por un total de ${formatMoney(selectedContract.totalAmount, selectedContract.currency)}. Puedes revisarla y firmar electrónicamente de conformidad aquí: ${clientUrl}`;
+                        alerts.push({
+                          text: `Propuesta de contrato enviada. Pendiente de firma.`,
+                          type: 'info',
+                          actionLink: getWaLink(cleanClientPhone, text),
+                          actionText: 'Compartir por WhatsApp'
+                        });
+                      }
+
+                      if (selectedContract.status === 'client_signed') {
+                        alerts.push({
+                          text: `El cliente ha firmado el contrato digitalmente. Pendiente de tu validación y firma final.`,
+                          type: 'warning'
+                        });
+                      }
+
+                      if (selectedContract.status === 'accepted') {
+                        const text = `Hola ${selectedContract.clientName}, ya validé y firmé de conformidad el contrato. El documento se encuentra sellado con huella digital y activo. Puedes ver tu copia aquí: ${clientUrl}`;
+                        alerts.push({
+                          text: `Contrato aceptado y sellado digitalmente.`,
+                          type: 'success',
+                          actionLink: getWaLink(cleanClientPhone, text),
+                          actionText: 'Notificar por WhatsApp'
+                        });
+                      }
+
+                      // Revision Proposed (status is draft and has revision logs)
+                      const revisionLogs = selectedContractLogs.filter(l => l.action === 'revision_proposed');
+                      if (selectedContract.status === 'draft' && revisionLogs.length > 0) {
+                        const latestRevLog = revisionLogs[0];
+                        if (latestRevLog.actor === 'client') {
+                          alerts.push({
+                            text: `El cliente solicitó una revisión. Motivo: ${latestRevLog.details}`,
+                            type: 'warning'
+                          });
+                        } else {
+                          const text = `Hola ${selectedContract.clientName}, actualicé el contrato con cambios y regresó a estado de borrador para tu revisión. Puedes verlo aquí: ${clientUrl}`;
+                          alerts.push({
+                            text: `Has propuesto una revisión al contrato. Regresó a borrador.`,
+                            type: 'info',
+                            actionLink: getWaLink(cleanClientPhone, text),
+                            actionText: 'Notificar por WhatsApp'
+                          });
+                        }
+                      }
+
+                      // 2. Milestone Status Alerts
+                      milestones.forEach(m => {
+                        if (m.status === 'requested') {
+                          const overdue = isMilestoneOverdue(m);
+                          const text = `Hola ${selectedContract.clientName}, te solicito el pago del hito "${m.label}" por un monto de ${formatMoney(m.amount, selectedContract.currency)}. Puedes reportar tu pago de transferencia SPEI adjuntando el comprobante aquí: ${clientUrl}`;
+                          alerts.push({
+                            text: `Cobro del hito "${m.label}" (${formatMoney(m.amount, selectedContract.currency)}) solicitado al cliente${overdue ? ' y se encuentra ATRASADO' : ''}.`,
+                            type: overdue ? 'warning' : 'info',
+                            actionLink: getWaLink(cleanClientPhone, text),
+                            actionText: 'Recordar por WhatsApp'
+                          });
+                        }
+                        if (m.status === 'marked_paid') {
+                          alerts.push({
+                            text: `El cliente ha reportado el pago del hito "${m.label}" (${formatMoney(m.amount, selectedContract.currency)}) con folio/ref: ${m.trackingReference}. Favor de verificar SPEI.`,
+                            type: 'info'
+                          });
+                        }
+                        if (m.status === 'confirmed') {
+                          const text = `Hola ${selectedContract.clientName}, he verificado y confirmado tu pago de ${formatMoney(m.amount, selectedContract.currency)} para el hito "${m.label}". ¡Muchas gracias!`;
+                          alerts.push({
+                            text: `Pago confirmado para el hito "${m.label}".`,
+                            type: 'success',
+                            actionLink: getWaLink(cleanClientPhone, text),
+                            actionText: 'Enviar Agradecimiento'
+                          });
+                        }
+                      });
+
+                      if (alerts.length === 0) {
+                        return <p className="text-3xs text-slate-400 italic">No hay alertas activas en este acuerdo.</p>;
+                      }
+
+                      return alerts.map((alert, idx) => (
+                        <div 
+                          key={idx} 
+                          className={`rounded-xl border p-3 text-xs flex justify-between items-center gap-3 transition-all ${
+                            alert.type === 'success' 
+                              ? 'bg-emerald-550/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-400' 
+                              : alert.type === 'warning'
+                              ? 'bg-red-500/10 border-red-500/20 text-red-800 dark:text-red-400 font-semibold'
+                              : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-800 dark:text-indigo-400'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-current shrink-0" />
+                            <span>{alert.text}</span>
+                          </div>
+                          {alert.actionLink && (
+                            <a 
+                              href={alert.actionLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="shrink-0 text-3xs font-extrabold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-2.5 py-1 transition-all"
+                            >
+                              {alert.actionText}
+                            </a>
+                          )}
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Alcance de Trabajo</span>
                 <div className="bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl p-4 text-sm leading-relaxed border border-slate-100 dark:border-slate-800/50">
@@ -1269,7 +1494,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Milestone Tracker Section */}
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Esquema de Anticipos e Hitos</span>
@@ -1314,7 +1538,6 @@ export default function Dashboard() {
                           </span>
                         </div>
 
-                        {/* CEP details if client transferred */}
                         {milestone.status === 'marked_paid' && milestone.trackingReference && (
                           <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3 text-xs leading-relaxed">
                             <p className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
@@ -1325,6 +1548,9 @@ export default function Dashboard() {
                               <p>Clave de Rastreo SPEI: <span className="font-bold font-mono text-slate-700 dark:text-slate-350 select-all">{milestone.trackingReference}</span></p>
                               {milestone.transferredAmount && (
                                 <p>Monto Declarado: <span className="font-bold text-slate-700 dark:text-slate-350">{formatMoney(milestone.transferredAmount, selectedContract.currency)}</span></p>
+                              )}
+                              {milestone.exchangeRate && milestone.mxnAmount && (
+                                <p className="sm:col-span-2">Tipo de cambio: <span className="font-bold text-slate-700 dark:text-slate-350">${milestone.exchangeRate.toFixed(4)}</span> | Equiv. MXN: <span className="font-bold text-slate-700 dark:text-slate-350">{formatMoney(milestone.mxnAmount, "MXN")}</span></p>
                               )}
                             </div>
                             <div className="flex items-center gap-4 mt-2 pt-2 border-t border-emerald-500/10">
@@ -1357,7 +1583,6 @@ export default function Dashboard() {
                             {formatMoney(milestone.amount, selectedContract.currency)}
                           </span>
                           
-                          {/* Control buttons locked based on double countersigning flow */}
                           <div className="flex items-center gap-1.5">
                             {(selectedContract.status === 'accepted' || selectedContract.status === 'completed') ? (
                               <>
@@ -1431,6 +1656,11 @@ export default function Dashboard() {
                                         <ExternalLink className="h-2.5 w-2.5" />
                                       </a>
                                     )}
+                                    {milestone.exchangeRate && milestone.mxnAmount && (
+                                      <span className="text-4xs text-slate-400 mt-1 block">
+                                        TC: ${milestone.exchangeRate.toFixed(4)} | Equiv: {formatMoney(milestone.mxnAmount, "MXN")}
+                                      </span>
+                                    )}
                                   </div>
                                 )}
                               </>
@@ -1445,9 +1675,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Detail drawer footer: Seal & Audit Logs */}
               <div className="border-t border-slate-100 dark:border-slate-850 pt-5 flex flex-col gap-6">
-                {/* Verified Criptographic Seal Box */}
                 {selectedContract.contractHash && (
                   <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 text-xs flex flex-col gap-2">
                     <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-bold">
@@ -1462,11 +1690,48 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )}
+                
+                {contractVersions.length > 0 && (
+                  <div className="flex flex-col gap-4 text-left border-t border-slate-100 dark:border-slate-850 pt-5">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Historial de Versiones Propuestas</span>
+                    <div className="grid grid-cols-1 gap-2.5">
+                      {contractVersions.map((v) => (
+                        <div key={v.id} className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/20 dark:bg-slate-900/20 p-3 text-xs flex justify-between items-start gap-4">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                              <span>Versión {v.versionNumber}</span>
+                              <span className="text-3xs font-semibold bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5 text-slate-400">
+                                {new Date(v.modifiedAt).toLocaleDateString('es-MX')}
+                              </span>
+                            </div>
+                            <p className="text-3xs text-slate-400 leading-normal italic">
+                              &ldquo;{v.reason || 'Sin descripción'}&rdquo;
+                            </p>
+                            <p className="text-3xs text-slate-505 dark:text-slate-400 font-light line-clamp-2">
+                              Alcance: {v.scopeDescription}
+                            </p>
+                          </div>
+                          <div className="text-right font-extrabold text-slate-800 dark:text-slate-200 shrink-0">
+                            {formatMoney(v.totalAmount, v.currency)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                {/* Audit Trail timeline */}
                 {selectedContractLogs.length > 0 && (
-                  <div className="flex flex-col gap-4 text-left">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Historial del Contrato (Audit Trail)</span>
+                  <div className="flex flex-col gap-4 text-left border-t border-slate-100 dark:border-slate-850 pt-5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Historial del Contrato (Audit Trail)</span>
+                      <button
+                        onClick={handleExportAuditLog}
+                        className="inline-flex items-center gap-1 text-3xs font-bold text-indigo-500 hover:text-indigo-650 transition-colors"
+                      >
+                        <Printer className="h-3.5 w-3.5" />
+                        Exportar Audit Log
+                      </button>
+                    </div>
                     
                     <div className="flow-root mt-1">
                       <ul role="list" className="-mb-8">

@@ -7,6 +7,8 @@ export interface Profile {
   codigoPostal?: string;
   logoUrl?: string;
   signatureUrl?: string;
+  tier?: 'free' | 'starter' | 'pro';
+  phone?: string;
   bankDetails: {
     clabe: string;
     bankName: string;
@@ -24,6 +26,7 @@ export interface Contract {
   clientRfc?: string;
   clientRegimen?: string;
   clientPostal?: string;
+  clientPhone?: string;
   
   scopeDescription: string;
   totalAmount: number;
@@ -62,6 +65,10 @@ export interface Contract {
   // OTP Verification
   clientOtpCode?: string;
   clientOtpVerified?: boolean;
+  clientOtpAttempts?: number;
+  
+  // Client Access Token
+  clientAccessToken?: string;
   
   created_at: string;
   updated_at: string;
@@ -81,6 +88,8 @@ export interface Milestone {
   trackingReference?: string; // SPEI Clave de Rastreo
   transferredAmount?: number; // Exact amount paid by client
   receiptUrl?: string; // Attachment receipt URL/text
+  exchangeRate?: number; // USD to MXN exchange rate
+  mxnAmount?: number; // Amount converted to MXN
   created_at: string;
 }
 
@@ -94,10 +103,24 @@ export interface ClauseTemplate {
 export interface AuditLog {
   id: string;
   contractId: string;
-  action: 'created' | 'client_signed' | 'freelancer_accepted' | 'milestone_requested' | 'milestone_transferred' | 'milestone_confirmed' | 'modified';
+  action: 'created' | 'client_signed' | 'freelancer_accepted' | 'milestone_requested' | 'milestone_transferred' | 'milestone_confirmed' | 'modified' | 'revision_proposed';
   actor: 'freelancer' | 'client' | 'system';
   details: string;
   timestamp: string;
   ip?: string;
   signature?: string;
+}
+
+export interface ContractVersion {
+  id: string;
+  contractId: string;
+  versionNumber: number;
+  scopeDescription: string;
+  totalAmount: number;
+  currency: 'MXN' | 'USD';
+  taxWithholdingAmount?: number;
+  ivaAmount?: number;
+  subtotalAmount?: number;
+  modifiedAt: string;
+  reason?: string;
 }

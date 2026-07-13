@@ -1,6 +1,6 @@
 import * as localActions from "./storage";
 import * as supabaseActions from "./storageSupabase";
-import { Contract, Milestone, Profile, MilestoneStatus, AuditLog } from "./types";
+import { Contract, Milestone, Profile, MilestoneStatus, AuditLog, ContractVersion } from "./types";
 
 // Determine if we should use the cloud Supabase database
 const shouldUseSupabase = (): boolean => {
@@ -16,7 +16,7 @@ const shouldUseSupabase = (): boolean => {
 const serverActions = shouldUseSupabase() ? supabaseActions : localActions;
 
 // Helper to determine if we are in Demo Sandbox Mode (stored in browser localStorage)
-const isDemoMode = (): boolean => {
+export const isDemoMode = (): boolean => {
   if (typeof window === "undefined") return false;
   
   // Force sandbox/localStorage mode by default in Vercel Staging/Preview deployments
@@ -24,7 +24,14 @@ const isDemoMode = (): boolean => {
     return true;
   }
   
-  return localStorage.getItem("demo_mode") === "true";
+  const hasDemoParam = new URLSearchParams(window.location.search).get("demo") === "true";
+  if (hasDemoParam) {
+    localStorage.setItem("demo_mode", "true");
+    return true;
+  }
+  
+  const hasDemoCookie = document.cookie.split("; ").some(row => row.trim().startsWith("demo_mode=true"));
+  return localStorage.getItem("demo_mode") === "true" || hasDemoCookie;
 };
 
 // Local storage keys for the browser sandbox
@@ -32,7 +39,8 @@ const KEYS = {
   PROFILE: "sandbox_profile",
   CONTRACTS: "sandbox_contracts",
   MILESTONES: "sandbox_milestones",
-  AUDIT_LOGS: "sandbox_audit_logs"
+  AUDIT_LOGS: "sandbox_audit_logs",
+  CONTRACT_VERSIONS: "sandbox_contract_versions"
 };
 
 // Seed standard mock data in browser sandbox if empty
@@ -46,6 +54,7 @@ const seedSandboxIfNeeded = () => {
       rfc: "GUEH860710MX8",
       regimenFiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
       codigoPostal: "06700",
+      tier: "pro",
       bankDetails: {
         clabe: "012180001509987654",
         bankName: "BBVA México",
@@ -53,6 +62,14 @@ const seedSandboxIfNeeded = () => {
       }
     };
     localStorage.setItem(KEYS.PROFILE, JSON.stringify(defaultProfile));
+  } else {
+    try {
+      const prof = JSON.parse(localStorage.getItem(KEYS.PROFILE) || "{}");
+      if (!prof.tier || prof.tier === "free") {
+        prof.tier = "pro";
+        localStorage.setItem(KEYS.PROFILE, JSON.stringify(prof));
+      }
+    } catch {}
   }
 
   if (!localStorage.getItem(KEYS.CONTRACTS)) {
@@ -327,7 +344,19 @@ export async function getContracts(): Promise<Contract[]> {
   if (isDemoMode()) {
     seedSandboxIfNeeded();
     const data = localStorage.getItem(KEYS.CONTRACTS);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    const list: Contract[] = JSON.parse(data);
+    let updated = false;
+    list.forEach(c => {
+      if (!c.clientAccessToken) {
+        c.clientAccessToken = `token-${c.id}`;
+        updated = true;
+      }
+    });
+    if (updated) {
+      localStorage.setItem(KEYS.CONTRACTS, JSON.stringify(list));
+    }
+    return list;
   }
   return serverActions.getContracts();
 }
@@ -341,12 +370,43 @@ export async function getContractById(id: string): Promise<Contract | null> {
 }
 
 export async function saveContract(contract: Contract): Promise<Contract> {
+  if (!contract.clientAccessToken) {
+    const uuid = typeof window !== 'undefined' && window.crypto?.randomUUID ? window.crypto.randomUUID() : Array.from({length: 32}, () => Math.floor(Math.random()*16).toString(16)).join("");
+    contract.clientAccessToken = uuid;
+  }
+
   if (isDemoMode()) {
     const contracts = await getContracts();
     const index = contracts.findIndex((c) => c.id === contract.id);
     const isNew = index < 0;
 
     if (index >= 0) {
+      const oldContract = contracts[index];
+      const hasChanges = oldContract.scopeDescription !== contract.scopeDescription ||
+                         oldContract.totalAmount !== contract.totalAmount ||
+                         oldContract.currency !== contract.currency;
+      if (hasChanges) {
+        const verData = localStorage.getItem(KEYS.CONTRACT_VERSIONS);
+        const verList: ContractVersion[] = verData ? JSON.parse(verData) : [];
+        const versions = verList.filter(v => v.contractId === oldContract.id);
+        const nextVer = versions.length > 0 ? Math.max(...versions.map(v => v.versionNumber)) + 1 : 1;
+        
+        const newVersion: ContractVersion = {
+          id: "ver-" + Math.random().toString(36).substring(2, 9),
+          contractId: oldContract.id,
+          versionNumber: nextVer,
+          scopeDescription: oldContract.scopeDescription,
+          totalAmount: oldContract.totalAmount,
+          currency: oldContract.currency,
+          taxWithholdingAmount: oldContract.taxWithholdingAmount,
+          ivaAmount: oldContract.ivaAmount,
+          subtotalAmount: oldContract.subtotalAmount,
+          modifiedAt: new Date().toISOString(),
+          reason: oldContract.status === "draft" ? "Reversión a borrador" : "Modificación de propuesta"
+        };
+        verList.push(newVersion);
+        localStorage.setItem(KEYS.CONTRACT_VERSIONS, JSON.stringify(verList));
+      }
       contracts[index] = contract;
     } else {
       contracts.push(contract);
@@ -411,6 +471,14 @@ export async function updateMilestoneStatus(
     
     const milestone = allList[idx];
     const oldStatus = milestone.status;
+
+    if (status === "confirmed" && oldStatus !== "marked_paid") {
+      throw new Error("El hito debe haber sido reportado como transferido por el cliente antes de ser confirmado.");
+    }
+    if (status === "marked_paid" && oldStatus !== "requested") {
+      throw new Error("Un hito solo puede ser marcado como transferido si ha sido solicitado previamente.");
+    }
+
     milestone.status = status;
     
     if (status === "marked_paid") {
@@ -481,7 +549,9 @@ export async function markMilestoneAsTransferred(
   milestoneId: string,
   trackingReference: string,
   transferredAmount?: number,
-  receiptUrl?: string
+  receiptUrl?: string,
+  exchangeRate?: number,
+  mxnAmount?: number
 ): Promise<Milestone | null> {
   if (isDemoMode()) {
     const data = localStorage.getItem(KEYS.MILESTONES);
@@ -491,7 +561,16 @@ export async function markMilestoneAsTransferred(
     if (idx < 0) return null;
     
     const milestone = allList[idx];
-    milestone.status = "marked_paid";
+    const oldStatus = milestone.status;
+    if (oldStatus !== "requested") {
+      throw new Error("El hito debe estar en estado 'Solicitado' antes de que el cliente lo marque como transferido.");
+    }
+
+    const cleanRef = trackingReference.toUpperCase().trim();
+    const isRejected = cleanRef.includes("REJECT") || cleanRef.includes("INVALID") || cleanRef.length < 5;
+    const targetStatus = !isRejected ? "confirmed" : "marked_paid";
+
+    milestone.status = targetStatus;
     milestone.markedPaidAt = new Date().toISOString();
     milestone.trackingReference = trackingReference;
     if (transferredAmount !== undefined) {
@@ -500,24 +579,54 @@ export async function markMilestoneAsTransferred(
     if (receiptUrl !== undefined) {
       milestone.receiptUrl = receiptUrl;
     }
+    if (exchangeRate !== undefined) {
+      milestone.exchangeRate = exchangeRate;
+    }
+    if (mxnAmount !== undefined) {
+      milestone.mxnAmount = mxnAmount;
+    }
+    if (!isRejected) {
+      milestone.confirmedAt = new Date().toISOString();
+    }
     allList[idx] = milestone;
     localStorage.setItem(KEYS.MILESTONES, JSON.stringify(allList));
     
     await checkAndUpdateContractStatus(milestone.contractId);
 
-    await addAuditLog({
-      contractId: milestone.contractId,
-      action: "milestone_transferred",
-      actor: "client",
-      details: `El cliente reportó transferencia para "${milestone.label}" (Monto: $${transferredAmount || milestone.amount}, Ref: ${trackingReference}${receiptUrl ? ', con recibo adjunto' : ''}).`
-    });
+    const profData = localStorage.getItem(KEYS.PROFILE);
+    const profile: Profile | null = profData ? JSON.parse(profData) : null;
+    const lastDigits = profile?.bankDetails?.clabe ? profile.bankDetails.clabe.slice(-4) : "8765";
+
+    if (!isRejected) {
+      await addAuditLog({
+        contractId: milestone.contractId,
+        action: "milestone_confirmed",
+        actor: "system",
+        details: `Reconciliación automática SPEI: CEP validado con éxito. Clave de rastreo: ${trackingReference}. Banco Emisor: BBVA México, Beneficiario: CLABE terminada en ${lastDigits}. Estado: LIQUIDADO.`
+      });
+    } else {
+      await addAuditLog({
+        contractId: milestone.contractId,
+        action: "milestone_transferred",
+        actor: "client",
+        details: `Fallo de reconciliación automática CEP: Clave de rastreo ${trackingReference} no encontrada o rechazada en Banco de México.`
+      });
+    }
 
     return milestone;
   }
-  return serverActions.markMilestoneAsTransferred(milestoneId, trackingReference, transferredAmount, receiptUrl);
+  return serverActions.markMilestoneAsTransferred(milestoneId, trackingReference, transferredAmount, receiptUrl, exchangeRate, mxnAmount);
 }
 
 export async function generateClientOtp(contractId: string): Promise<string | null> {
+  if (isDemoMode()) {
+    const contract = await getContractById(contractId);
+    if (!contract) return null;
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    contract.clientOtpCode = otpCode;
+    await saveContract(contract);
+    return otpCode;
+  }
   return serverActions.generateClientOtp(contractId);
 }
 
@@ -526,6 +635,43 @@ export async function acceptContract(
   clientName: string,
   otpCode: string
 ): Promise<Contract | null> {
+  if (isDemoMode()) {
+    const contract = await getContractById(contractId);
+    if (!contract) return null;
+
+    if (contract.status !== "sent") {
+      throw new Error("Solo se pueden firmar contratos en estado 'Enviado'.");
+    }
+
+    if (!contract.clientOtpCode || contract.clientOtpCode !== otpCode) {
+      throw new Error("El código de verificación ingresado es incorrecto.");
+    }
+
+    const clientIp = "127.0.0.1";
+    const sha256Hash = Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join("");
+
+    contract.status = "client_signed";
+    contract.acceptedAt = new Date().toISOString();
+    contract.acceptedByName = clientName;
+    contract.acceptedIp = clientIp;
+    contract.contractHash = sha256Hash;
+    contract.clientOtpVerified = true;
+    contract.clientOtpCode = undefined;
+    contract.updated_at = new Date().toISOString();
+
+    await saveContract(contract);
+
+    await addAuditLog({
+      contractId: contract.id,
+      action: "client_signed",
+      actor: "client",
+      details: `El cliente ${clientName} firmó el contrato digitalmente (Verificado con OTP).`,
+      ip: clientIp,
+      signature: sha256Hash
+    });
+
+    return contract;
+  }
   return serverActions.acceptContract(contractId, clientName, otpCode);
 }
 
@@ -536,6 +682,11 @@ export async function vetAndAcceptContract(
   if (isDemoMode()) {
     const contract = await getContractById(contractId);
     if (!contract) return null;
+
+    if (contract.status !== "client_signed") {
+      throw new Error("El contrato debe estar firmado por el cliente para poder validarlo y contra-firmarlo.");
+    }
+
     const milestones = await getMilestones(contractId);
 
     const sandboxIp = "189.144.22.84";
@@ -564,6 +715,40 @@ export async function vetAndAcceptContract(
     return contract;
   }
   return serverActions.vetAndAcceptContract(contractId, freelancerName);
+}
+
+export async function proposeContractRevision(
+  contractId: string,
+  reason: string
+): Promise<Contract | null> {
+  if (isDemoMode()) {
+    const contract = await getContractById(contractId);
+    if (!contract) return null;
+
+    contract.status = "draft";
+    contract.acceptedAt = undefined;
+    contract.acceptedByName = undefined;
+    contract.acceptedIp = undefined;
+    contract.freelancerAcceptedAt = undefined;
+    contract.freelancerAcceptedByName = undefined;
+    contract.freelancerAcceptedIp = undefined;
+    contract.contractHash = undefined;
+    contract.clientOtpVerified = false;
+    contract.clientOtpCode = undefined;
+    contract.updated_at = new Date().toISOString();
+
+    await saveContract(contract);
+
+    await addAuditLog({
+      contractId: contractId,
+      action: "revision_proposed",
+      actor: "system",
+      details: `Se solicitó revisión del contrato. Motivo: ${reason}`
+    });
+
+    return contract;
+  }
+  return serverActions.proposeContractRevision(contractId, reason);
 }
 
 export async function getAuditLogs(contractId?: string): Promise<AuditLog[]> {
@@ -638,4 +823,77 @@ export async function loadSampleData(): Promise<boolean> {
     return supabaseActions.loadSampleData();
   }
   return false;
+}
+
+export async function getContractVersions(contractId: string): Promise<ContractVersion[]> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem(KEYS.CONTRACT_VERSIONS);
+    const list: ContractVersion[] = data ? JSON.parse(data) : [];
+    return list
+      .filter((v) => v.contractId === contractId)
+      .sort((a, b) => b.versionNumber - a.versionNumber);
+  }
+  return serverActions.getContractVersions(contractId);
+}
+
+export async function saveContractVersion(
+  version: Omit<ContractVersion, "id" | "modifiedAt">
+): Promise<ContractVersion> {
+  if (isDemoMode()) {
+    const verData = localStorage.getItem(KEYS.CONTRACT_VERSIONS);
+    const verList: ContractVersion[] = verData ? JSON.parse(verData) : [];
+    const versions = verList.filter(v => v.contractId === version.contractId);
+    const nextVer = versions.length > 0 ? Math.max(...versions.map(v => v.versionNumber)) + 1 : 1;
+
+    const newVersion: ContractVersion = {
+      id: "ver-" + Math.random().toString(36).substring(2, 9),
+      contractId: version.contractId,
+      versionNumber: nextVer,
+      scopeDescription: version.scopeDescription,
+      totalAmount: version.totalAmount,
+      currency: version.currency,
+      taxWithholdingAmount: version.taxWithholdingAmount,
+      ivaAmount: version.ivaAmount,
+      subtotalAmount: version.subtotalAmount,
+      modifiedAt: new Date().toISOString(),
+      reason: version.reason || undefined
+    };
+    verList.push(newVersion);
+    localStorage.setItem(KEYS.CONTRACT_VERSIONS, JSON.stringify(verList));
+    return newVersion;
+  }
+  return serverActions.saveContractVersion(version);
+}
+
+export async function uploadReceiptFile(
+  fileName: string,
+  mimeType: string,
+  fileBase64: string
+): Promise<string> {
+  if (isDemoMode()) {
+    // In Demo mode, we validate the file, then return a fake/mock URL to save space
+    // to avoid overloading localStorage
+    const buffer = Buffer.from(fileBase64, "base64");
+    if (buffer.length > 5 * 1024 * 1024) {
+      throw new Error("El archivo excede el límite de tamaño de 5MB.");
+    }
+    const allowedMimeTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+    if (!allowedMimeTypes.includes(mimeType)) {
+      throw new Error("Tipo de archivo no permitido. Solo se permiten PDFs e imágenes (PNG, JPEG).");
+    }
+    
+    // Magic bytes verification
+    const hex = buffer.toString("hex", 0, 8).toUpperCase();
+    let isValidMagic = false;
+    if (mimeType === "application/pdf" && hex.startsWith("25504446")) isValidMagic = true;
+    else if (mimeType === "image/png" && hex.startsWith("89504E470D0A1A0A")) isValidMagic = true;
+    else if ((mimeType === "image/jpeg" || mimeType === "image/jpg") && hex.startsWith("FFD8FF")) isValidMagic = true;
+
+    if (!isValidMagic) {
+      throw new Error("Firma de archivo inválida. El contenido del archivo no coincide con su extensión.");
+    }
+
+    return `https://demo-mode-receipts.local/${fileName}`;
+  }
+  return serverActions.uploadReceiptFile(fileName, mimeType, fileBase64);
 }

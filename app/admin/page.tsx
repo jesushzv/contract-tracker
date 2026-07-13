@@ -19,7 +19,9 @@ import {
   Activity,
   Wifi,
   Globe,
-  RefreshCw
+  RefreshCw,
+  Clock,
+  Play
 } from "lucide-react";
 import { getContracts } from "@/lib/storage"; // Direct server database access
 import { Contract } from "@/lib/types";
@@ -87,6 +89,28 @@ export default function AdminDashboard() {
       loadAdminData();
     }
   }, [isAuthenticated]);
+
+  const [cronLoading, setCronLoading] = useState(false);
+  const [cronResult, setCronResult] = useState<string | null>(null);
+
+  const triggerCron = async () => {
+    setCronLoading(true);
+    setCronResult(null);
+    try {
+      const res = await fetch("/api/cron/reminders");
+      const data = await res.json();
+      if (data.success) {
+        setCronResult(`¡Éxito! Recordatorios enviados: ${data.sentRemindersCount}. Contratos procesados: ${data.processedContracts}.`);
+      } else {
+        setCronResult(`Error: ${data.error || "No se pudo ejecutar el cron."}`);
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Error al conectar con la API.";
+      setCronResult(`Error de red: ${errMsg}`);
+    } finally {
+      setCronLoading(false);
+    }
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -418,6 +442,41 @@ export default function AdminDashboard() {
               <span className="text-slate-400 font-light">Versión del Sistema</span>
               <span className="font-mono text-slate-700 dark:text-slate-350 font-bold">v1.1.0-release</span>
             </div>
+          </div>
+
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mt-4">
+            <Clock className="h-5 w-5 text-indigo-500" />
+            Simulación de Tareas
+          </h2>
+
+          <div className="glass rounded-3xl p-5 flex flex-col gap-4 border border-indigo-500/5 relative overflow-hidden">
+            <p className="text-xs text-slate-400 font-light leading-relaxed">
+              Ejecuta manualmente el cron de recordatorios de vencimiento. Esto buscará hitos que venzan en exactamente 3 días y enviará las notificaciones por correo electrónico simuladas.
+            </p>
+            
+            <button
+              onClick={triggerCron}
+              disabled={cronLoading}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {cronLoading ? (
+                <>
+                  <span className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Ejecutando...
+                </>
+              ) : (
+                <>
+                  <Play className="h-3.5 w-3.5" />
+                  Ejecutar Cron de Recordatorios
+                </>
+              )}
+            </button>
+
+            {cronResult && (
+              <div className={`text-2xs p-3 rounded-xl border ${cronResult.startsWith("¡Éxito!") ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-400" : "bg-rose-500/10 border-rose-500/20 text-rose-800 dark:text-rose-400"}`}>
+                {cronResult}
+              </div>
+            )}
           </div>
         </div>
 

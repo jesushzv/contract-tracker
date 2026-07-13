@@ -12,9 +12,10 @@ import {
   Briefcase,
   Printer,
   CreditCard,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from "lucide-react";
-import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp } from "@/lib/storageClient";
+import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision, uploadReceiptFile } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 import { Contract, Milestone, AuditLog, Profile } from "@/lib/types";
 
@@ -35,6 +36,10 @@ export default function ClientContractView() {
   const [otpInput, setOtpInput] = useState("");
   const [debugOtp, setDebugOtp] = useState<string | null>(null);
   const [otpError, setOtpError] = useState("");
+  const [otpAttempts, setOtpAttempts] = useState(0);
+  const [showRevisionModal, setShowRevisionModal] = useState(false);
+  const [revisionReason, setRevisionReason] = useState("");
+  const [revisionSuccess, setRevisionSuccess] = useState(false);
   
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMilestone, setPaymentMilestone] = useState<Milestone | null>(null);
@@ -43,34 +48,73 @@ export default function ClientContractView() {
   const [receiptUrl, setReceiptUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [acceptedSuccess, setAcceptedSuccess] = useState(false);
+  const [receiptFileType, setReceiptFileType] = useState<'file' | 'url'>('file');
+  const [receiptFileBase64, setReceiptFileBase64] = useState("");
+  const [receiptFileName, setReceiptFileName] = useState("");
+  const [receiptFileMimeType, setReceiptFileMimeType] = useState("");
+  const [modalError, setModalError] = useState("");
+  const [overrideExchangeRate, setOverrideExchangeRate] = useState("20.15");
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [isVerifyingToken, setIsVerifyingToken] = useState(true);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [lastPaidMilestoneLabel, setLastPaidMilestoneLabel] = useState("");
+  const [lastPaidMilestoneAmount, setLastPaidMilestoneAmount] = useState(0);
 
   useEffect(() => {
     async function loadData() {
       if (contractId) {
-        const c = await getContractById(contractId);
-        setContract(c);
-        if (c) {
-          const mList = await getMilestones(c.id);
-          setMilestones(mList);
-          const logs = await getAuditLogs(c.id);
-          setAuditLogs(logs);
-          
-          const prof = await getProfile();
-          setProfile(prof);
+        setIsVerifyingToken(true);
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const token = urlParams.get("token");
+
+          const c = await getContractById(contractId);
+          if (!c || c.clientAccessToken !== token) {
+            setAccessDenied(true);
+            setContract(null);
+          } else {
+            setAccessDenied(false);
+            setContract(c);
+            const mList = await getMilestones(c.id);
+            setMilestones(mList);
+            const logs = await getAuditLogs(c.id);
+            setAuditLogs(logs);
+            
+            const prof = await getProfile();
+            setProfile(prof);
+          }
+        } catch (err) {
+          console.error("Error loading contract:", err);
+          setAccessDenied(true);
+        } finally {
+          setIsVerifyingToken(false);
         }
+      } else {
+        setIsVerifyingToken(false);
       }
     }
     loadData();
   }, [contractId]);
 
   const refreshData = async () => {
-    const c = await getContractById(contractId);
-    setContract(c);
-    if (c) {
-      const mList = await getMilestones(c.id);
-      setMilestones(mList);
-      const logs = await getAuditLogs(c.id);
-      setAuditLogs(logs);
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get("token");
+
+      const c = await getContractById(contractId);
+      if (!c || c.clientAccessToken !== token) {
+        setAccessDenied(true);
+        setContract(null);
+      } else {
+        setAccessDenied(false);
+        setContract(c);
+        const mList = await getMilestones(c.id);
+        setMilestones(mList);
+        const logs = await getAuditLogs(c.id);
+        setAuditLogs(logs);
+      }
+    } catch (err) {
+      console.error("Error refreshing contract:", err);
     }
   };
 
@@ -94,10 +138,14 @@ export default function ClientContractView() {
         if (otp) {
           setDebugOtp(otp);
           setAcceptStep('otp');
+          setOtpAttempts(0);
         } else {
           alert("Error al generar el código de verificación OTP.");
         }
       } else {
+        if (otpAttempts >= 3) {
+          throw new Error("Límite de intentos OTP excedido. Genera un nuevo código.");
+        }
         const updated = await acceptContract(contractId, signerName, otpInput);
         if (updated) {
           setContract(updated);
@@ -110,16 +158,63 @@ export default function ClientContractView() {
           setOtpInput("");
           setDebugOtp(null);
           setShowAcceptModal(false);
-          setTimeout(() => setAcceptedSuccess(false), 5000);
+          setOtpAttempts(0);
+          setTimeout(() => setAcceptedSuccess(false), 5050);
         }
       }
     } catch (err) {
       const error = err as Error;
       if (acceptStep === 'otp') {
-        setOtpError(error.message || "Código de verificación incorrecto.");
+        const nextAttempts = otpAttempts + 1;
+        setOtpAttempts(nextAttempts);
+        if (nextAttempts >= 3) {
+          setOtpError("Has alcanzado el límite de 3 intentos fallidos. Por motivos de seguridad, este intento se ha bloqueado. Por favor, genera un nuevo código OTP.");
+        } else {
+          setOtpError(`${error.message || "Código incorrecto."} Intentos restantes: ${3 - nextAttempts}`);
+        }
       } else {
         alert("Error al firmar el contrato: " + error.message);
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegenerateOtp = async () => {
+    setLoading(true);
+    setOtpError("");
+    try {
+      const otp = await generateClientOtp(contractId);
+      if (otp) {
+        setDebugOtp(otp);
+        setOtpAttempts(0);
+        setOtpInput("");
+      } else {
+        alert("Error al generar el código de verificación OTP.");
+      }
+    } catch (err) {
+      alert("Error al regenerar OTP: " + err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProposeRevision = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contractId || !revisionReason) return;
+    setLoading(true);
+    try {
+      const updated = await proposeContractRevision(contractId, revisionReason);
+      if (updated) {
+        setContract(updated);
+        await refreshData();
+        setShowRevisionModal(false);
+        setRevisionReason("");
+        setRevisionSuccess(true);
+        setTimeout(() => setRevisionSuccess(false), 5050);
+      }
+    } catch (err) {
+      alert("Error al solicitar revisión: " + err);
     } finally {
       setLoading(false);
     }
@@ -144,14 +239,28 @@ export default function ClientContractView() {
     return milestone.dueDate < todayStr;
   };
 
-  if (!contract) {
+  if (isVerifyingToken) {
+    return (
+      <div className="mx-auto w-full max-w-md px-4 py-24 text-center">
+        <div className="glass rounded-3xl p-8 flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 text-indigo-500 animate-spin" />
+          <h1 className="text-xl font-bold">Verificando Acceso...</h1>
+          <p className="text-sm text-slate-500">
+            Validando tus credenciales de acceso seguro.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (accessDenied) {
     return (
       <div className="mx-auto w-full max-w-md px-4 py-24 text-center">
         <div className="glass rounded-3xl p-8 flex flex-col items-center gap-4">
           <AlertCircle className="h-12 w-12 text-red-500" />
-          <h1 className="text-xl font-bold">Contrato No Encontrado</h1>
+          <h1 className="text-xl font-bold">Acceso Restringido</h1>
           <p className="text-sm text-slate-500">
-            El enlace que ingresaste es inválido o el contrato ha sido eliminado por el freelancer.
+            El enlace que ingresaste no es válido, no tiene el token de acceso requerido o ha expirado.
           </p>
           <Link 
             href="/"
@@ -162,6 +271,58 @@ export default function ClientContractView() {
         </div>
       </div>
     );
+  }
+
+  if (!contract) {
+    return (
+      <div className="mx-auto w-full max-w-md px-4 py-24 text-center">
+        <div className="glass rounded-3xl p-8 flex flex-col items-center gap-4">
+          <AlertCircle className="h-12 w-12 text-red-500" />
+          <h1 className="text-xl font-bold">Contrato No Encontrado</h1>
+          <p className="text-sm text-slate-500">
+            El contrato no pudo ser localizado o fue eliminado.
+          </p>
+          <Link 
+            href="/"
+            className="mt-4 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+          >
+            Ir a Inicio
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setModalError("");
+    if (!file) {
+      setReceiptFileBase64("");
+      setReceiptFileName("");
+      setReceiptFileMimeType("");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setModalError("El archivo excede el límite de tamaño de 5MB.");
+      return;
+    }
+
+    const allowedMimeTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+    if (!allowedMimeTypes.includes(file.type)) {
+      setModalError("Solo se permiten archivos PDF o imágenes (PNG, JPG).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const base64Data = result.split(",")[1];
+      setReceiptFileBase64(base64Data);
+      setReceiptFileName(file.name);
+      setReceiptFileMimeType(file.type);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleOpenPaymentModal = (milestone: Milestone) => {
@@ -169,6 +330,12 @@ export default function ClientContractView() {
     setTrackingReference("");
     setTransferredAmount(milestone.amount);
     setReceiptUrl("");
+    setReceiptFileType("file");
+    setReceiptFileBase64("");
+    setReceiptFileName("");
+    setReceiptFileMimeType("");
+    setModalError("");
+    setOverrideExchangeRate("20.15");
     setShowPaymentModal(true);
   };
 
@@ -177,22 +344,60 @@ export default function ClientContractView() {
     if (!paymentMilestone || !trackingReference) return;
     
     setLoading(true);
+    setModalError("");
     try {
+      let resolvedReceiptUrl = undefined;
+      if (receiptFileType === 'file') {
+        if (!receiptFileBase64) {
+          throw new Error("Por favor, seleccione un archivo de comprobante de pago.");
+        }
+        resolvedReceiptUrl = await uploadReceiptFile(
+          receiptFileName,
+          receiptFileMimeType,
+          receiptFileBase64
+        );
+      } else {
+        resolvedReceiptUrl = receiptUrl || undefined;
+      }
+
+      const fxRate = parseFloat(overrideExchangeRate) || 20.15;
+      const mxnSum = contract.currency === "USD" ? (transferredAmount * fxRate) : undefined;
+
+      setLastPaidMilestoneLabel(paymentMilestone.label);
+      setLastPaidMilestoneAmount(transferredAmount);
+
       await markMilestoneAsTransferred(
         paymentMilestone.id,
         trackingReference,
         transferredAmount,
-        receiptUrl || undefined
+        resolvedReceiptUrl,
+        contract.currency === "USD" ? fxRate : undefined,
+        mxnSum
       );
       await refreshData();
       setShowPaymentModal(false);
       setPaymentMilestone(null);
+      setPaymentSuccess(true);
+      setTimeout(() => setPaymentSuccess(false), 8000);
     } catch (err) {
-      alert("Error al guardar referencia de transferencia: " + err);
+      const msg = err instanceof Error ? err.message : "Error al guardar referencia de transferencia.";
+      setModalError(msg);
     } finally {
       setLoading(false);
     }
-  };  // Find active requested payments
+  };
+
+  const tokenPart = contract?.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+  const demoPart = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get("demo") === "true" ? "&demo=true" : "";
+  const clientUrl = typeof window !== 'undefined' ? `${window.location.origin}/c/${contract?.id}${tokenPart}${demoPart}` : "";
+  const cleanFreelancerPhone = profile?.phone ? profile.phone.replace(/\D/g, "") : "";
+
+  const getFreelancerWaLink = (text: string) => {
+    if (cleanFreelancerPhone) return `https://wa.me/${cleanFreelancerPhone}?text=${encodeURIComponent(text)}`;
+    return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  };
+
+  // Find active requested payments
   const activePayment = milestones.find(m => m.status === 'requested');
 
   return (
@@ -211,13 +416,21 @@ export default function ClientContractView() {
           </button>
           
           {contract.status === 'sent' && (
-            <button
-              onClick={() => setShowAcceptModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md hover:bg-indigo-500 transition-colors"
-            >
-              <ShieldCheck className="h-4 w-4" />
-              Revisar y Firmar Aceptación
-            </button>
+            <>
+              <button
+                onClick={() => setShowAcceptModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-md hover:bg-indigo-500 transition-colors cursor-pointer"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Revisar y Firmar Aceptación
+              </button>
+              <button
+                onClick={() => setShowRevisionModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
+              >
+                Solicitar Revisión
+              </button>
+            </>
           )}
 
           {contract.status === 'client_signed' && (
@@ -231,14 +444,70 @@ export default function ClientContractView() {
 
       {/* Accepted success notification banner */}
       {acceptedSuccess && (
-        <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-800 dark:text-emerald-400 flex items-start gap-3 print:hidden animate-in zoom-in-95 duration-200">
-          <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <span className="font-bold">¡Contrato firmado exitosamente!</span>
-            <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
-              Hemos registrado tu firma electrónica. El contrato se encuentra ahora en revisión final por parte del freelancer.
-            </p>
+        <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-800 dark:text-emerald-400 flex items-start justify-between gap-3 print:hidden animate-in zoom-in-95 duration-200">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">¡Contrato firmado exitosamente!</span>
+              <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
+                Hemos registrado tu firma electrónica. El contrato se encuentra ahora en revisión final por parte del freelancer.
+              </p>
+            </div>
           </div>
+          <a
+            href={getFreelancerWaLink(`Hola ${profile?.fullName || 'Freelancer'}, ya firmé el contrato digitalmente. Por favor, revísalo y valídalo aquí: ${clientUrl}`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-3 py-1.5 transition-all flex items-center gap-1"
+          >
+            Notificar por WhatsApp
+          </a>
+        </div>
+      )}
+
+      {/* Revision proposed success banner */}
+      {revisionSuccess && (
+        <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-850 dark:text-amber-400 flex items-start justify-between gap-3 print:hidden animate-in zoom-in-95 duration-200">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 animate-pulse" />
+            <div>
+              <span className="font-bold">Solicitud de revisión enviada</span>
+              <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
+                Hemos notificado al freelancer. El contrato ha vuelto a estado de borrador para su edición.
+              </p>
+            </div>
+          </div>
+          <a
+            href={getFreelancerWaLink(`Hola ${profile?.fullName || 'Freelancer'}, solicité una revisión al contrato. Motivo: ${revisionReason}. Podemos ajustarlo aquí: ${clientUrl}`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-xl px-3 py-1.5 transition-all flex items-center gap-1"
+          >
+            Notificar por WhatsApp
+          </a>
+        </div>
+      )}
+
+      {/* Payment reported success banner */}
+      {paymentSuccess && (
+        <div className="rounded-2xl bg-indigo-500/10 border border-indigo-500/20 p-4 text-sm text-indigo-800 dark:text-indigo-400 flex items-start justify-between gap-3 print:hidden animate-in zoom-in-95 duration-200">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">¡Pago reportado exitosamente!</span>
+              <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
+                Tu transferencia para el hito &ldquo;{lastPaidMilestoneLabel}&rdquo; por {formatMoney(lastPaidMilestoneAmount, contract.currency)} ha sido enviada para verificación.
+              </p>
+            </div>
+          </div>
+          <a
+            href={getFreelancerWaLink(`Hola ${profile?.fullName || 'Freelancer'}, ya realicé la transferencia de ${formatMoney(lastPaidMilestoneAmount, contract.currency)} para el hito '${lastPaidMilestoneLabel}'. Adjunté el comprobante para tu validación: ${clientUrl}`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-3 py-1.5 transition-all flex items-center gap-1"
+          >
+            Notificar por WhatsApp
+          </a>
         </div>
       )}
 
@@ -455,19 +724,43 @@ export default function ClientContractView() {
 
           {/* Printable signature lines */}
           <div className="hidden print:grid grid-cols-2 gap-16 mt-20 pt-8 border-t border-slate-200">
-            <div className="text-center">
-              <div className="h-16"></div>
-              <div className="border-t border-slate-300 pt-2 text-xs">
+            <div className="text-center flex flex-col items-center justify-between min-h-[90px]">
+              <div className="h-12 flex items-center justify-center">
+                {contract.freelancerAcceptedAt ? (
+                  profile?.signatureUrl ? (
+                    <img src={profile.signatureUrl} alt="Firma Freelancer" className="max-h-12 object-contain" />
+                  ) : (
+                    <div className="text-[#10b981] text-3xs font-mono leading-tight">
+                      [VALIDADO DIGITALMENTE]<br />
+                      FECHA: {new Date(contract.freelancerAcceptedAt).toLocaleDateString('es-MX')}<br />
+                      IP: {contract.freelancerAcceptedIp}
+                    </div>
+                  )
+                ) : (
+                  <span className="text-3xs text-slate-300 italic">Pendiente de firma del Prestador</span>
+                )}
+              </div>
+              <div className="w-full border-t border-slate-300 pt-2 text-xs">
                 <p className="font-bold text-slate-700">{contract.beneficiaryName}</p>
                 {contract.freelancerRfc && <p className="text-slate-400 font-mono text-3xs">RFC: {contract.freelancerRfc}</p>}
                 <p className="text-slate-400">Prestador de Servicios</p>
               </div>
             </div>
-            <div className="text-center">
-              <div className="h-16 flex items-center justify-center text-purple-500 text-xs font-mono">
-                {contract.status !== 'draft' && contract.status !== 'sent' && `FIRMADO CLIENTE - IP: ${contract.acceptedIp}`}
+
+            <div className="text-center flex flex-col items-center justify-between min-h-[90px]">
+              <div className="h-12 flex items-center justify-center">
+                {contract.acceptedAt ? (
+                  <div className="text-[#6366f1] text-3xs font-mono leading-tight">
+                    [FIRMADO ELECTRÓNICAMENTE]<br />
+                    FECHA: {new Date(contract.acceptedAt).toLocaleDateString('es-MX')}<br />
+                    IP: {contract.acceptedIp}<br />
+                    HASH: {contract.contractHash?.substring(0, 16)}...
+                  </div>
+                ) : (
+                  <span className="text-3xs text-slate-300 italic">Pendiente de firma del Cliente</span>
+                )}
               </div>
-              <div className="border-t border-slate-300 pt-2 text-xs">
+              <div className="w-full border-t border-slate-300 pt-2 text-xs">
                 <p className="font-bold text-slate-700">{contract.acceptedByName || contract.clientName}</p>
                 {contract.clientRfc && <p className="text-slate-400 font-mono text-3xs">RFC: {contract.clientRfc}</p>}
                 <p className="text-slate-400">Cliente</p>
@@ -656,17 +949,100 @@ export default function ClientContractView() {
                   />
                 </div>
               </div>
+              {contract.currency === "USD" && (
+                <>
+                  <div>
+                    <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tipo de Cambio (Banxico sugerido: 20.15)</label>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      required
+                      value={overrideExchangeRate}
+                      onChange={(e) => setOverrideExchangeRate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                    />
+                  </div>
+
+                  <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-3.5 text-xs flex flex-col gap-1.5">
+                    <div className="flex justify-between text-slate-400 font-medium">
+                      <span>Monto en USD:</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">${transferredAmount.toFixed(2)} USD</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 font-medium">
+                      <span>Tipo de Cambio:</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">${(parseFloat(overrideExchangeRate) || 20.15).toFixed(4)} MXN</span>
+                    </div>
+                    <div className="flex justify-between text-indigo-500 font-bold border-t border-slate-200 dark:border-slate-800/80 pt-2">
+                      <span>Total a Transferir:</span>
+                      <span>${(transferredAmount * (parseFloat(overrideExchangeRate) || 20.15)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Comprobante de Pago (Enlace o Nombre de Archivo)</label>
-                <input
-                  type="text"
-                  placeholder="Ej. https://dropbox.com/s/recibo.pdf o captura.png"
-                  value={receiptUrl}
-                  onChange={(e) => setReceiptUrl(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-                />
+                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Método de Comprobante
+                </label>
+                <div className="flex gap-4 mb-3">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="receiptFileType"
+                      checked={receiptFileType === 'file'}
+                      onChange={() => setReceiptFileType('file')}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    Subir Archivo (PDF, PNG, JPG)
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="receiptFileType"
+                      checked={receiptFileType === 'url'}
+                      onChange={() => setReceiptFileType('url')}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    Enlace URL
+                  </label>
+                </div>
+
+                {receiptFileType === 'file' ? (
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="file"
+                      id="receipt-file-input"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={handleFileChange}
+                      className="block w-full text-xs text-slate-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-xl file:border-0
+                        file:text-xs file:font-semibold
+                        file:bg-indigo-50 file:text-indigo-700
+                        hover:file:bg-indigo-100
+                        dark:file:bg-indigo-950/30 dark:file:text-indigo-400"
+                    />
+                    <p className="text-3xs text-slate-400">
+                      Formatos permitidos: PDF, PNG, JPG. Máx. 5MB.
+                    </p>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Ej. https://dropbox.com/s/recibo.pdf o captura.png"
+                    value={receiptUrl}
+                    onChange={(e) => setReceiptUrl(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                )}
               </div>
+
+              {modalError && (
+                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-3 text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{modalError}</span>
+                </div>
+              )}
 
               <div className="flex gap-3 justify-end mt-4">
                 <button
@@ -743,14 +1119,24 @@ export default function ClientContractView() {
                       type="text"
                       maxLength={6}
                       required
+                      disabled={otpAttempts >= 3}
                       placeholder="Ej. 123456"
                       value={otpInput}
                       onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm font-bold text-center tracking-widest focus:border-indigo-500 focus:outline-none dark:text-white"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm font-bold text-center tracking-widest focus:border-indigo-500 focus:outline-none dark:text-white disabled:opacity-50"
                     />
                   </div>
                   {otpError && (
                     <span className="text-3xs text-red-500 font-semibold">{otpError}</span>
+                  )}
+                  {otpAttempts >= 3 && (
+                    <button
+                      type="button"
+                      onClick={handleRegenerateOtp}
+                      className="text-xs font-bold text-indigo-500 hover:text-indigo-400 text-left underline focus:outline-none"
+                    >
+                      Generar un nuevo código OTP
+                    </button>
                   )}
                 </div>
               )}
@@ -771,7 +1157,7 @@ export default function ClientContractView() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || (acceptStep === 'name' ? !signerName : otpInput.length < 6)}
+                  disabled={loading || (acceptStep === 'name' ? !signerName : (otpInput.length < 6 || otpAttempts >= 3))}
                   className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                 >
                   {loading ? (
@@ -790,6 +1176,52 @@ export default function ClientContractView() {
                       Verificar y Firmar
                     </>
                   )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Revision Modal Dialog */}
+      {showRevisionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
+          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-red-500/20">
+            <h3 className="text-xl font-bold flex items-center gap-2 text-red-500">
+              <AlertCircle className="h-6 w-6" />
+              Solicitar Revisión de la Propuesta
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+              ¿Hay algún cambio que desees realizar antes de firmar? Describe el motivo para que el freelancer pueda corregir el documento y volver a enviártelo. El contrato volverá a estado de **Borrador**.
+            </p>
+
+            <form onSubmit={handleProposeRevision} className="mt-6 flex flex-col gap-4">
+              <div>
+                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Comentarios o Motivo de la Revisión</label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Ej. Favor de corregir el monto del segundo hito..."
+                  value={revisionReason}
+                  onChange={(e) => setRevisionReason(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-red-500 focus:outline-none dark:text-white"
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRevisionModal(false)}
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || !revisionReason}
+                  className="rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  {loading ? "Procesando..." : "Enviar Solicitud"}
                 </button>
               </div>
             </form>
