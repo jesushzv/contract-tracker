@@ -9,6 +9,11 @@ if (!fs.existsSync(compiledDir)) {
   fs.mkdirSync(compiledDir, { recursive: true });
 }
 
+const coverageDir = path.join(__dirname, '../coverage');
+if (!fs.existsSync(coverageDir)) {
+  fs.mkdirSync(coverageDir, { recursive: true });
+}
+
 try {
   // 1. Compile TS dependency
   console.log("📦 Compiling TypeScript dependencies...");
@@ -16,7 +21,8 @@ try {
 
   // 2. Run tests with coverage collection
   console.log("🧪 Running unit tests with native V8 coverage...");
-  const output = execSync('node --test --experimental-test-coverage scripts/run-tests.js', { encoding: 'utf8' });
+  const lcovPath = path.join(coverageDir, 'lcov.info');
+  const output = execSync(`node --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination="${lcovPath}" scripts/run-tests.js`, { encoding: 'utf8' });
   console.log(output);
 
   // 3. Parse code coverage metrics from Node.js report
