@@ -88,7 +88,7 @@ test.describe("Sprint SEC: Security Hardening E2E Integration Suite", () => {
     await expect(page.locator('h3:has-text("Notificar Transferencia SPEI")')).toBeVisible();
     
     // Fill tracking reference
-    await page.fill('input[placeholder="Ej. 182746182903485761 o folio"]', "REF123456");
+    await page.fill('input[placeholder="Ej. 182746182903485761 o folio"]', "INVALIDREF");
     
     // Check default file input
     const fileInput = page.locator('input[type="file"]');
@@ -116,7 +116,7 @@ test.describe("Sprint SEC: Security Hardening E2E Integration Suite", () => {
     await fileInput.setInputFiles(validFilePath);
     
     // Clear and refill tracking reference just in case
-    await page.fill('input[placeholder="Ej. 182746182903485761 o folio"]', "REF123456");
+    await page.fill('input[placeholder="Ej. 182746182903485761 o folio"]', "INVALIDREF");
     
     // Click submit
     await page.click('button:has-text("Notificar Pago")');
