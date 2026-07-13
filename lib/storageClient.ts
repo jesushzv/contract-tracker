@@ -3,7 +3,7 @@ import * as supabaseActions from "./storageSupabase";
 import { Contract, Milestone, Profile, MilestoneStatus, AuditLog, ContractVersion } from "./types";
 
 // Determine if we should use the cloud Supabase database
-const shouldUseSupabase = (): boolean => {
+export const shouldUseSupabase = (): boolean => {
   // If running in a Vercel Staging/Preview environment, we bypass the cloud DB
   // to avoid persistent data storage or requiring a secondary DB.
   if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") {
@@ -11,6 +11,7 @@ const shouldUseSupabase = (): boolean => {
   }
   return !!process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== "";
 };
+
 
 // Dispatch server actions based on config
 const serverActions = shouldUseSupabase() ? supabaseActions : localActions;

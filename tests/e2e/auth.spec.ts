@@ -55,4 +55,30 @@ test.describe("Authentication & Session Redirection E2E Suite", () => {
     await page.click('text="Inicia sesión aquí"');
     await expect(page).toHaveURL(/\/login/);
   });
+
+  test("should register successfully in mock mode", async ({ page }) => {
+    await page.goto("/register");
+    await page.fill('input[placeholder="correo@ejemplo.com"]', "testregister@example.com");
+    await page.fill('input[placeholder="••••••••"] >> nth=0', "password123");
+    await page.fill('input[placeholder="••••••••"] >> nth=1', "password123");
+    
+    await page.click('button[type="submit"]');
+
+    // Expect mock registration success message
+    await expect(page.locator("body")).toContainText("Registro exitoso");
+    
+    // Expect redirect to onboarding
+    await expect(page).toHaveURL(/\/onboarding/, { timeout: 5000 });
+  });
+
+  test("should login successfully in mock mode", async ({ page }) => {
+    await page.goto("/login");
+    await page.fill('input[placeholder="correo@ejemplo.com"]', "testlogin@example.com");
+    await page.fill('input[placeholder="••••••••"]', "password123");
+    
+    await page.click('button[type="submit"]');
+    
+    // Expect redirect to dashboard
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 5000 });
+  });
 });
