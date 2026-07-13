@@ -24,13 +24,16 @@ test.describe("Sprint WB2: SPEI CEP Reconciler, USD FX, Version History & WhatsA
     await rfcInput.fill("GUEH860710MX8");
     await rfcInput.blur();
     
-    await page.click('button:has-text("Completar Registro")');
+    await page.click('button:has-text("Guardar Perfil y Empezar")');
     
     // Verify navigated to dashboard
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
-  test("should display USD conversion details in client payment modal and auto-reconcile", async ({ page }) => {
+  test("should display USD conversion details in client payment modal, auto-reconcile, and verify audit logs", async ({ page, context }) => {
+    // Grant clipboard permissions
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+
     // Navigate directly to new contract creation
     await page.goto("/contracts/new?demo=true");
     
@@ -55,58 +58,68 @@ test.describe("Sprint WB2: SPEI CEP Reconciler, USD FX, Version History & WhatsA
     // Wait for redirect to dashboard
     await expect(page).toHaveURL(/\/dashboard/);
     
-    // Get the newly created contract ID from list / URL
-    const contractLink = page.locator('a:has-text("Copiar Enlace de Pago")');
-    await expect(contractLink.first()).toBeVisible();
+    // Select the contract to make sure details drawer is open
+    await page.locator('text=Sofía Garza').first().click();
+
+    // Click Copy Link button
+    await page.click('button:has-text("Copiar Link Cliente")');
     
-    // Grab client URL: in demo mode it links to /c/[id]?demo=true
-    const href = await contractLink.first().getAttribute("href") || "";
+    // Grab client URL from clipboard
+    const href = await page.evaluate(() => navigator.clipboard.readText());
     expect(href).toContain("/c/");
     
     // Go to client payment view
     await page.goto(href);
     
     // Verify client view loads successfully
-    await expect(page.locator("body")).toContainText("Propuesta de Servicios");
+    await expect(page.locator("body")).toContainText("Propuesta de Contrato");
     
     // Accept proposal first
-    await page.click('button:has-text("Aceptar Propuesta")');
+    await page.click('button:has-text("Revisar y Firmar Aceptación")');
     await page.fill('input[placeholder="Escribe tu nombre y apellido"]', "Sofía Garza");
-    await page.click('button:has-text("Continuar")');
+    await page.click('button:has-text("Enviar Código de Firma")');
     
     // Fill OTP
-    await expect(page.locator('text=Demo Debug Info:')).toBeVisible();
-    const debugText = await page.locator('text=Demo Debug Info:').textContent() || "";
-    const otpCode = debugText.replace(/[^0-9]/g, "");
+    const debugBox = page.locator('div:has-text("Demo Debug Info:")').last();
+    await expect(debugBox).toContainText(/es: \d{6}/);
+    const debugText = await debugBox.textContent() || "";
+    const match = debugText.match(/\b\d{6}\b/);
+    const otpCode = match ? match[0] : "";
+    console.log("Extracted OTP Code:", otpCode);
     
-    await page.fill('input[placeholder="000000"]', otpCode);
-    await page.click('button:has-text("Firmar Contrato")');
+    await page.fill('input[placeholder="Ej. 123456"]', otpCode);
+    await page.click('button:has-text("Verificar y Firmar")');
     
     // Wait for the modal to close and show acceptance success
-    await expect(page.locator("body")).toContainText("Acuerdo Firmado Exitosamente");
+    await expect(page.locator("body")).toContainText("Contrato firmado exitosamente!");
     
-    // Now notify payment for the requested milestone (Anticipo)
-    await page.click('button:has-text("Notificar Transferencia SPEI")');
+    // Go to freelancer dashboard to countersign/seal the contract
+    await page.goto("/dashboard?demo=true");
+    await page.locator('text=Sofía Garza').first().click();
+    await page.click('button:has-text("Validar y Contra-firmar")');
+    
+    // Go back to the client page to notify payment
+    await page.goto(href);
+    await page.click('button:has-text("Ya transferí por SPEI")');
     
     // Verify USD conversion display Banxico exchange rate suggestion
     await expect(page.locator("body")).toContainText("Tipo de Cambio (Banxico sugerido: 20.15)");
     await expect(page.locator("body")).toContainText("Total a Transferir");
     
+    // Choose URL receipt method
+    await page.click('text=Enlace URL');
+    await page.fill('input[placeholder*="dropbox.com"]', "https://ejemplo.com/recibo.pdf");
+
     // Enter tracking reference and notify payment
     await page.fill('input[placeholder="Ej. 182746182903485761 o folio"]', "SPEI12345");
     await page.click('button:has-text("Notificar Pago")');
     
-    // Wait for automatic reconciliation which immediately confirms the payment (since it does not include REJECT)
+    // Wait for automatic reconciliation which immediately confirms the payment
     await expect(page.locator("body")).toContainText("confirmado");
-  });
 
-  test("should display version proposed panel and printable audit trail logs", async ({ page }) => {
+    // Finally, verify Export Audit Log is visible in dashboard
     await page.goto("/dashboard?demo=true");
-    
-    // Select the first contract
-    await page.locator('div.glass.rounded-2xl.p-4').first().click();
-    
-    // Verify Export Audit Log is visible
+    await page.locator('text=Sofía Garza').first().click();
     const exportBtn = page.locator('button:has-text("Exportar Audit Log")');
     await expect(exportBtn).toBeVisible();
   });
