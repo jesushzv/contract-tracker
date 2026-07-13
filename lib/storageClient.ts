@@ -16,7 +16,7 @@ const shouldUseSupabase = (): boolean => {
 const serverActions = shouldUseSupabase() ? supabaseActions : localActions;
 
 // Helper to determine if we are in Demo Sandbox Mode (stored in browser localStorage)
-const isDemoMode = (): boolean => {
+export const isDemoMode = (): boolean => {
   if (typeof window === "undefined") return false;
   
   // Force sandbox/localStorage mode by default in Vercel Staging/Preview deployments
@@ -344,7 +344,19 @@ export async function getContracts(): Promise<Contract[]> {
   if (isDemoMode()) {
     seedSandboxIfNeeded();
     const data = localStorage.getItem(KEYS.CONTRACTS);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    const list: Contract[] = JSON.parse(data);
+    let updated = false;
+    list.forEach(c => {
+      if (!c.clientAccessToken) {
+        c.clientAccessToken = `token-${c.id}`;
+        updated = true;
+      }
+    });
+    if (updated) {
+      localStorage.setItem(KEYS.CONTRACTS, JSON.stringify(list));
+    }
+    return list;
   }
   return serverActions.getContracts();
 }
@@ -358,6 +370,11 @@ export async function getContractById(id: string): Promise<Contract | null> {
 }
 
 export async function saveContract(contract: Contract): Promise<Contract> {
+  if (!contract.clientAccessToken) {
+    const uuid = typeof window !== 'undefined' && window.crypto?.randomUUID ? window.crypto.randomUUID() : Array.from({length: 32}, () => Math.floor(Math.random()*16).toString(16)).join("");
+    contract.clientAccessToken = uuid;
+  }
+
   if (isDemoMode()) {
     const contracts = await getContracts();
     const index = contracts.findIndex((c) => c.id === contract.id);

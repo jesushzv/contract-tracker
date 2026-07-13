@@ -12,7 +12,8 @@ import {
   Briefcase,
   Printer,
   CreditCard,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from "lucide-react";
 import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision, uploadReceiptFile } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
@@ -53,34 +54,67 @@ export default function ClientContractView() {
   const [receiptFileMimeType, setReceiptFileMimeType] = useState("");
   const [modalError, setModalError] = useState("");
   const [overrideExchangeRate, setOverrideExchangeRate] = useState("20.15");
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [isVerifyingToken, setIsVerifyingToken] = useState(true);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [lastPaidMilestoneLabel, setLastPaidMilestoneLabel] = useState("");
+  const [lastPaidMilestoneAmount, setLastPaidMilestoneAmount] = useState(0);
 
   useEffect(() => {
     async function loadData() {
       if (contractId) {
-        const c = await getContractById(contractId);
-        setContract(c);
-        if (c) {
-          const mList = await getMilestones(c.id);
-          setMilestones(mList);
-          const logs = await getAuditLogs(c.id);
-          setAuditLogs(logs);
-          
-          const prof = await getProfile();
-          setProfile(prof);
+        setIsVerifyingToken(true);
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const token = urlParams.get("token");
+
+          const c = await getContractById(contractId);
+          if (!c || c.clientAccessToken !== token) {
+            setAccessDenied(true);
+            setContract(null);
+          } else {
+            setAccessDenied(false);
+            setContract(c);
+            const mList = await getMilestones(c.id);
+            setMilestones(mList);
+            const logs = await getAuditLogs(c.id);
+            setAuditLogs(logs);
+            
+            const prof = await getProfile();
+            setProfile(prof);
+          }
+        } catch (err) {
+          console.error("Error loading contract:", err);
+          setAccessDenied(true);
+        } finally {
+          setIsVerifyingToken(false);
         }
+      } else {
+        setIsVerifyingToken(false);
       }
     }
     loadData();
   }, [contractId]);
 
   const refreshData = async () => {
-    const c = await getContractById(contractId);
-    setContract(c);
-    if (c) {
-      const mList = await getMilestones(c.id);
-      setMilestones(mList);
-      const logs = await getAuditLogs(c.id);
-      setAuditLogs(logs);
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get("token");
+
+      const c = await getContractById(contractId);
+      if (!c || c.clientAccessToken !== token) {
+        setAccessDenied(true);
+        setContract(null);
+      } else {
+        setAccessDenied(false);
+        setContract(c);
+        const mList = await getMilestones(c.id);
+        setMilestones(mList);
+        const logs = await getAuditLogs(c.id);
+        setAuditLogs(logs);
+      }
+    } catch (err) {
+      console.error("Error refreshing contract:", err);
     }
   };
 
@@ -205,14 +239,28 @@ export default function ClientContractView() {
     return milestone.dueDate < todayStr;
   };
 
-  if (!contract) {
+  if (isVerifyingToken) {
+    return (
+      <div className="mx-auto w-full max-w-md px-4 py-24 text-center">
+        <div className="glass rounded-3xl p-8 flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 text-indigo-500 animate-spin" />
+          <h1 className="text-xl font-bold">Verificando Acceso...</h1>
+          <p className="text-sm text-slate-500">
+            Validando tus credenciales de acceso seguro.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (accessDenied) {
     return (
       <div className="mx-auto w-full max-w-md px-4 py-24 text-center">
         <div className="glass rounded-3xl p-8 flex flex-col items-center gap-4">
           <AlertCircle className="h-12 w-12 text-red-500" />
-          <h1 className="text-xl font-bold">Contrato No Encontrado</h1>
+          <h1 className="text-xl font-bold">Acceso Restringido</h1>
           <p className="text-sm text-slate-500">
-            El enlace que ingresaste es inválido o el contrato ha sido eliminado por el freelancer.
+            El enlace que ingresaste no es válido, no tiene el token de acceso requerido o ha expirado.
           </p>
           <Link 
             href="/"
@@ -223,7 +271,27 @@ export default function ClientContractView() {
         </div>
       </div>
     );
-  };
+  }
+
+  if (!contract) {
+    return (
+      <div className="mx-auto w-full max-w-md px-4 py-24 text-center">
+        <div className="glass rounded-3xl p-8 flex flex-col items-center gap-4">
+          <AlertCircle className="h-12 w-12 text-red-500" />
+          <h1 className="text-xl font-bold">Contrato No Encontrado</h1>
+          <p className="text-sm text-slate-500">
+            El contrato no pudo ser localizado o fue eliminado.
+          </p>
+          <Link 
+            href="/"
+            className="mt-4 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+          >
+            Ir a Inicio
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -295,6 +363,9 @@ export default function ClientContractView() {
       const fxRate = parseFloat(overrideExchangeRate) || 20.15;
       const mxnSum = contract.currency === "USD" ? (transferredAmount * fxRate) : undefined;
 
+      setLastPaidMilestoneLabel(paymentMilestone.label);
+      setLastPaidMilestoneAmount(transferredAmount);
+
       await markMilestoneAsTransferred(
         paymentMilestone.id,
         trackingReference,
@@ -306,13 +377,27 @@ export default function ClientContractView() {
       await refreshData();
       setShowPaymentModal(false);
       setPaymentMilestone(null);
+      setPaymentSuccess(true);
+      setTimeout(() => setPaymentSuccess(false), 8000);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error al guardar referencia de transferencia.";
       setModalError(msg);
     } finally {
       setLoading(false);
     }
-  };  // Find active requested payments
+  };
+
+  const tokenPart = contract?.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+  const demoPart = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get("demo") === "true" ? "&demo=true" : "";
+  const clientUrl = typeof window !== 'undefined' ? `${window.location.origin}/c/${contract?.id}${tokenPart}${demoPart}` : "";
+  const cleanFreelancerPhone = profile?.phone ? profile.phone.replace(/\D/g, "") : "";
+
+  const getFreelancerWaLink = (text: string) => {
+    if (cleanFreelancerPhone) return `https://wa.me/${cleanFreelancerPhone}?text=${encodeURIComponent(text)}`;
+    return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+  };
+
+  // Find active requested payments
   const activePayment = milestones.find(m => m.status === 'requested');
 
   return (
@@ -359,27 +444,70 @@ export default function ClientContractView() {
 
       {/* Accepted success notification banner */}
       {acceptedSuccess && (
-        <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-800 dark:text-emerald-400 flex items-start gap-3 print:hidden animate-in zoom-in-95 duration-200">
-          <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
-          <div>
-            <span className="font-bold">¡Contrato firmado exitosamente!</span>
-            <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
-              Hemos registrado tu firma electrónica. El contrato se encuentra ahora en revisión final por parte del freelancer.
-            </p>
+        <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-800 dark:text-emerald-400 flex items-start justify-between gap-3 print:hidden animate-in zoom-in-95 duration-200">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">¡Contrato firmado exitosamente!</span>
+              <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
+                Hemos registrado tu firma electrónica. El contrato se encuentra ahora en revisión final por parte del freelancer.
+              </p>
+            </div>
           </div>
+          <a
+            href={getFreelancerWaLink(`Hola ${profile?.fullName || 'Freelancer'}, ya firmé el contrato digitalmente. Por favor, revísalo y valídalo aquí: ${clientUrl}`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-3 py-1.5 transition-all flex items-center gap-1"
+          >
+            Notificar por WhatsApp
+          </a>
         </div>
       )}
 
       {/* Revision proposed success banner */}
       {revisionSuccess && (
-        <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-805 dark:text-amber-400 flex items-start gap-3 print:hidden animate-in zoom-in-95 duration-200">
-          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 animate-pulse" />
-          <div>
-            <span className="font-bold">Solicitud de revisión enviada</span>
-            <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
-              Hemos notificado al freelancer. El contrato ha vuelto a estado de borrador para su edición.
-            </p>
+        <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-850 dark:text-amber-400 flex items-start justify-between gap-3 print:hidden animate-in zoom-in-95 duration-200">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 animate-pulse" />
+            <div>
+              <span className="font-bold">Solicitud de revisión enviada</span>
+              <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
+                Hemos notificado al freelancer. El contrato ha vuelto a estado de borrador para su edición.
+              </p>
+            </div>
           </div>
+          <a
+            href={getFreelancerWaLink(`Hola ${profile?.fullName || 'Freelancer'}, solicité una revisión al contrato. Motivo: ${revisionReason}. Podemos ajustarlo aquí: ${clientUrl}`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-xl px-3 py-1.5 transition-all flex items-center gap-1"
+          >
+            Notificar por WhatsApp
+          </a>
+        </div>
+      )}
+
+      {/* Payment reported success banner */}
+      {paymentSuccess && (
+        <div className="rounded-2xl bg-indigo-500/10 border border-indigo-500/20 p-4 text-sm text-indigo-800 dark:text-indigo-400 flex items-start justify-between gap-3 print:hidden animate-in zoom-in-95 duration-200">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">¡Pago reportado exitosamente!</span>
+              <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
+                Tu transferencia para el hito &ldquo;{lastPaidMilestoneLabel}&rdquo; por {formatMoney(lastPaidMilestoneAmount, contract.currency)} ha sido enviada para verificación.
+              </p>
+            </div>
+          </div>
+          <a
+            href={getFreelancerWaLink(`Hola ${profile?.fullName || 'Freelancer'}, ya realicé la transferencia de ${formatMoney(lastPaidMilestoneAmount, contract.currency)} para el hito '${lastPaidMilestoneLabel}'. Adjunté el comprobante para tu validación: ${clientUrl}`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl px-3 py-1.5 transition-all flex items-center gap-1"
+          >
+            Notificar por WhatsApp
+          </a>
         </div>
       )}
 

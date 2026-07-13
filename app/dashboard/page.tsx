@@ -385,7 +385,10 @@ export default function Dashboard() {
 
   const handleCopyLink = (contractId: string) => {
     if (typeof window === "undefined") return;
-    const clientUrl = `${window.location.origin}/c/${contractId}`;
+    const targetCon = contracts.find(c => c.id === contractId);
+    const tokenParam = targetCon?.clientAccessToken ? `?token=${targetCon.clientAccessToken}` : "";
+    const demoParam = isDemo ? `${tokenParam ? "&" : "?"}demo=true` : "";
+    const clientUrl = `${window.location.origin}/c/${contractId}${tokenParam}${demoParam}`;
     navigator.clipboard.writeText(clientUrl);
     setCopiedId(contractId);
     setTimeout(() => setCopiedId(null), 2500);
@@ -426,8 +429,15 @@ export default function Dashboard() {
 
   const getWhatsAppShareLink = (c: Contract) => {
     if (typeof window === "undefined") return "";
-    const clientUrl = `${window.location.origin}/c/${c.id}`;
+    const tokenPart = c.clientAccessToken ? `?token=${c.clientAccessToken}` : "";
+    const demoPart = isDemo ? `${tokenPart ? "&" : "?"}demo=true` : "";
+    const clientUrl = `${window.location.origin}/c/${c.id}${tokenPart}${demoPart}`;
     const text = `Hola ${c.clientName}, te comparto la propuesta de contrato de servicios profesionales por un total de ${formatMoney(c.totalAmount, c.currency)}. Puedes revisarla y firmar de conformidad electrónicamente aquí: ${clientUrl}`;
+    
+    if (c.clientPhone) {
+      const cleanPhone = c.clientPhone.replace(/\D/g, "");
+      return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+    }
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   };
 
@@ -1222,7 +1232,7 @@ export default function Dashboard() {
                     Ver Contrato
                   </button>
                   <Link
-                    href={`/c/${selectedContract.id}`}
+                    href={`/c/${selectedContract.id}?token=${selectedContract.clientAccessToken || ''}${isDemo ? '&demo=true' : ''}`}
                     target="_blank"
                     className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-colors"
                   >
@@ -1354,32 +1364,89 @@ export default function Dashboard() {
                     {(() => {
                       const alerts: { text: string; type: 'success' | 'warning' | 'info'; actionLink?: string; actionText?: string }[] = [];
                       
-                      if (selectedContractLogs.some(l => l.action === 'client_signed')) {
+                      const tokenPart = selectedContract.clientAccessToken ? `?token=${selectedContract.clientAccessToken}` : "";
+                      const demoPart = isDemo ? `${tokenPart ? "&" : "?"}demo=true` : "";
+                      const clientUrl = `${window.location.origin}/c/${selectedContract.id}${tokenPart}${demoPart}`;
+                      const cleanClientPhone = selectedContract.clientPhone ? selectedContract.clientPhone.replace(/\D/g, "") : "";
+                      
+                      const getWaLink = (phone: string, text: string) => {
+                        if (phone) return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+                        return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+                      };
+
+                      // 1. Contract Status Alerts
+                      if (selectedContract.status === 'sent') {
+                        const text = `Hola ${selectedContract.clientName}, te comparto la propuesta de contrato de servicios profesionales por un total de ${formatMoney(selectedContract.totalAmount, selectedContract.currency)}. Puedes revisarla y firmar electrónicamente de conformidad aquí: ${clientUrl}`;
                         alerts.push({
-                          text: `Firma del cliente recibida con éxito para el contrato.`,
-                          type: 'success'
+                          text: `Propuesta de contrato enviada. Pendiente de firma.`,
+                          type: 'info',
+                          actionLink: getWaLink(cleanClientPhone, text),
+                          actionText: 'Compartir por WhatsApp'
                         });
                       }
 
+                      if (selectedContract.status === 'client_signed') {
+                        alerts.push({
+                          text: `El cliente ha firmado el contrato digitalmente. Pendiente de tu validación y firma final.`,
+                          type: 'warning'
+                        });
+                      }
+
+                      if (selectedContract.status === 'accepted') {
+                        const text = `Hola ${selectedContract.clientName}, ya validé y firmé de conformidad el contrato. El documento se encuentra sellado con huella digital y activo. Puedes ver tu copia aquí: ${clientUrl}`;
+                        alerts.push({
+                          text: `Contrato aceptado y sellado digitalmente.`,
+                          type: 'success',
+                          actionLink: getWaLink(cleanClientPhone, text),
+                          actionText: 'Notificar por WhatsApp'
+                        });
+                      }
+
+                      // Revision Proposed (status is draft and has revision logs)
+                      const revisionLogs = selectedContractLogs.filter(l => l.action === 'revision_proposed');
+                      if (selectedContract.status === 'draft' && revisionLogs.length > 0) {
+                        const latestRevLog = revisionLogs[0];
+                        if (latestRevLog.actor === 'client') {
+                          alerts.push({
+                            text: `El cliente solicitó una revisión. Motivo: ${latestRevLog.details}`,
+                            type: 'warning'
+                          });
+                        } else {
+                          const text = `Hola ${selectedContract.clientName}, actualicé el contrato con cambios y regresó a estado de borrador para tu revisión. Puedes verlo aquí: ${clientUrl}`;
+                          alerts.push({
+                            text: `Has propuesto una revisión al contrato. Regresó a borrador.`,
+                            type: 'info',
+                            actionLink: getWaLink(cleanClientPhone, text),
+                            actionText: 'Notificar por WhatsApp'
+                          });
+                        }
+                      }
+
+                      // 2. Milestone Status Alerts
                       milestones.forEach(m => {
                         if (m.status === 'requested') {
                           const overdue = isMilestoneOverdue(m);
-                          const waText = `Hola ${selectedContract.clientName}, te escribo con respecto a nuestro contrato por el hito "${m.label}" ($${m.amount} ${selectedContract.currency}). ¿Me podrías confirmar si ya realizaste la transferencia? ¡Gracias!`;
-                          const waUrl = selectedContract.clientPhone 
-                            ? `https://wa.me/${selectedContract.clientPhone.replace(/\D/g, "")}?text=${encodeURIComponent(waText)}`
-                            : undefined;
-
+                          const text = `Hola ${selectedContract.clientName}, te solicito el pago del hito "${m.label}" por un monto de ${formatMoney(m.amount, selectedContract.currency)}. Puedes reportar tu pago de transferencia SPEI adjuntando el comprobante aquí: ${clientUrl}`;
                           alerts.push({
                             text: `Cobro del hito "${m.label}" (${formatMoney(m.amount, selectedContract.currency)}) solicitado al cliente${overdue ? ' y se encuentra ATRASADO' : ''}.`,
                             type: overdue ? 'warning' : 'info',
-                            actionLink: waUrl,
+                            actionLink: getWaLink(cleanClientPhone, text),
                             actionText: 'Recordar por WhatsApp'
                           });
                         }
                         if (m.status === 'marked_paid') {
                           alerts.push({
-                            text: `El cliente ha reportado el pago del hito "${m.label}" (${formatMoney(m.amount, selectedContract.currency)}) con folio/ref: ${m.trackingReference}. Favor de verificar CEP.`,
+                            text: `El cliente ha reportado el pago del hito "${m.label}" (${formatMoney(m.amount, selectedContract.currency)}) con folio/ref: ${m.trackingReference}. Favor de verificar SPEI.`,
                             type: 'info'
+                          });
+                        }
+                        if (m.status === 'confirmed') {
+                          const text = `Hola ${selectedContract.clientName}, he verificado y confirmado tu pago de ${formatMoney(m.amount, selectedContract.currency)} para el hito "${m.label}". ¡Muchas gracias!`;
+                          alerts.push({
+                            text: `Pago confirmado para el hito "${m.label}".`,
+                            type: 'success',
+                            actionLink: getWaLink(cleanClientPhone, text),
+                            actionText: 'Enviar Agradecimiento'
                           });
                         }
                       });

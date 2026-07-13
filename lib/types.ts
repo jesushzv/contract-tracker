@@ -67,6 +67,9 @@ export interface Contract {
   clientOtpVerified?: boolean;
   clientOtpAttempts?: number;
   
+  // Client Access Token
+  clientAccessToken?: string;
+  
   created_at: string;
   updated_at: string;
 }

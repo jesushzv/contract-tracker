@@ -5,6 +5,7 @@ import path from "path";
 import crypto from "crypto";
 import { headers } from "next/headers";
 import { Contract, Milestone, Profile, MilestoneStatus, AuditLog, ContractVersion } from "./types";
+import { sendSimulatedEmail } from "./emails";
 
 const DB_PATH = path.join(process.cwd(), "data", "db.json");
 
@@ -220,6 +221,10 @@ export async function saveContract(contract: Contract): Promise<Contract> {
   const contracts = db.contracts || [];
   const isNew = contracts.findIndex((c: Contract) => c.id === contract.id) < 0;
 
+  if (!contract.clientAccessToken) {
+    contract.clientAccessToken = crypto.randomUUID();
+  }
+
   const sanitizedContract: Contract = {
     ...contract,
     clientName: sanitizeInput(contract.clientName),
@@ -239,6 +244,7 @@ export async function saveContract(contract: Contract): Promise<Contract> {
     acceptedIp: contract.acceptedIp ? sanitizeInput(contract.acceptedIp) : undefined,
     freelancerAcceptedByName: contract.freelancerAcceptedByName ? sanitizeInput(contract.freelancerAcceptedByName) : undefined,
     freelancerAcceptedIp: contract.freelancerAcceptedIp ? sanitizeInput(contract.freelancerAcceptedIp) : undefined,
+    clientAccessToken: contract.clientAccessToken
   };
 
   // Snap freelancer's current fiscal info into the contract if not set
@@ -291,6 +297,16 @@ export async function saveContract(contract: Contract): Promise<Contract> {
       actor: "freelancer",
       details: `El contrato para "${sanitizedContract.clientName}" fue creado y guardado como borrador.`
     });
+  }
+
+  if (sanitizedContract.status === "sent") {
+    const tokenPart = sanitizedContract.clientAccessToken ? `?token=${sanitizedContract.clientAccessToken}` : "";
+    const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${sanitizedContract.id}${tokenPart}`;
+    sendSimulatedEmail({
+      to: sanitizedContract.clientEmail,
+      subject: `Propuesta de Contrato de Servicios Profesionales - ${sanitizedContract.clientName}`,
+      html: `<p>Hola ${sanitizedContract.clientName},</p><p>Te han compartido una propuesta de contrato por ${sanitizedContract.totalAmount} ${sanitizedContract.currency}.</p><p>Puedes revisarlo y firmar aquí: <a href="${clientUrl}">${clientUrl}</a></p>`
+    }).catch(console.error);
   }
 
   return sanitizedContract;
@@ -386,6 +402,30 @@ export async function updateMilestoneStatus(
         });
       }
     }
+
+    if (status === "requested") {
+      const contract = db.contracts?.find(c => c.id === milestone.contractId);
+      if (contract) {
+        const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+        const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+        sendSimulatedEmail({
+          to: contract.clientEmail,
+          subject: `Solicitud de Pago: Hito "${milestone.label}"`,
+          html: `<p>Hola ${contract.clientName},</p><p>Se ha solicitado el pago para el hito <strong>"${milestone.label}"</strong> por un monto de <strong>$${milestone.amount} ${contract.currency}</strong>.</p><p>Puedes subir tu comprobante de transferencia ingresando al siguiente enlace seguro: <a href="${clientUrl}">${clientUrl}</a></p>`
+        }).catch(console.error);
+      }
+    } else if (status === "confirmed") {
+      const contract = db.contracts?.find(c => c.id === milestone.contractId);
+      if (contract) {
+        const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+        const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+        sendSimulatedEmail({
+          to: contract.clientEmail,
+          subject: `Pago Confirmado: Hito "${milestone.label}"`,
+          html: `<p>Hola ${contract.clientName},</p><p>Tu pago para el hito <strong>"${milestone.label}"</strong> por <strong>$${milestone.amount} ${contract.currency}</strong> ha sido verificado y confirmado con éxito.</p><p>Puedes seguir el avance del proyecto aquí: <a href="${clientUrl}">${clientUrl}</a></p>`
+        }).catch(console.error);
+      }
+    }
   }
 
   return milestone;
@@ -468,6 +508,15 @@ export async function markMilestoneAsTransferred(
       details: `Fallo de reconciliación automática CEP: Clave de rastreo ${trackingReference} no encontrada o rechazada en Banco de México.`
     });
   }
+
+  // Send email to freelancer
+  const profile = db.profile;
+  const freelancerEmail = profile?.email || "hector@freelancemx.dev";
+  sendSimulatedEmail({
+    to: freelancerEmail,
+    subject: `Pago Reportado: Hito "${milestone.label}"`,
+    html: `<p>Hola,</p><p>El cliente ha reportado la transferencia para el hito <strong>"${milestone.label}"</strong> por un monto de <strong>$${milestone.amount}</strong>.</p><p>Clave de rastreo: <strong>${trackingReference}</strong>.</p><p>Por favor, ingresa al panel para verificar y confirmarlo de conformidad.</p>`
+  }).catch(console.error);
 
   return milestone;
 }
@@ -614,6 +663,15 @@ export async function acceptContract(
     ip: clientIp,
     signature: sha256Hash
   });
+
+  // Send simulated email to freelancer
+  const profile = db.profile;
+  const freelancerEmail = profile?.email || "hector@freelancemx.dev";
+  sendSimulatedEmail({
+    to: freelancerEmail,
+    subject: `Contrato Firmado por el Cliente - ${contract.clientName}`,
+    html: `<p>Hola,</p><p>El cliente <strong>${contract.clientName}</strong> ha firmado el contrato digitalmente.</p><p>Por favor, ingresa al panel de control para revisarlo y realizar la firma de conformidad final.</p>`
+  }).catch(console.error);
   
   return contract;
 }
@@ -678,6 +736,15 @@ export async function vetAndAcceptContract(
     signature: finalHash
   });
 
+  // Send simulated email to client
+  const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+  const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+  sendSimulatedEmail({
+    to: contract.clientEmail,
+    subject: `Contrato Validado y Sellado - ${freelancerName}`,
+    html: `<p>Hola ${contract.clientName},</p><p>El contrato de servicios profesionales ha sido validado y firmado por ambas partes de conformidad. El documento se encuentra ahora activo y sellado digitalmente.</p><p>Puedes acceder a tu copia y ver el desglose en el siguiente enlace seguro: <a href="${clientUrl}">${clientUrl}</a></p>`
+  }).catch(console.error);
+
   // Automatically request the first milestone (e.g. Anticipo)
   if (milestones.length > 0 && milestones[0].status === "pending") {
     await updateMilestoneStatus(milestones[0].id, "requested");
@@ -717,6 +784,24 @@ export async function proposeContractRevision(
     actor: "system",
     details: `Se solicitó revisión del contrato. Motivo: ${reason}`
   });
+
+  // Send email notifications to both parties
+  const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+  const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+  const profile = db.profile;
+  const freelancerEmail = profile?.email || "hector@freelancemx.dev";
+  
+  sendSimulatedEmail({
+    to: contract.clientEmail,
+    subject: `Revisión Solicitada del Contrato - ${profile?.fullName || 'Freelancer'}`,
+    html: `<p>Hola ${contract.clientName},</p><p>Se ha solicitado una revisión para el contrato de servicios profesionales. El contrato ha vuelto al estado de borrador y requiere cambios.</p><p><strong>Motivo:</strong> ${reason}</p><p>Puedes ver los detalles aquí: <a href="${clientUrl}">${clientUrl}</a></p>`
+  }).catch(console.error);
+
+  sendSimulatedEmail({
+    to: freelancerEmail,
+    subject: `Revisión Solicitada del Contrato - ${contract.clientName}`,
+    html: `<p>Hola,</p><p>Se ha registrado una solicitud de revisión para el contrato de ${contract.clientName}. El contrato ha vuelto al estado de borrador.</p><p><strong>Motivo:</strong> ${reason}</p>`
+  }).catch(console.error);
 
   return contract;
 }

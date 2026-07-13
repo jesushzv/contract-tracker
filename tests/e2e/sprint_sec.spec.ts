@@ -31,18 +31,18 @@ test.describe("Sprint SEC: Security Hardening E2E Integration Suite", () => {
     await page.waitForURL(url => url.pathname === "/dashboard");
     
     // Extract the ID of the new contract directly from localstorage
-    const newContractId = await page.evaluate(() => {
+    const { newContractId, newContractToken } = await page.evaluate(() => {
       const data = localStorage.getItem("sandbox_contracts");
       const list = data ? JSON.parse(data) : [];
       const newContract = list.find((c: { clientName?: string; id?: string }) => c.clientName === "Sofía Garza");
-      return newContract ? newContract.id : null;
+      return newContract ? { newContractId: newContract.id, newContractToken: newContract.clientAccessToken } : { newContractId: null, newContractToken: null };
     });
     
     expect(newContractId).not.toBeNull();
-    const href = `/c/${newContractId}`;
+    const href = `/c/${newContractId}?demo=true&token=${newContractToken}`;
     
     // Go to client portal
-    await page.goto(`${href}?demo=true`);
+    await page.goto(href);
     
     // Verify we are on the client page and it is sent
     await expect(page.locator("body")).toContainText("Revisar y Firmar Aceptación");
@@ -79,7 +79,7 @@ test.describe("Sprint SEC: Security Hardening E2E Integration Suite", () => {
 
   test("should allow uploading a valid PDF receipt but reject invalid magic bytes", async ({ page }) => {
     // c4-desarrollo-ecommerce is accepted. We go to its client view
-    await page.goto("/c/c4-desarrollo-ecommerce?demo=true");
+    await page.goto("/c/c4-desarrollo-ecommerce?demo=true&token=token-c4-desarrollo-ecommerce");
     
     // Locate the first hito which is requested, click 'Ya transferí por SPEI'
     await page.click('button:has-text("Ya transferí por SPEI")');

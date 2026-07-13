@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog, ContractVersion } from "./types";
 import crypto from "crypto";
 import path from "path";
+import { sendSimulatedEmail } from "./emails";
 import { headers, cookies } from "next/headers";
 
 // Initialize Supabase Client
@@ -401,6 +402,9 @@ export async function getContractById(id: string): Promise<Contract | null> {
 }
 
 export async function saveContract(contract: Contract): Promise<Contract> {
+  if (!contract.clientAccessToken) {
+    contract.clientAccessToken = crypto.randomUUID();
+  }
   const existing = await getContractById(contract.id);
   const isNew = !existing;
 
@@ -471,6 +475,7 @@ export async function saveContract(contract: Contract): Promise<Contract> {
       client_otp_code: contract.clientOtpCode || null,
       client_otp_verified: contract.clientOtpVerified || false,
       client_otp_attempts: contract.clientOtpAttempts || 0,
+      client_access_token: contract.clientAccessToken || null,
       updated_at: new Date().toISOString()
     });
 
@@ -483,6 +488,16 @@ export async function saveContract(contract: Contract): Promise<Contract> {
       actor: "freelancer",
       details: `El contrato para "${contract.clientName}" fue creado y guardado como borrador.`
     });
+  }
+
+  if (contract.status === "sent") {
+    const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+    const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+    sendSimulatedEmail({
+      to: contract.clientEmail,
+      subject: `Propuesta de Contrato de Servicios Profesionales - ${contract.clientName}`,
+      html: `<p>Hola ${contract.clientName},</p><p>Te han compartido una propuesta de contrato por ${contract.totalAmount} ${contract.currency}.</p><p>Puedes revisarlo y firmar aquí: <a href="${clientUrl}">${clientUrl}</a></p>`
+    }).catch(console.error);
   }
 
   return contract;
@@ -662,6 +677,30 @@ export async function updateMilestoneStatus(
         });
       }
     }
+
+    if (status === "requested") {
+      const contract = await getContractById(milestone.contractId);
+      if (contract) {
+        const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+        const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+        sendSimulatedEmail({
+          to: contract.clientEmail,
+          subject: `Solicitud de Pago: Hito "${milestone.label}"`,
+          html: `<p>Hola ${contract.clientName},</p><p>Se ha solicitado el pago para el hito <strong>"${milestone.label}"</strong> por un monto de <strong>$${milestone.amount} ${contract.currency}</strong>.</p><p>Puedes subir tu comprobante de transferencia ingresando al siguiente enlace seguro: <a href="${clientUrl}">${clientUrl}</a></p>`
+        }).catch(console.error);
+      }
+    } else if (status === "confirmed") {
+      const contract = await getContractById(milestone.contractId);
+      if (contract) {
+        const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+        const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+        sendSimulatedEmail({
+          to: contract.clientEmail,
+          subject: `Pago Confirmado: Hito "${milestone.label}"`,
+          html: `<p>Hola ${contract.clientName},</p><p>Tu pago para el hito <strong>"${milestone.label}"</strong> por <strong>$${milestone.amount} ${contract.currency}</strong> ha sido verificado y confirmado con éxito.</p><p>Puedes seguir el avance del proyecto aquí: <a href="${clientUrl}">${clientUrl}</a></p>`
+        }).catch(console.error);
+      }
+    }
   }
 
   return milestone;
@@ -766,6 +805,15 @@ export async function markMilestoneAsTransferred(
       details: `Fallo de reconciliación automática CEP: Clave de rastreo ${trackingReference} no encontrada o rechazada en Banco de México.`
     });
   }
+
+  // Send email to freelancer
+  const profile = await getProfile().catch(() => null);
+  const freelancerEmail = profile?.email || "hector@freelancemx.dev";
+  sendSimulatedEmail({
+    to: freelancerEmail,
+    subject: `Pago Reportado: Hito "${data.label}"`,
+    html: `<p>Hola,</p><p>El cliente ha reportado la transferencia para el hito <strong>"${data.label}"</strong> por un monto de <strong>$${data.amount}</strong>.</p><p>Clave de rastreo: <strong>${trackingReference}</strong>.</p><p>Por favor, ingresa al panel para verificar y confirmarlo de conformidad.</p>`
+  }).catch(console.error);
 
   return {
     id: data.id,
@@ -947,6 +995,15 @@ export async function acceptContract(
     signature: sha256Hash
   });
 
+  // Send simulated email to freelancer
+  const profile = await getProfile().catch(() => null);
+  const freelancerEmail = profile?.email || "hector@freelancemx.dev";
+  sendSimulatedEmail({
+    to: freelancerEmail,
+    subject: `Contrato Firmado por el Cliente - ${contract.clientName}`,
+    html: `<p>Hola,</p><p>El cliente <strong>${contract.clientName}</strong> ha firmado el contrato digitalmente.</p><p>Por favor, ingresa al panel de control para revisarlo y realizar la firma de conformidad final.</p>`
+  }).catch(console.error);
+
   return mapContractFromDb(data);
 }
 
@@ -1019,6 +1076,15 @@ export async function vetAndAcceptContract(
     signature: finalHash
   });
 
+  // Send simulated email to client
+  const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+  const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+  sendSimulatedEmail({
+    to: contract.clientEmail,
+    subject: `Contrato Validado y Sellado - ${freelancerName}`,
+    html: `<p>Hola ${contract.clientName},</p><p>El contrato de servicios profesionales ha sido validado y firmado por ambas partes de conformidad. El documento se encuentra ahora activo y sellado digitalmente.</p><p>Puedes acceder a tu copia y ver el desglose en el siguiente enlace seguro: <a href="${clientUrl}">${clientUrl}</a></p>`
+  }).catch(console.error);
+
   if (milestones.length > 0 && milestones[0].status === "pending") {
     await updateMilestoneStatus(milestones[0].id, "requested");
   }
@@ -1063,6 +1129,7 @@ function mapContractFromDb(row: any): Contract {
     clientOtpCode: row.client_otp_code,
     clientOtpVerified: !!row.client_otp_verified,
     clientOtpAttempts: Number(row.client_otp_attempts || 0),
+    clientAccessToken: row.client_access_token || undefined,
     created_at: row.created_at,
     updated_at: row.updated_at
   };
@@ -1201,6 +1268,24 @@ export async function proposeContractRevision(
     actor: "system",
     details: `Se solicitó revisión del contrato. Motivo: ${reason}`
   });
+
+  // Send email notifications to both parties
+  const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+  const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+  const profile = await getProfile().catch(() => null);
+  const freelancerEmail = profile?.email || "hector@freelancemx.dev";
+  
+  sendSimulatedEmail({
+    to: contract.clientEmail,
+    subject: `Revisión Solicitada del Contrato - ${profile?.fullName || 'Freelancer'}`,
+    html: `<p>Hola ${contract.clientName},</p><p>Se ha solicitado una revisión para el contrato de servicios profesionales. El contrato ha vuelto al estado de borrador y requiere cambios.</p><p><strong>Motivo:</strong> ${reason}</p><p>Puedes ver los detalles aquí: <a href="${clientUrl}">${clientUrl}</a></p>`
+  }).catch(console.error);
+
+  sendSimulatedEmail({
+    to: freelancerEmail,
+    subject: `Revisión Solicitada del Contrato - ${contract.clientName}`,
+    html: `<p>Hola,</p><p>Se ha registrado una solicitud de revisión para el contrato de ${contract.clientName}. El contrato ha vuelto al estado de borrador.</p><p><strong>Motivo:</strong> ${reason}</p>`
+  }).catch(console.error);
 
   return mapContractFromDb(data);
 }
