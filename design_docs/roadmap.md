@@ -22,8 +22,8 @@ gantt
     Sprint WB-1 (Polish, Tiers & Security) :active, 2026-07-15, 2026-07-17
     Sprint WB-2 (SPEI & Versioning) :active, 2026-07-19, 2026-07-21
     Sprint SDET (QA Automation & CI/CD) :active, 2026-07-21, 2026-07-23
+    Sprint 6 (Emails & Magic Links) :active, 2026-07-23, 2026-07-25
     section Pendiente
-    Sprint 6 (Emails & Magic Links) :2026-07-23, 2026-07-25
     Sprint 7 (CFDI 4.0 PAC Sandbox) :2026-07-25, 2026-07-27
     Sprint 8 (Stripe Payments SaaS) :2026-07-27, 2026-07-30
     Sprint 9 (CSD Vault & Encryption) :2026-07-30, 2026-08-02
@@ -106,7 +106,7 @@ gantt
 * **Supabase Test Environment Seeding**: Create a pipeline-friendly test seeding script that spins up a mock Postgres schema, applies migrations, and seeds test-authenticated users to verify true database integration (RLS validation) in a staging environment.
 * **Unified Coverage Reports**: Integrate LCOV coverage metrics for unit tests and track test suite assertions to maintain at least 85% coverage on tax calculators, validators, and security wrappers.
 
-### 🔴 Sprint 6: Notificaciones WhatsApp, Correos Transaccionales y Enlaces Mágicos (Pendiente)
+### 🟢 Sprint 6: Notificaciones WhatsApp, Correos Transaccionales y Enlaces Mágicos (Completado)
 * **WhatsApp Status Notifications**: Capture freelancer `phone` and client `client_phone`. Construct unique contextual Click-to-Chat WhatsApp links (`wa.me`) for key contract and milestone state transitions (Proposal Sent, Client Signed, Accepted/Sealed, Milestone Requested, Payment Proof Uploaded, Payment Confirmed, Revision Proposed).
 * **React Email & Resend**: Templates setup for client invitations and contract changes.
 * **Client Access Tokens**: Secure, passwordless magic links (`/c/[id]?token=...`) so clients can review and sign without creating an account.
