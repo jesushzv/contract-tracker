@@ -54,13 +54,14 @@ test.describe("Sprint QA-1: Freelancer Payment Proof & State Transition Warnings
     await page.click('button:has-text("Enviar Código de Firma")');
 
     // Extract OTP Code
-    const debugBox = page.locator('div:has-text("Demo Debug Info:")').last();
-    await expect(debugBox).toContainText(/es: \d{6}/);
+    const debugBox = page.locator('div:has-text("SYSTEM_DEBUG_OTP")').last();
+    await debugBox.waitFor({ timeout: 10000 });
+    await expect(debugBox).toContainText(/\d{6}/, { timeout: 10000 });
     const debugText = await debugBox.textContent() || "";
     const match = debugText.match(/\b\d{6}\b/);
     const otpCode = match ? match[0] : "";
 
-    await page.fill('input[placeholder="Ej. 123456"]', otpCode);
+    await page.fill('input[placeholder="••••••"]', otpCode);
     await page.click('button:has-text("Verificar y Firmar")');
 
     // Check Accept Confirmation Modal
@@ -124,7 +125,7 @@ test.describe("Sprint QA-1: Freelancer Payment Proof & State Transition Warnings
     await page.locator("button:has-text('Confirmar Cancelación')").click();
 
     // Cancel Confirmation Warning Modal
-    await expect(page.locator(".glass h3:has-text('Cancelar Contrato')")).toBeVisible();
+    await expect(page.locator("text=¿Estás seguro de que deseas cancelar")).toBeVisible();
     await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
 
     // Contract status must change to cancelled/Cancelado

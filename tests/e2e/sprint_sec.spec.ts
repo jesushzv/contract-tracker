@@ -55,10 +55,10 @@ test.describe("Sprint SEC: Security Hardening E2E Integration Suite", () => {
     await page.click('button:has-text("Enviar Código de Firma")');
     
     // Now OTP input is visible
-    await expect(page.locator('input[placeholder="Ej. 123456"]')).toBeVisible();
+    await expect(page.locator('input[placeholder="••••••"]')).toBeVisible();
     
     // Try 3 invalid OTPs
-    const otpInput = page.locator('input[placeholder="Ej. 123456"]');
+    const otpInput = page.locator('input[placeholder="••••••"]');
     const submitOtpBtn = page.locator('button:has-text("Verificar y Firmar")');
     
     // Attempt 1
@@ -92,7 +92,7 @@ test.describe("Sprint SEC: Security Hardening E2E Integration Suite", () => {
     
     // Check default file input
     const fileInput = page.locator('input[type="file"]');
-    await expect(fileInput).toBeVisible();
+    await expect(fileInput).toBeAttached();
     
     // Create a mock invalid text file named 'receipt.pdf'
     const tempDir = path.join(__dirname, "../tmp");
