@@ -276,6 +276,7 @@ function NewContractForm() {
       subtotalAmount: totalAmount,
       clientOtpVerified: false,
       paymentProfileId: selectedProfileId || undefined,
+      selectedClauses: selectedClauses,
       
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

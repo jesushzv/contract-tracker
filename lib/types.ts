@@ -76,6 +76,9 @@ export interface Contract {
   // Client Access Token
   clientAccessToken?: string;
   
+  // Selected Legal Clauses
+  selectedClauses?: string[];
+  
   created_at: string;
   updated_at: string;
 }

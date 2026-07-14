@@ -64,6 +64,17 @@ export default function Dashboard() {
   const [editScopeDescription, setEditScopeDescription] = useState("");
   const [editTotalAmount, setEditTotalAmount] = useState(0);
   const [editMilestones, setEditMilestones] = useState<Milestone[]>([]);
+  const [editClientName, setEditClientName] = useState("");
+  const [editClientEmail, setEditClientEmail] = useState("");
+  const [editClientPhone, setEditClientPhone] = useState("");
+  const [editClientRfc, setEditClientRfc] = useState("");
+  const [editClientRegimen, setEditClientRegimen] = useState("");
+  const [editClientPostal, setEditClientPostal] = useState("");
+  const [editCurrency, setEditCurrency] = useState<'MXN' | 'USD'>("MXN");
+  const [editRetencionIsr, setEditRetencionIsr] = useState(false);
+  const [editRetencionIva, setEditRetencionIva] = useState(false);
+  const [editSelectedClauses, setEditSelectedClauses] = useState<string[]>([]);
+
 
   const [fullName, setFullName] = useState("");
   const [clabe, setClabe] = useState("");
@@ -411,6 +422,31 @@ export default function Dashboard() {
     });
   };
 
+  const handleEditAddMilestone = () => {
+    setEditMilestones(prev => [
+      ...prev,
+      {
+        id: "new-" + Math.random().toString(36).substring(2, 9),
+        contractId: selectedContract?.id || "",
+        label: "",
+        amount: 0,
+        dueDate: new Date(Date.now() + (prev.length + 1) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: 'pending',
+        created_at: new Date().toISOString()
+      }
+    ]);
+  };
+
+  const handleEditRemoveMilestone = (idx: number) => {
+    if (editMilestones.length <= 1) return;
+    setEditMilestones(prev => {
+      const updated = prev.filter((_, i) => i !== idx);
+      const newSum = updated.reduce((sum, m) => sum + m.amount, 0);
+      setEditTotalAmount(newSum);
+      return updated;
+    });
+  };
+
   const handleCancelContract = async () => {
     if (!selectedContract || !cancelReason.trim()) return;
 
@@ -556,17 +592,59 @@ export default function Dashboard() {
       alert("Error al establecer perfil por defecto: " + error.message);
     }
   };
+  const startEditingContract = () => {
+    if (!selectedContract) return;
+    setEditScopeDescription(selectedContract.scopeDescription);
+    setEditTotalAmount(selectedContract.totalAmount);
+    setEditMilestones(milestones.map(m => ({ ...m })));
+    setEditClientName(selectedContract.clientName);
+    setEditClientEmail(selectedContract.clientEmail);
+    setEditClientPhone(selectedContract.clientPhone || "");
+    setEditClientRfc(selectedContract.clientRfc || "");
+    setEditClientRegimen(selectedContract.clientRegimen || "");
+    setEditClientPostal(selectedContract.clientPostal || "");
+    setEditCurrency(selectedContract.currency);
+    setEditRetencionIsr(!!selectedContract.retencionIsr);
+    setEditRetencionIva(!!selectedContract.retencionIva);
+    setEditSelectedClauses(selectedContract.selectedClauses || []);
+    setIsEditingContract(true);
+  };
 
   const handleSaveModification = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedContract) return;
 
+    // Validate milestone sums
+    const milestoneSum = editMilestones.reduce((sum, m) => sum + m.amount, 0);
+    if (Math.abs(milestoneSum - editTotalAmount) > 0.01) {
+      alert(`La suma de los hitos (${milestoneSum} ${editCurrency}) debe ser exactamente igual al monto total del contrato (${editTotalAmount} ${editCurrency}). Por favor, ajusta los importes de tus hitos.`);
+      return;
+    }
+
     const executeSaveModification = async () => {
       try {
+        const total = editTotalAmount;
+        const subtotalAmount = total;
+        const taxWithholdingAmount = (editRetencionIsr ? total * 0.10 : 0) + (editRetencionIva ? total * 0.16 * (2 / 3) : 0);
+        const ivaAmount = total * 0.16;
+
         const updatedContract: Contract = {
           ...selectedContract,
+          clientName: editClientName,
+          clientEmail: editClientEmail,
+          clientPhone: editClientPhone || undefined,
+          clientRfc: editClientRfc || undefined,
+          clientRegimen: editClientRegimen || undefined,
+          clientPostal: editClientPostal || undefined,
           scopeDescription: editScopeDescription,
-          totalAmount: editTotalAmount,
+          totalAmount: total,
+          currency: editCurrency,
+          retencionIsr: editRetencionIsr,
+          retencionIva: editRetencionIva,
+          taxWithholdingAmount,
+          ivaAmount,
+          subtotalAmount,
+          selectedClauses: editSelectedClauses,
           status: 'sent',
           acceptedAt: undefined,
           acceptedByName: undefined,
@@ -577,14 +655,28 @@ export default function Dashboard() {
           contractHash: undefined
         };
 
+        // Ensure newly added milestones have cryptographically secure UUIDs
+        const finalMilestones = editMilestones.map((m) => {
+          const finalId = m.id.startsWith("new-") ? (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+            const r = (Math.random() * 16) | 0;
+            const v = c === "x" ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+          })) : m.id;
+          return {
+            ...m,
+            id: finalId,
+            contractId: selectedContract.id
+          };
+        });
+
         await saveContract(updatedContract);
-        await saveMilestones(editMilestones);
+        await saveMilestones(finalMilestones);
 
         await addAuditLog({
           contractId: selectedContract.id,
           action: 'modified',
           actor: 'freelancer',
-          details: `El freelancer modificó el alcance y presupuesto del contrato (Nuevo monto: ${editTotalAmount} ${selectedContract.currency}). El acuerdo regresó a estado Enviado.`,
+          details: `El freelancer modificó los componentes del contrato (Nuevo monto: ${editTotalAmount} ${editCurrency}). El acuerdo regresó a estado Enviado.`,
           ip: '127.0.0.1'
         });
 
@@ -1791,12 +1883,7 @@ export default function Dashboard() {
                       Marcar como Enviado
                     </button>
                     <button
-                      onClick={() => {
-                        setEditScopeDescription(selectedContract.scopeDescription);
-                        setEditTotalAmount(selectedContract.totalAmount);
-                        setEditMilestones(milestones.map(m => ({ ...m })));
-                        setIsEditingContract(true);
-                      }}
+                      onClick={startEditingContract}
                       className="border border-amber-300 dark:border-amber-700 bg-white/20 dark:bg-slate-900/20 hover:bg-white dark:hover:bg-slate-900 text-amber-800 dark:text-amber-400 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
                     >
                       Modificar Propuesta
@@ -1814,12 +1901,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <button
-                    onClick={() => {
-                      setEditScopeDescription(selectedContract.scopeDescription);
-                      setEditTotalAmount(selectedContract.totalAmount);
-                      setEditMilestones(milestones.map(m => ({ ...m })));
-                      setIsEditingContract(true);
-                    }}
+                    onClick={startEditingContract}
                     className="w-full mt-1 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 text-indigo-650 dark:text-indigo-400 font-bold py-2 text-xs transition-colors flex items-center justify-center gap-1.5"
                   >
                     Modificar Propuesta
@@ -1847,12 +1929,7 @@ export default function Dashboard() {
                       Validar y Contra-firmar
                     </button>
                     <button
-                      onClick={() => {
-                        setEditScopeDescription(selectedContract.scopeDescription);
-                        setEditTotalAmount(selectedContract.totalAmount);
-                        setEditMilestones(milestones.map(m => ({ ...m })));
-                        setIsEditingContract(true);
-                      }}
+                      onClick={startEditingContract}
                       className="rounded-xl border border-purple-200 dark:border-purple-800 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 text-purple-750 dark:text-purple-400 font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
                       Modificar Propuesta
@@ -2517,7 +2594,7 @@ export default function Dashboard() {
               </h3>
               <button
                 onClick={() => setIsEditingContract(false)}
-                className="rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-bold transition-colors"
+                className="rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -2525,71 +2602,316 @@ export default function Dashboard() {
 
             {/* Content */}
             <form onSubmit={handleSaveModification} className="p-6 flex flex-col gap-6 text-left">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Scope Input */}
-                <div className="md:col-span-2 flex flex-col gap-1.5">
-                  <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Concepto y Alcance de Trabajo</label>
-                  <textarea
-                    rows={6}
-                    required
-                    value={editScopeDescription}
-                    onChange={(e) => setEditScopeDescription(e.target.value)}
-                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-                  />
+              
+              {/* Section 1: Client Details */}
+              <div className="flex flex-col gap-4">
+                <h4 className="text-2xs font-extrabold text-indigo-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">1. Datos del Cliente</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Nombre / Razón Social</label>
+                    <input
+                      type="text"
+                      required
+                      value={editClientName}
+                      onChange={(e) => setEditClientName(e.target.value)}
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Correo Electrónico</label>
+                    <input
+                      type="email"
+                      required
+                      value={editClientEmail}
+                      onChange={(e) => setEditClientEmail(e.target.value)}
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Teléfono de Contacto</label>
+                    <input
+                      type="text"
+                      value={editClientPhone}
+                      onChange={(e) => setEditClientPhone(e.target.value)}
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                      placeholder="Ej. +525512345678"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">RFC Cliente</label>
+                    <input
+                      type="text"
+                      value={editClientRfc}
+                      onChange={(e) => setEditClientRfc(e.target.value.toUpperCase())}
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                      placeholder="Ej. GUEH860710MX3"
+                      maxLength={13}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Régimen Fiscal</label>
+                    <select
+                      value={editClientRegimen}
+                      onChange={(e) => setEditClientRegimen(e.target.value)}
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white bg-slate-900"
+                    >
+                      <option value="">-- Selecciona Régimen --</option>
+                      <option value="601 - General de Ley Personas Morales">601 - General de Ley Personas Morales</option>
+                      <option value="603 - Personas Morales con Fines no Lucrativos">603 - Personas Morales con Fines no Lucrativos</option>
+                      <option value="605 - Sueldos y Salarios e Ingresos Asimilados a Salarios">605 - Sueldos y Salarios e Ingresos Asimilados a Salarios</option>
+                      <option value="606 - Arrendamiento">606 - Arrendamiento</option>
+                      <option value="612 - Personas Físicas con Actividades Empresariales y Profesionales">612 - Personas Físicas con Actividades Empresariales y Profesionales</option>
+                      <option value="625 - Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas">625 - Régimen de Plataformas</option>
+                      <option value="626 - Régimen Simplificado de Confianza (RESICO)">626 - Régimen RESICO</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Código Postal</label>
+                    <input
+                      type="text"
+                      value={editClientPostal}
+                      onChange={(e) => setEditClientPostal(e.target.value)}
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                      placeholder="Ej. 06000"
+                      maxLength={5}
+                    />
+                  </div>
                 </div>
+              </div>
 
-                {/* Amount Input */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Presupuesto Total ({selectedContract.currency})</label>
-                  <input
-                    type="number"
-                    min={1}
-                    required
-                    value={editTotalAmount || ""}
-                    onChange={(e) => handleEditTotalAmountChange(Number(e.target.value))}
-                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-bold"
-                  />
-                  <p className="text-3xs text-slate-500 dark:text-slate-400 leading-normal mt-1">
-                    Tip: Edita el total para escalar proporcionalmente los hitos, o modifica los montos individuales abajo.
-                  </p>
-                </div>
+              {/* Section 2: Scope, Budget, and Taxes */}
+              <div className="flex flex-col gap-4">
+                <h4 className="text-2xs font-extrabold text-indigo-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">2. Configuración del Proyecto y Retenciones</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Scope Input */}
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Concepto y Alcance de Trabajo</label>
+                    <textarea
+                      rows={4}
+                      required
+                      value={editScopeDescription}
+                      onChange={(e) => setEditScopeDescription(e.target.value)}
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
 
-                {/* Individual Milestones Editing Section */}
-                <div className="md:col-span-2 flex flex-col gap-3.5 bg-slate-50/50 dark:bg-slate-900/10 p-4 rounded-2xl border border-slate-200 dark:border-slate-800/80 mt-2">
-                  <span className="text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Desglose e Importes de Hitos</span>
+                  {/* Budget & Currency */}
                   <div className="flex flex-col gap-3">
-                    {editMilestones.map((m, idx) => (
-                      <div key={m.id || idx} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-                        <div className="sm:col-span-7">
-                          <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Concepto</label>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Presupuesto Total</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                        <input
+                          type="number"
+                          min={1}
+                          required
+                          value={editTotalAmount || ""}
+                          onChange={(e) => handleEditTotalAmountChange(Number(e.target.value))}
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent pl-6 pr-3 py-1.5 text-xs font-bold focus:border-indigo-500 focus:outline-none dark:text-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Moneda</label>
+                      <select
+                        value={editCurrency}
+                        onChange={(e) => setEditCurrency(e.target.value as 'MXN' | 'USD')}
+                        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white bg-slate-900 font-bold"
+                      >
+                        <option value="MXN">Pesos Mexicanos (MXN)</option>
+                        <option value="USD">Dólares Americanos (USD)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tax Checkboxes */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start mt-2">
+                  <div className="flex flex-col gap-3 bg-slate-100/50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <span className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block">Retención de Impuestos (México)</span>
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-350 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editRetencionIsr}
+                          onChange={(e) => setEditRetencionIsr(e.target.checked)}
+                          className="rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        Retención ISR (10% Freelancer)
+                      </label>
+                      <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-350 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editRetencionIva}
+                          onChange={(e) => setEditRetencionIva(e.target.checked)}
+                          className="rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        Retención IVA (10.667% / 2/3 partes)
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Tax Breakdown */}
+                  <div className="md:col-span-2 bg-indigo-500/5 p-4 rounded-xl border border-indigo-500/10 flex flex-col gap-2 text-xs">
+                    <span className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block">Desglose Fiscal Estimado</span>
+                    <div className="flex justify-between border-b border-slate-200/50 dark:border-slate-800 pb-1 text-slate-650 dark:text-slate-450">
+                      <span>Subtotal (Monto del Proyecto):</span>
+                      <span className="font-semibold">{formatMoney(editTotalAmount, editCurrency)}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-200/50 dark:border-slate-800 pb-1 text-slate-650 dark:text-slate-450">
+                      <span>IVA Trasladado (16%):</span>
+                      <span className="font-semibold">{formatMoney(editTotalAmount * 0.16, editCurrency)}</span>
+                    </div>
+                    {editRetencionIsr && (
+                      <div className="flex justify-between text-red-500 border-b border-slate-200/50 dark:border-slate-800 pb-1">
+                        <span>Retención ISR (10%):</span>
+                        <span className="font-semibold">-{formatMoney(editTotalAmount * 0.10, editCurrency)}</span>
+                      </div>
+                    )}
+                    {editRetencionIva && (
+                      <div className="flex justify-between text-red-500 border-b border-slate-200/50 dark:border-slate-800 pb-1">
+                        <span>Retención IVA (10.667%):</span>
+                        <span className="font-semibold">-{formatMoney(editTotalAmount * 0.16 * (2 / 3), editCurrency)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-slate-800 dark:text-white font-bold pt-1">
+                      <span>Neto Estimado a Recibir:</span>
+                      <span className="text-indigo-500">
+                        {formatMoney(
+                          editTotalAmount +
+                          (editTotalAmount * 0.16) -
+                          (editRetencionIsr ? editTotalAmount * 0.10 : 0) -
+                          (editRetencionIva ? editTotalAmount * 0.16 * (2 / 3) : 0),
+                          editCurrency
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Milestones Schedule */}
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-1.5">
+                  <h4 className="text-2xs font-extrabold text-indigo-500 uppercase tracking-wider">3. Esquema de Cobro y Entregables</h4>
+                  <button
+                    type="button"
+                    onClick={handleEditAddMilestone}
+                    className="flex items-center gap-1 rounded bg-indigo-550/10 hover:bg-indigo-550/20 text-indigo-500 border border-indigo-500/20 px-2 py-1 text-4xs font-bold uppercase transition-colors cursor-pointer"
+                  >
+                    + Agregar Hito
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {editMilestones.map((m, idx) => (
+                    <div key={m.id || idx} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-slate-100/30 dark:bg-slate-900/10 border border-slate-200/60 dark:border-slate-900/60 rounded-xl p-3">
+                      <div className="sm:col-span-6">
+                        <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Concepto del Entregable</label>
+                        <input
+                          type="text"
+                          required
+                          value={m.label}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, label: val } : item));
+                          }}
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                          placeholder="Ej. Anticipo o Entrega final"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Fecha Vencimiento</label>
+                        <input
+                          type="date"
+                          required
+                          value={m.dueDate ? m.dueDate.split('T')[0] : ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, dueDate: val } : item));
+                          }}
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Importe ({editCurrency})</label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-3xs font-bold text-slate-400">$</span>
                           <input
-                            type="text"
+                            type="number"
                             required
-                            value={m.label}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, label: val } : item));
-                            }}
-                            className="w-full rounded-lg border border-slate-350 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                            min={1}
+                            value={m.amount || ""}
+                            onChange={(e) => handleEditMilestoneAmount(idx, Number(e.target.value))}
+                            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent pl-5 pr-2 py-1.5 text-xs font-bold focus:border-indigo-500 focus:outline-none dark:text-white"
                           />
                         </div>
-                        <div className="sm:col-span-5">
-                          <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Importe ({selectedContract.currency})</label>
-                          <div className="relative">
-                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-3xs font-bold text-slate-400">$</span>
-                            <input
-                              type="number"
-                              required
-                              min={0}
-                              value={m.amount || ""}
-                              onChange={(e) => handleEditMilestoneAmount(idx, Number(e.target.value))}
-                              className="w-full rounded-lg border border-slate-350 dark:border-slate-700 bg-transparent pl-5 pr-3 py-1.5 text-xs font-bold focus:border-indigo-500 focus:outline-none dark:text-white"
-                            />
-                          </div>
+                      </div>
+                      <div className="sm:col-span-1 flex justify-center pb-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleEditRemoveMilestone(idx)}
+                          disabled={editMilestones.length <= 1}
+                          className="text-red-500 hover:text-red-600 disabled:opacity-30 p-1.5 rounded bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 cursor-pointer"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Milestone Balance Help Message */}
+                {(() => {
+                  const currentSum = editMilestones.reduce((sum, m) => sum + m.amount, 0);
+                  const difference = editTotalAmount - currentSum;
+                  if (Math.abs(difference) <= 0.01) {
+                    return (
+                      <p className="text-3xs text-emerald-500 font-semibold bg-emerald-500/5 border border-emerald-500/10 rounded-xl px-4 py-2 mt-1">
+                        ¡Balance Correcto! La suma de los hitos coincide con el presupuesto total: {formatMoney(currentSum, editCurrency)}.
+                      </p>
+                    );
+                  } else {
+                    return (
+                      <p className="text-3xs text-amber-500 font-semibold bg-amber-500/5 border border-amber-500/10 rounded-xl px-4 py-2 mt-1">
+                        Suma Incorrecta: La suma de los hitos es {formatMoney(currentSum, editCurrency)}. {difference > 0 ? "Faltan" : "Exceden"} {formatMoney(Math.abs(difference), editCurrency)} para coincidir con el total de {formatMoney(editTotalAmount, editCurrency)}.
+                      </p>
+                    );
+                  }
+                })()}
+              </div>
+
+              {/* Section 4: Clauses Checklist */}
+              <div className="flex flex-col gap-4">
+                <h4 className="text-2xs font-extrabold text-indigo-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">4. Cláusulas del Acuerdo</h4>
+                <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 bg-slate-100/20 dark:bg-slate-900/10">
+                  {MOCK_CLAUSES.map((clause) => {
+                    const isChecked = editSelectedClauses.includes(clause.id);
+                    return (
+                      <div
+                        key={clause.id}
+                        onClick={() => {
+                          setEditSelectedClauses(prev =>
+                            prev.includes(clause.id)
+                              ? prev.filter(id => id !== clause.id)
+                              : [...prev, clause.id]
+                          );
+                        }}
+                        className={`flex gap-3 items-start p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 cursor-pointer select-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50 ${isChecked ? 'bg-indigo-500/5 border-indigo-500/30! ring-1 ring-indigo-500/20' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}} // handled by parent div onClick
+                          className="rounded border-slate-350 dark:border-slate-700 text-indigo-650 focus:ring-indigo-500 mt-0.5 pointer-events-none"
+                        />
+                        <div className="text-xs">
+                          <h5 className="font-bold text-slate-850 dark:text-slate-200">{clause.title} <span className="text-4xs text-slate-400 bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.25 font-normal uppercase ml-1.5">{clause.category}</span></h5>
+                          <p className="text-3xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{clause.content}</p>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -2606,8 +2928,12 @@ export default function Dashboard() {
                         {formatMoney(selectedContract.totalAmount, selectedContract.currency)}
                       </span>
                     </div>
-                    <div className="whitespace-pre-wrap text-xs text-slate-650 dark:text-slate-450 line-through leading-relaxed">
-                      {selectedContract.scopeDescription}
+                    <div className="text-xs text-slate-600 dark:text-slate-400 flex flex-col gap-2">
+                      <div><strong className="text-4xs uppercase tracking-wider text-slate-400">Cliente:</strong> {selectedContract.clientName} ({selectedContract.clientEmail})</div>
+                      <div><strong className="text-4xs uppercase tracking-wider text-slate-400">Alcance:</strong></div>
+                      <div className="whitespace-pre-wrap line-through leading-relaxed">
+                        {selectedContract.scopeDescription}
+                      </div>
                     </div>
                   </div>
 
@@ -2616,11 +2942,15 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-3xs font-extrabold text-emerald-600 uppercase tracking-wider">Nueva Propuesta</span>
                       <span className="text-xs font-black text-emerald-600">
-                        {formatMoney(editTotalAmount, selectedContract.currency)}
+                        {formatMoney(editTotalAmount, editCurrency)}
                       </span>
                     </div>
-                    <div className="whitespace-pre-wrap text-xs text-slate-800 dark:text-white leading-relaxed">
-                      {editScopeDescription}
+                    <div className="text-xs text-slate-800 dark:text-white flex flex-col gap-2">
+                      <div><strong className="text-4xs uppercase tracking-wider text-slate-500">Cliente:</strong> {editClientName} ({editClientEmail})</div>
+                      <div><strong className="text-4xs uppercase tracking-wider text-slate-500">Alcance:</strong></div>
+                      <div className="whitespace-pre-wrap leading-relaxed">
+                        {editScopeDescription}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2631,13 +2961,13 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => setIsEditingContract(false)}
-                  className="rounded-xl bg-slate-100 dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="rounded-xl bg-slate-100 dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-indigo-500/10"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-indigo-500/10 cursor-pointer"
                 >
                   Confirmar y Solicitar Firma
                 </button>

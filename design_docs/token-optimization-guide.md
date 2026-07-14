@@ -9,10 +9,11 @@ This document outlines the strategy for executing sprints on the `contract-track
 To prevent the massive amount of research data (PRDs, roadmaps, and directory listings) from bloating the active context window during coding and testing, split the sprint lifecycle into **three distinct conversation phases**.
 
 ### 📋 Phase 1: Research & Planning (New Chat Session)
-*Use this prompt to generate the implementation plan without running long autonomous loops.*
+
+_Use this prompt to generate the implementation plan without running long autonomous loops._
 
 ```markdown
-Use the sprint-development-workflow skill and active ECC rules to plan Sprint QA-1 for the contract-tracker project. 
+Use the sprint-development-workflow skill and active ECC rules to plan Sprint.
 
 1. Read the roadmap and technical PRD files in `design_docs/` to understand the requirements.
 2. Search the codebase for files that need modifications using grep (do not read entire files yet).
@@ -23,12 +24,13 @@ Use the sprint-development-workflow skill and active ECC rules to plan Sprint QA
 ---
 
 ### 💻 Phase 2: Step-by-Step Execution (Start a NEW Chat Session)
-*Once the plan is approved, start a new chat. This wipes the large PRD texts from the context window, leaving maximum room for coding.*
+
+_Once the plan is approved, start a new chat. This wipes the large PRD texts from the context window, leaving maximum room for coding._
 
 ```markdown
 /goal Execute the approved implementation plan.
 
-1. Read the approved [implementation_plan.md](file:///Users/jhzamora/.gemini/antigravity-ide/brain/8e2a9a64-85c1-4993-a1b3-e41a4490fc8b/implementation_plan.md).
+1. Read the approved implementation_plan.md
 2. Initialize the task.md tracker.
 3. Modify the files step-by-step as planned. Preserve existing comments and style conventions. Use targeted line edits (avoid rewriting or reading entire files unless necessary).
 4. Update task.md as you complete each task.
@@ -37,7 +39,8 @@ Use the sprint-development-workflow skill and active ECC rules to plan Sprint QA
 ---
 
 ### 🧪 Phase 3: Verification & Handover (Same session as Phase 2, or a NEW one)
-*Use this prompt to run tests, write the walkthrough, and push changes.*
+
+_Use this prompt to run tests, write the walkthrough, and push changes._
 
 ```markdown
 Verify and package the implemented changes for Sprint QA-1:
