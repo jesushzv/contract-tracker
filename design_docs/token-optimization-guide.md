@@ -43,7 +43,7 @@ _Once the plan is approved, start a new chat. This wipes the large PRD texts fro
 _Use this prompt to run tests, write the walkthrough, and push changes._
 
 ```markdown
-Verify and package the implemented changes for Sprint QA-1:
+Verify and package the implemented changes for Sprint:
 
 1. Run the local unit tests and end-to-end integration tests. Fix any failures or regressions immediately.
 2. Create the walkthrough.md artifact with test outputs and a summary of the changes.

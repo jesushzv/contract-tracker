@@ -333,12 +333,25 @@ export async function getProfile(): Promise<Profile> {
   return serverActions.getProfile();
 }
 
-export async function updateProfile(profile: Profile): Promise<Profile> {
+export async function getProfileByStripeCustomerId(customerId: string): Promise<Profile | null> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem(KEYS.PROFILE);
+    if (!data) return null;
+    const profile: Profile = JSON.parse(data);
+    if (profile.stripeCustomerId === customerId) {
+      return profile;
+    }
+    return null;
+  }
+  return serverActions.getProfileByStripeCustomerId(customerId);
+}
+
+export async function updateProfile(profile: Profile, isAdmin = false): Promise<Profile> {
   if (isDemoMode()) {
     localStorage.setItem(KEYS.PROFILE, JSON.stringify(profile));
     return profile;
   }
-  return serverActions.updateProfile(profile);
+  return serverActions.updateProfile(profile, isAdmin);
 }
 
 export async function getContracts(): Promise<Contract[]> {

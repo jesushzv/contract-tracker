@@ -251,11 +251,11 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto w-full">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto w-full">
             {/* Free tier */}
-            <div className="glass rounded-3xl p-6 flex flex-col justify-between text-left border-slate-200 dark:border-slate-800">
+            <div className="glass rounded-3xl p-6 flex flex-col justify-between text-left border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-900/10">
               <div>
-                <h4 className="text-lg font-bold text-slate-800 dark:text-white">Plan Semilla</h4>
+                <h4 className="text-lg font-bold text-slate-850 dark:text-white">Plan Semilla</h4>
                 <p className="text-2xs text-slate-400 mt-1">Ideal para iniciar en el freelance con orden.</p>
                 <div className="mt-4 flex items-baseline">
                   <span className="text-3xl font-extrabold text-slate-900 dark:text-white">$0</span>
@@ -264,15 +264,15 @@ export default function Home() {
                 <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 dark:text-slate-450">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                    Hasta 3 contratos activos al mes
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                    Plantillas legales básicas (Ley MX)
+                    Hasta 3 contratos creados
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                     Aceptación por clickwrap express
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                    Plantillas de contrato básicas (MXN)
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
@@ -282,48 +282,84 @@ export default function Home() {
               </div>
               <Link 
                 href="/dashboard"
-                className="mt-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-center py-2.5 text-xs font-bold transition-colors"
+                className="mt-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-center py-2.5 text-xs font-bold transition-colors cursor-pointer"
               >
                 Comenzar Gratis
               </Link>
             </div>
 
-            {/* Pro tier */}
+            {/* Starter tier */}
             <div className="glass rounded-3xl p-6 flex flex-col justify-between text-left border-indigo-500/35 relative overflow-hidden bg-indigo-500/5">
               <div className="absolute top-3 right-3 bg-indigo-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
                 Popular
               </div>
               <div>
-                <h4 className="text-lg font-bold text-indigo-500">Plan Crecimiento</h4>
+                <h4 className="text-lg font-bold text-indigo-500">Plan Emprendedor</h4>
                 <p className="text-2xs text-slate-400 mt-1">Para profesionales con flujo de clientes constante.</p>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-extrabold text-slate-900 dark:text-white">$149</span>
+                  <span className="text-3xl font-extrabold text-slate-900 dark:text-white">$99</span>
                   <span className="text-xs text-slate-400 ml-1">MXN / mes</span>
                 </div>
-                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 dark:text-slate-455">
+                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 dark:text-slate-450">
                   <li className="flex items-center gap-2 text-slate-700 dark:text-slate-250">
                     <CheckCircle2 className="h-4 w-4 text-indigo-500 flex-shrink-0" />
-                    <strong>Contratos e hitos ilimitados</strong>
+                    <strong>Hasta 10 contratos activos</strong>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-indigo-500 flex-shrink-0" />
-                    Alertas dinámicas de atraso (&quot;Atrasado&quot;)
+                    Monedas múltiples (MXN & USD)
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-indigo-500 flex-shrink-0" />
-                    Verificación SPEI Clave de Rastreo (Banxico CEP)
+                    Personalización de logotipos y firmas
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-indigo-500 flex-shrink-0" />
-                    Exportación PDF y respaldo legal offline
+                    Soporte prioritario
                   </li>
                 </ul>
               </div>
               <Link 
                 href="/dashboard"
-                className="mt-8 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-center py-2.5 text-xs font-bold shadow-lg shadow-indigo-600/15 transition-colors"
+                className="mt-8 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-center py-2.5 text-xs font-bold shadow-lg shadow-indigo-600/15 transition-colors cursor-pointer"
               >
-                Probar Plan Pro
+                Suscribirse a Starter
+              </Link>
+            </div>
+
+            {/* Pro tier */}
+            <div className="glass rounded-3xl p-6 flex flex-col justify-between text-left border-purple-500/35 relative overflow-hidden bg-purple-500/5">
+              <div>
+                <h4 className="text-lg font-bold text-purple-500">Plan Profesional</h4>
+                <p className="text-2xs text-slate-400 mt-1">Control absoluto, automatización y conciliación.</p>
+                <div className="mt-4 flex items-baseline">
+                  <span className="text-3xl font-extrabold text-slate-900 dark:text-white">$199</span>
+                  <span className="text-xs text-slate-400 ml-1">MXN / mes</span>
+                </div>
+                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 dark:text-slate-450">
+                  <li className="flex items-center gap-2 text-slate-700 dark:text-slate-250">
+                    <CheckCircle2 className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                    <strong>Contratos e hitos ilimitados</strong>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                    Reconciliación SPEI automática (CEP)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                    Multi-perfiles de pago bancarios
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                    Control de versiones e historial
+                  </li>
+                </ul>
+              </div>
+              <Link 
+                href="/dashboard"
+                className="mt-8 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-center py-2.5 text-xs font-bold shadow-lg shadow-purple-600/15 transition-colors cursor-pointer"
+              >
+                Suscribirse a Pro
               </Link>
             </div>
           </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { updateProfile, uploadBrandAsset } from "@/lib/storageClient";
+import { updateProfile, uploadBrandAsset, getProfile, isDemoMode } from "@/lib/storageClient";
 import { Profile } from "@/lib/types";
 import { ShieldCheck, ArrowRight, AlertCircle, Loader2, Landmark } from "lucide-react";
 import { validateRFC } from "@/lib/rfcValidator";
@@ -48,23 +48,76 @@ export default function OnboardingPage() {
   };
   const [loading, setLoading] = useState(false);
   const [sessionCheckLoading, setSessionCheckLoading] = useState(true);
+  const [isDemo, setIsDemo] = useState(false);
 
   useEffect(() => {
     async function checkSession() {
-      const isDemo = new URLSearchParams(window.location.search).get("demo") === "true" || localStorage.getItem("demo_mode") === "true";
-      if (isDemo) {
-        setEmail("hector@freelancemx.dev");
-        setSessionCheckLoading(false);
-        return;
-      }
+      try {
+        const demoModeActive = isDemoMode();
+        setIsDemo(demoModeActive);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push("/login");
-        return;
+        let userEmail = "";
+        if (demoModeActive) {
+          userEmail = "hector@freelancemx.dev";
+          setEmail(userEmail);
+        } else {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            router.push("/login");
+            return;
+          }
+          userEmail = session.user.email || "";
+          setEmail(userEmail);
+        }
+
+        const searchParams = new URLSearchParams(window.location.search);
+        const sessionId = searchParams.get("session_id");
+
+        let activeTier: 'free' | 'starter' | 'pro' | undefined = undefined;
+
+        if (sessionId && !demoModeActive) {
+          try {
+            const res = await fetch(`/api/stripe/checkout-session?session_id=${sessionId}`);
+            const data = await res.json();
+            if (data.success && data.tier) {
+              activeTier = data.tier;
+              setTier(data.tier);
+            }
+          } catch (err) {
+            console.error("Error syncing checkout session on client:", err);
+          }
+        }
+
+        const prof = await getProfile();
+        if (prof) {
+          if (prof.fullName) setFullName(prof.fullName);
+          if (prof.rfc) setRfc(prof.rfc);
+          if (prof.regimenFiscal) setRegimenFiscal(prof.regimenFiscal);
+          if (prof.codigoPostal) setCodigoPostal(prof.codigoPostal);
+          if (prof.phone) setPhone(prof.phone);
+          if (prof.bankDetails?.bankName) setBankName(prof.bankDetails.bankName);
+          if (prof.bankDetails?.clabe) setClabe(prof.bankDetails.clabe);
+          if (prof.logoUrl) setLogoUrl(prof.logoUrl);
+          if (prof.signatureUrl) setSignatureUrl(prof.signatureUrl);
+          
+          if (!activeTier) {
+            activeTier = prof.tier;
+          }
+        }
+
+        if (!activeTier && !sessionId) {
+          router.push("/plans");
+          return;
+        }
+
+        if (activeTier) {
+          setTier(activeTier);
+        }
+      } catch (err) {
+        console.error("Error checking session/profile in onboarding:", err);
+      } finally {
+        setSessionCheckLoading(false);
       }
-      setEmail(session.user.email || "");
-      setSessionCheckLoading(false);
     }
     checkSession();
   }, [router]);
@@ -172,62 +225,90 @@ export default function OnboardingPage() {
         )}
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          
-          {/* Section: Plan Selection */}
+              {/* Section: Plan Selection */}
           <div className="md:col-span-2">
-            <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-3">Selecciona tu Plan</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div 
-                onClick={() => setTier("free")}
-                className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
-                  tier === "free" 
-                    ? "border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20" 
-                    : "border-slate-200 dark:border-slate-800 hover:border-slate-350 bg-white/40 dark:bg-slate-900/40"
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Gratuito</span>
-                  <span className="text-2xs font-extrabold text-indigo-500">$0 MXN</span>
+            <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-3">
+              {!isDemo ? "Plan de Suscripción" : "Selecciona tu Plan (Modo Demo)"}
+            </h3>
+            {!isDemo ? (
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                      Plan {tier}
+                    </span>
+                    <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-4xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      Activo
+                    </span>
+                  </div>
+                  <p className="text-3xs text-slate-400 mt-1 leading-normal">
+                    {tier === "free" && "Límite de 3 contratos. Branding personalizado bloqueado."}
+                    {tier === "starter" && "Límite de 10 contratos. Identidad de marca (logo/firma) desbloqueada."}
+                    {tier === "pro" && "Contratos ilimitados, branding desbloqueado y características premium."}
+                  </p>
                 </div>
-                <p className="text-3xs text-slate-400 mt-1 leading-normal">
-                  Ideal para empezar. Máx. 3 contratos. Branding personalizado bloqueado.
-                </p>
+                <button
+                  type="button"
+                  onClick={() => router.push("/plans")}
+                  className="text-2xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline text-left cursor-pointer"
+                >
+                  Cambiar Plan →
+                </button>
               </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div 
+                  onClick={() => setTier("free")}
+                  className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
+                    tier === "free" 
+                      ? "border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20" 
+                      : "border-slate-200 dark:border-slate-800 hover:border-slate-350 bg-white/40 dark:bg-slate-900/40"
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Gratuito</span>
+                    <span className="text-2xs font-extrabold text-indigo-500">$0 MXN</span>
+                  </div>
+                  <p className="text-3xs text-slate-400 mt-1 leading-normal">
+                    Ideal para empezar. Máx. 3 contratos. Branding personalizado bloqueado.
+                  </p>
+                </div>
 
-              <div 
-                onClick={() => setTier("starter")}
-                className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
-                  tier === "starter" 
-                    ? "border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20" 
-                    : "border-slate-200 dark:border-slate-800 hover:border-slate-350 bg-white/40 dark:bg-slate-900/40"
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Starter</span>
-                  <span className="text-2xs font-extrabold text-indigo-500">$99 MXN</span>
+                <div 
+                  onClick={() => setTier("starter")}
+                  className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
+                    tier === "starter" 
+                      ? "border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20" 
+                      : "border-slate-200 dark:border-slate-800 hover:border-slate-350 bg-white/40 dark:bg-slate-900/40"
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Starter</span>
+                    <span className="text-2xs font-extrabold text-indigo-500">$99 MXN</span>
+                  </div>
+                  <p className="text-3xs text-slate-400 mt-1 leading-normal">
+                    Límite de 10 contratos. Identidad de marca (logo/firma) desbloqueada.
+                  </p>
                 </div>
-                <p className="text-3xs text-slate-400 mt-1 leading-normal">
-                  Límite de 10 contratos. Identidad de marca (logo/firma) desbloqueada.
-                </p>
-              </div>
 
-              <div 
-                onClick={() => setTier("pro")}
-                className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
-                  tier === "pro" 
-                    ? "border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20" 
-                    : "border-slate-200 dark:border-slate-800 hover:border-slate-350 bg-white/40 dark:bg-slate-900/40"
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Pro</span>
-                  <span className="text-2xs font-extrabold text-emerald-500">$199 MXN</span>
+                <div 
+                  onClick={() => setTier("pro")}
+                  className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
+                    tier === "pro" 
+                      ? "border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20" 
+                      : "border-slate-200 dark:border-slate-800 hover:border-slate-350 bg-white/40 dark:bg-slate-900/40"
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Pro</span>
+                    <span className="text-2xs font-extrabold text-emerald-500">$199 MXN</span>
+                  </div>
+                  <p className="text-3xs text-slate-400 mt-1 leading-normal">
+                    Contratos ilimitados, branding desbloqueado y características premium.
+                  </p>
                 </div>
-                <p className="text-3xs text-slate-400 mt-1 leading-normal">
-                  Contratos ilimitados, branding desbloqueado y características premium.
-                </p>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Section: Fiscal Details */}

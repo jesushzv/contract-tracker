@@ -209,7 +209,16 @@ export async function getProfile(): Promise<Profile> {
   return db.profile;
 }
 
-export async function updateProfile(profile: Profile): Promise<Profile> {
+export async function getProfileByStripeCustomerId(customerId: string): Promise<Profile | null> {
+  const db = await readDb();
+  if (db.profile && db.profile.stripeCustomerId === customerId) {
+    return db.profile;
+  }
+  return null;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function updateProfile(profile: Profile, _isAdmin = false): Promise<Profile> {
   const db = await readDb();
   
   const sanitizedProfile: Profile = {
@@ -222,6 +231,8 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
     logoUrl: profile.logoUrl ? sanitizeInput(profile.logoUrl) : undefined,
     signatureUrl: profile.signatureUrl ? sanitizeInput(profile.signatureUrl) : undefined,
     phone: profile.phone ? sanitizeInput(profile.phone) : undefined,
+    stripeCustomerId: profile.stripeCustomerId ? sanitizeInput(profile.stripeCustomerId) : undefined,
+    stripeSubscriptionId: profile.stripeSubscriptionId ? sanitizeInput(profile.stripeSubscriptionId) : undefined,
     bankDetails: {
       clabe: sanitizeInput(profile.bankDetails.clabe),
       bankName: sanitizeInput(profile.bankDetails.bankName),

@@ -16,11 +16,10 @@ import {
   Layers,
   Percent,
   Building,
-  ShieldAlert,
-  Loader2
+  ShieldAlert
 } from "lucide-react";
 import { MOCK_CLAUSES, CONTRACT_TEMPLATES } from "@/lib/mockData";
-import { getProfile, saveContract, saveMilestones, getContracts, updateProfile, getPaymentProfiles } from "@/lib/storageClient";
+import { getProfile, saveContract, saveMilestones, getContracts, getPaymentProfiles } from "@/lib/storageClient";
 import { Contract, Milestone, Profile, PaymentProfile } from "@/lib/types";
 import { validateRFC } from "@/lib/rfcValidator";
 
@@ -41,7 +40,6 @@ function NewContractForm() {
   const templateParam = searchParams.get("template");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [contractsCount, setContractsCount] = useState(0);
-  const [isUpgradeLoading, setIsUpgradeLoading] = useState(false);
 
   // Stepper state
   const [step, setStep] = useState(1);
@@ -84,20 +82,6 @@ function NewContractForm() {
   // Payment profiles state
   const [paymentProfiles, setPaymentProfiles] = useState<PaymentProfile[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
-
-  const handleUpgradeToPro = async () => {
-    if (!profile) return;
-    setIsUpgradeLoading(true);
-    try {
-      const updated = { ...profile, tier: "pro" as const };
-      await updateProfile(updated);
-      setProfile(updated);
-    } catch (err) {
-      alert("Error al actualizar a Pro: " + err);
-    } finally {
-      setIsUpgradeLoading(false);
-    }
-  };
 
   useEffect(() => {
     async function loadData() {
@@ -298,8 +282,22 @@ function NewContractForm() {
     router.push("/dashboard");
   };
 
-  // Enforce Free tier contract cap
-  if (profile && (!profile.tier || profile.tier === "free") && contractsCount >= 3) {
+  // Enforce contract limits based on tier
+  const hasReachedLimit = 
+    profile && (
+      ((!profile.tier || profile.tier === "free") && contractsCount >= 3) ||
+      (profile.tier === "starter" && contractsCount >= 10)
+    );
+
+  if (hasReachedLimit) {
+    const isStarter = profile.tier === "starter";
+    const currentLimit = isStarter ? 10 : 3;
+    const nextPlanName = isStarter ? "Plan Pro" : "Plan Starter";
+    const nextPlanCost = isStarter ? "$199 MXN/mes" : "$99 MXN/mes";
+    const nextPlanFeatures = isStarter 
+      ? "Contratos ilimitados + Conciliación SPEI" 
+      : "Hasta 10 contratos activos + Logotipo/Firma";
+
     return (
       <div className="mx-auto w-full max-w-lg px-4 py-16 text-center flex-grow flex items-center justify-center min-h-[70vh]">
         <div className="glass rounded-3xl p-8 border border-indigo-500/20 shadow-2xl relative overflow-hidden text-left flex flex-col gap-6 w-full">
@@ -312,25 +310,25 @@ function NewContractForm() {
             </div>
             <div>
               <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Límite del Plan Alcanzado</h1>
-              <p className="text-xs text-slate-400 mt-0.5">Límite de contratos para el Plan Gratuito</p>
+              <p className="text-xs text-slate-400 mt-0.5">Límite de contratos para tu plan activo</p>
             </div>
           </div>
 
           <div className="text-sm leading-relaxed text-slate-500 dark:text-slate-400 flex flex-col gap-3 font-light">
             <p>
-              Has alcanzado el límite máximo de **3 contratos** permitidos en tu **Plan Gratuito**.
+              Has alcanzado el límite máximo de **{currentLimit} contratos** permitidos en tu **Plan {isStarter ? "Starter" : "Gratuito"}**.
             </p>
             <p>
-              Para crear más acuerdos de servicio con tus clientes y habilitar la personalización de logotipos y firmas, te invitamos a actualizar al **Plan Pro**.
+              Para crear más acuerdos de servicio con tus clientes y habilitar todas las funcionalidades avanzadas, te invitamos a mejorar tu plan.
             </p>
           </div>
 
           <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 p-5 flex justify-between items-center mt-2">
             <div>
-              <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Pro</span>
-              <p className="text-3xs text-slate-400 mt-0.5">Contratos ilimitados + Branding</p>
+              <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{nextPlanName}</span>
+              <p className="text-3xs text-slate-400 mt-0.5">{nextPlanFeatures}</p>
             </div>
-            <span className="text-xs font-black text-emerald-500">$199 MXN/mes</span>
+            <span className="text-xs font-black text-emerald-500">{nextPlanCost}</span>
           </div>
 
           <div className="flex items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-850 pt-5 mt-2">
@@ -340,20 +338,12 @@ function NewContractForm() {
             >
               Volver al Panel
             </Link>
-            <button
-              onClick={handleUpgradeToPro}
-              disabled={isUpgradeLoading}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 text-xs transition-all shadow-md shadow-indigo-500/10 cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+            <Link
+              href="/plans"
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 text-xs transition-all shadow-md shadow-indigo-500/10 cursor-pointer flex items-center gap-1.5"
             >
-              {isUpgradeLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Actualizando...
-                </>
-              ) : (
-                "Actualizar a Pro"
-              )}
-            </button>
+              Ver Planes de Actualización
+            </Link>
           </div>
         </div>
       </div>
