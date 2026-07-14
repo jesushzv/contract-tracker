@@ -1,16 +1,16 @@
 # Technical PRD: Contract & Anticipo Tracker for Freelancers (MX)
 
 **Owner:** Hector Zamora  
-**Status:** Approved v1.2 (Security Scoped Revision)  
-**Last updated:** July 11, 2026  
+**Status:** Approved v1.3 (UX & Document Completeness Revision)  
+**Last updated:** July 13, 2026  
 
 ---
 
 ## 1. Overview
 
-A specialized mobile-friendly web application designed for Mexican freelancers to generate client-facing service agreements, validate RFC taxpayers, calculate localized tax withholdings, secure digital agreement signatures via OTP, and track milestone payments (anticipos) under a single connected system. 
+A specialized mobile-friendly web application designed for Mexican freelancers to generate client-facing service agreements, validate RFC taxpayers, calculate localized tax withholdings, secure digital agreement signatures via OTP, manage multiple banking payment profiles, and track milestone payments (anticipos) under a single connected system. 
 
-By unifying contract drafting, signature, fiscal verification, and payment tracking, the platform replaces disconnected tools (e.g., Google Docs, WhatsApp, and bank apps) and establishes a single cryptographic source of truth.
+By unifying contract drafting, signature, fiscal verification, payment tracking, and document archive management, the platform replaces disconnected tools (e.g., Google Docs, WhatsApp, and bank apps) and establishes a single cryptographic source of truth.
 
 ---
 
@@ -21,18 +21,19 @@ Freelancers in Mexico experience significant transaction friction and payment de
 1. **Fiscal Overhead:** Contracts with typos in RFCs, postal codes, or incorrect withholding calculations (*retenciones de ISR/IVA*) are legally voidable or block corporate bank clearance.
 2. **Disconnected Signature Workflows:** Standard e-signature tools are expensive, while lightweight check-box agreements lack strong identity verification and legal enforceability in Mexico.
 3. **No Payment-to-Contract Link:** Bank transfers (SPEI) and payment receipts live in banking portals, separate from the agreed milestones.
+4. **Lack of Trust Transparency:** Clients lack visual cues verifying the freelancer's standing or past compliance when signing remote contracts.
 
 ### Goals & Success Metrics
 * **Draft-to-Send Speed:** Time from "new contract" to "contract sent with calculated tax and milestones" is < 3 minutes.
 * **Rapid Acceptance:** \geq 60% of contracts are signed by clients within 48 hours.
-* **Verification Trust:** 100% of generated contracts include a cryptographic SHA-256 digital integrity seal (*Sello de Integridad Digital*) and client OTP validation to minimize repudiation.
+* **Verification Trust:** 100% of generated contracts include a cryptographic SHA-256 digital integrity seal (*Sello de Integridad Digital*), client OTP validation, and freelancer verified standing indicators.
 
 ---
 
 ## 3. User Roles
 
-* **Freelancer (Account Holder):** Registers via email/password, performs fiscal onboarding, selects subscription tier, uploads custom logo/signature branding, drafts contracts with dynamic templates, and approves client signatures.
-* **Client (No Account Required):** Receives a secure contract link, verifies their identity via a 6-digit email OTP, signs electronically, and uploads SPEI payment receipts for milestones.
+* **Freelancer (Account Holder):** Registers via email/password, performs fiscal onboarding, selects subscription tier, uploads custom logo/signature branding, manages bank accounts (Payment Profiles), drafts contracts with dynamic templates, and approves client signatures.
+* **Client (No Account Required):** Receives a secure contract link, verifies their identity via a 6-digit email OTP, reviews freelancer verified standing, signs electronically, and uploads SPEI payment receipts for milestones.
 
 ---
 
@@ -47,9 +48,9 @@ Freelancers in Mexico experience significant transaction friction and payment de
 
 ### 4.2 Onboarding Subscription Funnel & Gated Caps
 * **Subscription Tiers:** The platform supports a three-tier pricing model:
-  * **Free Plan ($0 MXN/mo):** Restricted to a cap of **3 contracts maximum**. Custom branding (logo and signature upload) is locked. Standard legal templates only.
-  * **Starter Plan (Middle Tier, $99 MXN/mo):** Restricted to a cap of **10 contracts maximum**. Custom branding is unlocked. Standard legal templates.
-  * **Pro Plan ($199 MXN/mo):** Unlimited contracts, custom branding unlocked, advanced features (like multiple templates, visual diff comparator, and premium client-signing options).
+50:   * **Free Plan ($0 MXN/mo):** Restricted to a cap of **3 contracts maximum**. Custom branding (logo and signature upload) is locked. Standard legal templates only.
+51:   * **Starter Plan (Middle Tier, $99 MXN/mo):** Restricted to a cap of **10 contracts maximum**. Custom branding is unlocked. Standard legal templates.
+52:   * **Pro Plan ($199 MXN/mo):** Unlimited contracts, custom branding unlocked, advanced features (like multiple templates, visual diff comparator, and premium client-signing options).
 * **Commercialization Funnel:** The onboarding flow for new users must be a friction-free, high-conversion path:
   1. **Registration:** Account creation via email/password.
   2. **Tier Selection:** Prompt user to select between the Free, Starter, or Pro tiers.
@@ -80,7 +81,7 @@ Freelancers in Mexico experience significant transaction friction and payment de
   2. Client reviews and signs via OTP (Contract status: `client_signed`).
   3. Freelancer reviews details and clicks "Approve & Seal" (Contract status: `accepted`). This vetting step avoids legally voidable errors before locking the terms.
 * **Digital Integrity Seal:** Generates a unique SHA-256 hash based on the final, accepted contract content. Any subsequent alterations break the hash, ensuring the agreement's immutability.
-* **Chronological Audit Trail:** Log records containing exact timestamps, IP addresses, actors, and signatures for all contract state transitions (draft \rightarrow sent \rightarrow client_signed \rightarrow accepted \rightarrow completed).
+* **Chronological Audit Trail:** Log records containing exact timestamps, IP addresses, actors, and signatures for all contract state transitions (draft → sent → client_signed → accepted → completed).
 
 ### 4.6 Revision Proposals on Sealed Contracts
 * **Revision Flow:** Even after a contract is sealed (`accepted` / `client_signed`), either party can click a "Propose Revision" button.
@@ -91,12 +92,14 @@ Freelancers in Mexico experience significant transaction friction and payment de
 
 ### 4.8 Sequential State Machines & Warnings
 * **Locked Sequential States:** States cannot be skipped.
-  * Contract: `draft` \rightarrow `sent` \rightarrow `client_signed` \rightarrow `accepted` \rightarrow `completed`.
-  * Milestone: `pending` \rightarrow `requested` \rightarrow `marked_paid` \rightarrow `confirmed`.
+  * Contract: `draft` → `sent` → `client_signed` → `accepted` → `completed`.
+  * Milestone: `pending` → `requested` → `marked_paid` → `confirmed`.
+* **Escrow Double Completion Flow:** When a contract is active (`accepted`), both parties must mark it as complete. When the client clicks "Confirmar Proyecto como Terminado" and the freelancer clicks "Marcar Proyecto como Completado", the contract status transitions to `completed`.
+* **State Machine Validation Guards:** Server and storage layers strictly reject any invalid state transitions using a formal `CONTRACT_VALID_TRANSITIONS` map.
 * **Two-Party Payments:** Milestones require both parties' actions: the client uploads payment proof (status: `marked_paid`), and the freelancer verifies it to seal it (status: `confirmed`).
 * **Warning Prompts:** Important status changes (like sealing a contract, reverting milestones, or proposing revisions) must trigger warning confirmation boxes outlining the consequences of the state change.
 
-### 4.9 Freelancer Activity & Alerts Center (Future Scope)
+### 4.9 Freelancer Activity & Alerts Center
 * **Alerts Panel:** Provide a visual activity feed/alerts center on the Freelancer's Dashboard.
 * **Event Scoping:** Displays dynamic notification updates for key contract events:
   * When a client signs a contract (`client_signed`).
@@ -120,6 +123,16 @@ Freelancers in Mexico experience significant transaction friction and payment de
     * By Freelancer: "Hola [clientName], actualicé el contrato con cambios y regresó a estado de borrador para tu revisión. Puedes verlo aquí: [clientUrl]"
 * **Alert Actions Integration:** Embed these WhatsApp Click-to-Chat sharing quick links directly within the Freelancer Activity Feed cards next to each corresponding notification entry to streamline follow-ups.
 
+### 4.11 Banking Payment Profiles
+* **Multi-Account Profiles CRUD:** Freelancers can manage multiple bank payment configurations (apodo, banco receptor, CLABE interbancaria, and payment instructions) from the settings panel.
+* **Default Pre-filling:** One account can be set as the default, which automatically populates CLABE/Bank fields when creating a new contract.
+
+### 4.12 Trust "Standing" Element in Client Portal
+* **Standing Indicator Badge:** Displays the freelancer's identity verification, active cryptoseal status, and dispute rating (e.g. "Freelancer en Buena Posición") in the client contract view to bolster confidence.
+
+### 4.13 Standalone Documents Archive (Expediente)
+* **Unified Portfolio Archive:** A dedicated route `/documents` that dynamically lists and filters contracts, SPEI receipt uploads, and transaction audit trails across all projects.
+
 ---
 
 ## 5. Non-Functional & Security Requirements
@@ -133,13 +146,13 @@ Freelancers in Mexico experience significant transaction friction and payment de
 
 ---
 
-## 6. Architecture Stack (v1.2)
+## 6. Architecture Stack (v1.3)
 
 * **Frontend:** Next.js (React), Tailwind CSS.
 * **Backend:** Next.js API Routes / React Server Actions.
 * **Database:** Postgres via Supabase (equipped with Row-Level Security).
 * **Auth:** Supabase Auth (scoped to freelancers).
-* **Storage:** Supabase Storage (for branding assets and SPEI receipts).
+* **Storage:** Supabase Storage (for branding assets, logo, signature, and SPEI receipts).
 * **Testing:** Playwright for E2E integration suites, Node.js scripts for validation unit tests.
 
 ---
@@ -182,6 +195,8 @@ Freelancers in Mexico experience significant transaction friction and payment de
 * `accepted_by_name` (TEXT, Nullable)
 * `accepted_at` (TIMESTAMP, Nullable)
 * `accepted_ip` (TEXT, Nullable)
+* `freelancer_completed_at` (TIMESTAMP, Nullable)
+* `client_completed_at` (TIMESTAMP, Nullable)
 
 ### Milestones
 * `id` (UUID, PK)
@@ -191,6 +206,15 @@ Freelancers in Mexico experience significant transaction friction and payment de
 * `due_date` (DATE)
 * `status` (ENUM: `pending`, `requested`, `marked_paid`, `confirmed`)
 * `receipt_url` (TEXT, Nullable)
+
+### Payment Profiles
+* `id` (UUID, PK)
+* `freelancer_id` (UUID, FK)
+* `nickname` (TEXT)
+* `bank_name` (TEXT)
+* `clabe` (TEXT)
+* `payment_instructions` (TEXT, Nullable)
+* `is_default` (BOOLEAN)
 
 ### Audit Logs
 * `id` (UUID, PK)

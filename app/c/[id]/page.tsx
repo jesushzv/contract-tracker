@@ -13,9 +13,10 @@ import {
   Printer,
   CreditCard,
   ExternalLink,
-  Loader2
+  Loader2,
+  Star
 } from "lucide-react";
-import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision, uploadReceiptFile } from "@/lib/storageClient";
+import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision, uploadReceiptFile, cancelContract, markContractCompleted } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 import { Contract, Milestone, AuditLog, Profile } from "@/lib/types";
 
@@ -59,6 +60,10 @@ export default function ClientContractView() {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [lastPaidMilestoneLabel, setLastPaidMilestoneLabel] = useState("");
   const [lastPaidMilestoneAmount, setLastPaidMilestoneAmount] = useState(0);
+
+  // Cancellation State
+  const [isCancellingContract, setIsCancellingContract] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   useEffect(() => {
     async function loadData() {
@@ -196,6 +201,28 @@ export default function ClientContractView() {
       alert("Error al regenerar OTP: " + err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancelContract = async () => {
+    if (!contractId || !cancelReason.trim()) return;
+    try {
+      await cancelContract(contractId, "client", cancelReason);
+      setIsCancellingContract(false);
+      setCancelReason("");
+      await refreshData();
+    } catch (err) {
+      alert("Error al cancelar el contrato: " + err);
+    }
+  };
+
+  const handleMarkCompleted = async () => {
+    if (!contractId) return;
+    try {
+      await markContractCompleted(contractId, "client");
+      await refreshData();
+    } catch (err) {
+      alert("Error al marcar el contrato como completado: " + err);
     }
   };
 
@@ -769,8 +796,31 @@ export default function ClientContractView() {
           </div>
         </div>
 
-        {/* Right Column: Financial Milestones & SPEI Clabe (Interactive) */}
         <div className="lg:col-span-4 flex flex-col gap-6 print:hidden">
+          {/* Freelancer Reputation / Standing Card */}
+          <div className="glass rounded-3xl p-5 border-emerald-500/20 bg-emerald-500/5 flex flex-col gap-4 text-left">
+            <h3 className="text-sm font-bold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <Star className="h-4 w-4 fill-emerald-500 text-emerald-500" />
+              Freelancer en Buena Posición
+            </h3>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                Reputación de Confianza de Anticipo MX
+              </div>
+              <ul className="text-3xs text-slate-500 dark:text-slate-450 flex flex-col gap-1.5 leading-normal pl-1">
+                <li className="flex items-center gap-1.5">✓ Identidad fiscal emisor validada (RFC {contract.freelancerRfc ? "Registrado" : "N/A"})</li>
+                <li className="flex items-center gap-1.5">✓ Sello de integridad criptográfica activo</li>
+                <li className="flex items-center gap-1.5">✓ 0 penalizaciones ni disputas vigentes</li>
+                <li className="flex items-center gap-1.5">✓ Hitos financieros protegidos por escrow</li>
+              </ul>
+              <div className="border-t border-slate-100 dark:border-slate-800/80 pt-2.5 mt-1 flex justify-between items-center text-3xs text-slate-400">
+                <span>Miembro desde</span>
+                <span className="font-semibold text-slate-600 dark:text-slate-300">Julio 2026</span>
+              </div>
+            </div>
+          </div>
+
           {/* SPEI bank details card */}
           <div className="glass rounded-3xl p-5 border-indigo-500/20 bg-white/70 dark:bg-slate-950/70 flex flex-col gap-4 text-left">
             <h3 className="text-sm font-bold flex items-center gap-1.5 text-indigo-500">
@@ -819,6 +869,41 @@ export default function ClientContractView() {
               </div>
             )}
           </div>
+
+          {contract.status === 'accepted' && (
+            <div className="glass rounded-3xl p-5 border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/10 flex flex-col gap-4 text-left">
+              <h3 className="text-sm font-bold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-4 w-4" />
+                Entrega y Finalización del Proyecto
+              </h3>
+              <p className="text-2xs text-slate-500 dark:text-slate-400 leading-normal">
+                Si el freelancer ha completado la entrega de los servicios/productos acordados, puedes marcar tu confirmación de conformidad a continuación.
+              </p>
+              
+              <div className="flex flex-col gap-2">
+                {contract.clientCompletedAt ? (
+                  <div className="text-xs text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1.5">
+                    <span className="animate-pulse h-2 w-2 rounded-full bg-amber-500"></span>
+                    Has confirmado la entrega. Esperando que el freelancer confirme por su parte para cerrar el contrato.
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleMarkCompleted}
+                    className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 text-xs transition-colors shadow-lg shadow-emerald-500/10 cursor-pointer"
+                  >
+                    Confirmar Proyecto como Terminado / Recibido
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setIsCancellingContract(true)}
+                  className="w-full rounded-xl border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-650 font-semibold py-2.5 text-xs transition-colors cursor-pointer"
+                >
+                  Cancelar Contrato (Detener Proyecto)
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Active invoice request */}
           {activePayment && contract.status === 'accepted' ? (
@@ -1225,6 +1310,46 @@ export default function ClientContractView() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {isCancellingContract && contract && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm print:hidden">
+          <div className="bg-slate-50 dark:bg-slate-950 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-red-500/20 flex flex-col gap-4 text-left">
+            <div>
+              <h3 className="font-bold text-slate-800 dark:text-slate-200 text-lg flex items-center gap-2">
+                Cancelar Contrato
+              </h3>
+              <p className="text-2xs text-slate-400 mt-1">
+                Ingresa el motivo de cancelación del contrato. Se notificará al freelancer y quedará registrado en la bitácora de auditoría.
+              </p>
+            </div>
+            <textarea
+              rows={4}
+              required
+              placeholder="Ej. Mutuo acuerdo, cambio de proveedor, etc..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-3 py-2 text-xs focus:border-red-500 focus:outline-none dark:text-white transition-all resize-none"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setIsCancellingContract(false);
+                  setCancelReason("");
+                }}
+                className="rounded-lg bg-slate-100 dark:bg-slate-800 px-4 py-2 text-2xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cerrar
+              </button>
+              <button
+                onClick={handleCancelContract}
+                disabled={!cancelReason.trim()}
+                className="rounded-lg bg-red-650 hover:bg-red-550 text-white font-bold px-4 py-2 text-2xs transition-colors disabled:opacity-50"
+              >
+                Confirmar Cancelación
+              </button>
+            </div>
           </div>
         </div>
       )}

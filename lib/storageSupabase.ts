@@ -1,11 +1,33 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
-import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog, ContractVersion } from "./types";
+import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog, ContractVersion, PaymentProfile, EditRequest, Notification } from "./types";
 import crypto from "crypto";
 import path from "path";
 import { sendSimulatedEmail } from "./emails";
 import { headers, cookies } from "next/headers";
+
+// ── Contract State Machine ──────────────────────────────────────────────────
+const CONTRACT_VALID_TRANSITIONS: Record<ContractStatus, ContractStatus[]> = {
+  draft: ["sent"],
+  sent: ["client_signed", "cancelled"],
+  client_signed: ["accepted", "sent", "cancelled"],
+  accepted: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+};
+
+function validateContractTransition(
+  currentStatus: ContractStatus,
+  newStatus: ContractStatus
+): void {
+  const allowed = CONTRACT_VALID_TRANSITIONS[currentStatus];
+  if (!allowed || !allowed.includes(newStatus)) {
+    throw new Error(
+      `Transición de estado inválida: No se puede pasar de '${currentStatus}' a '${newStatus}'. Transiciones permitidas: ${allowed?.join(", ") || "ninguna"}.`
+    );
+  }
+}
 
 // Initialize Supabase Client
 // These variables must be configured in Vercel's Environment Settings
@@ -406,6 +428,11 @@ export async function saveContract(contract: Contract): Promise<Contract> {
     contract.clientAccessToken = crypto.randomUUID();
   }
   const existing = await getContractById(contract.id);
+  
+  if (existing && existing.status !== contract.status) {
+    validateContractTransition(existing.status, contract.status);
+  }
+
   const isNew = !existing;
 
   const profile = await getProfile().catch(() => null);
@@ -588,6 +615,10 @@ export async function updateMilestoneStatus(
     .single();
 
   const oldStatus = current.data?.status as MilestoneStatus || "pending";
+
+  if (status === "requested" && oldStatus !== "pending") {
+    throw new Error("Un hito solo puede ser solicitado si está en estado 'Pendiente'.");
+  }
 
   if (status === "confirmed" && oldStatus !== "marked_paid") {
     throw new Error("El hito debe haber sido reportado como transferido por el cliente antes de ser confirmado.");
@@ -914,9 +945,7 @@ export async function acceptContract(
   const contract = await getContractById(contractId);
   if (!contract) return null;
 
-  if (contract.status !== "sent") {
-    throw new Error("Solo se pueden firmar contratos en estado 'Enviado'.");
-  }
+  validateContractTransition(contract.status, "client_signed");
 
   // OTP attempts lockout guard
   const attempts = contract.clientOtpAttempts || 0;
@@ -1372,4 +1401,400 @@ export async function saveContractVersion(
     modifiedAt: data.modified_at,
     reason: data.reason || undefined
   };
+}
+
+export async function getPaymentProfiles(freelancerId?: string): Promise<PaymentProfile[]> {
+  const client = await getSupabaseClient();
+  let query = client.from("payment_profiles").select("*");
+  if (freelancerId) {
+    query = query.eq("freelancer_id", freelancerId);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []).map((p: any) => ({
+    id: p.id,
+    freelancerId: p.freelancer_id,
+    nickname: p.nickname,
+    bankName: p.bank_name,
+    clabe: p.clabe,
+    paymentInstructions: p.payment_instructions || undefined,
+    isDefault: p.is_default
+  }));
+}
+
+export async function savePaymentProfile(profile: PaymentProfile): Promise<PaymentProfile> {
+  const client = await getSupabaseClient();
+  if (profile.isDefault) {
+    await client.from("payment_profiles").update({ is_default: false }).eq("freelancer_id", profile.freelancerId);
+  }
+  const record = {
+    id: profile.id,
+    freelancer_id: profile.freelancerId,
+    nickname: sanitizeInput(profile.nickname),
+    bank_name: sanitizeInput(profile.bankName),
+    clabe: sanitizeInput(profile.clabe),
+    payment_instructions: profile.paymentInstructions ? sanitizeInput(profile.paymentInstructions) : null,
+    is_default: profile.isDefault
+  };
+  const { data, error } = await client.from("payment_profiles").upsert(record).select().single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    freelancerId: data.freelancer_id,
+    nickname: data.nickname,
+    bankName: data.bank_name,
+    clabe: data.clabe,
+    paymentInstructions: data.payment_instructions || undefined,
+    isDefault: data.is_default
+  };
+}
+
+export async function deletePaymentProfile(id: string): Promise<void> {
+  const client = await getSupabaseClient();
+  const { error } = await client.from("payment_profiles").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function getEditRequests(contractId: string): Promise<EditRequest[]> {
+  const client = await getSupabaseClient();
+  const { data, error } = await client.from("edit_requests").select("*").eq("contract_id", contractId);
+  if (error) throw error;
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    contractId: r.contract_id,
+    requestedBy: r.requested_by as 'freelancer' | 'client',
+    reason: r.reason || undefined,
+    status: r.status as 'pending' | 'approved' | 'rejected',
+    proposedChanges: r.proposed_changes,
+    requestedAt: r.requested_at,
+    respondedAt: r.responded_at || undefined,
+    respondedBy: r.responded_by || undefined
+  }));
+}
+
+export async function proposeEditRequest(editRequest: Omit<EditRequest, "id" | "requestedAt" | "status">): Promise<EditRequest> {
+  const client = await getSupabaseClient();
+  const { data, error } = await client
+    .from("edit_requests")
+    .insert({
+      contract_id: editRequest.contractId,
+      requested_by: editRequest.requestedBy,
+      reason: editRequest.reason ? sanitizeInput(editRequest.reason) : null,
+      proposed_changes: editRequest.proposedChanges,
+      status: "pending"
+    })
+    .select()
+    .single();
+  if (error) throw error;
+
+  const contract = await getContractById(editRequest.contractId);
+  if (contract) {
+    const isFreelancer = editRequest.requestedBy === "freelancer";
+    const recipientEmail = contract.clientEmail;
+    const senderName = isFreelancer ? "Freelancer" : contract.clientName;
+    
+    sendSimulatedEmail({
+      to: recipientEmail,
+      subject: `Modificación de Contrato Propuesta - ${senderName}`,
+      html: `<p>Hola,</p><p>Se ha propuesto una modificación al contrato. Por favor ingresa a la plataforma para revisar los cambios propuestos (antes/después).</p><p>Motivo: ${editRequest.reason || 'Sin motivo especificado'}</p>`
+    }).catch(console.error);
+
+    if (!isFreelancer) {
+      await addNotification({
+        userId: contract.freelancerId,
+        contractId: contract.id,
+        eventType: "edit_requested",
+        message: `El cliente ${contract.clientName} ha propuesto una modificación al contrato.`
+      });
+    }
+  }
+
+  return {
+    id: data.id,
+    contractId: data.contract_id,
+    requestedBy: data.requested_by as 'freelancer' | 'client',
+    reason: data.reason || undefined,
+    status: data.status as 'pending' | 'approved' | 'rejected',
+    proposedChanges: data.proposed_changes,
+    requestedAt: data.requested_at,
+    respondedAt: data.responded_at || undefined,
+    respondedBy: data.responded_by || undefined
+  };
+}
+
+export async function respondToEditRequest(id: string, status: "approved" | "rejected", respondedBy: string): Promise<EditRequest | null> {
+  const client = await getSupabaseClient();
+  const { data: request, error: fetchError } = await client.from("edit_requests").select("*").eq("id", id).single();
+  if (fetchError || !request) return null;
+
+  const { data: updatedRequest, error: updateError } = await client
+    .from("edit_requests")
+    .update({
+      status,
+      responded_at: new Date().toISOString(),
+      responded_by: respondedBy
+    })
+    .eq("id", id)
+    .select()
+    .single();
+  if (updateError) throw updateError;
+
+  if (status === "approved") {
+    const contract = await getContractById(request.contract_id);
+    if (contract) {
+      await saveContractVersion({
+        contractId: contract.id,
+        versionNumber: 0,
+        scopeDescription: contract.scopeDescription,
+        totalAmount: contract.totalAmount,
+        currency: contract.currency,
+        taxWithholdingAmount: contract.taxWithholdingAmount,
+        ivaAmount: contract.ivaAmount,
+        subtotalAmount: contract.subtotalAmount,
+        reason: `Modificación aprobada por ${respondedBy}`
+      });
+
+      const changes = request.proposed_changes;
+      const updatedContract = {
+        ...contract,
+        scopeDescription: changes.scopeDescription !== undefined ? changes.scopeDescription : contract.scopeDescription,
+        totalAmount: changes.totalAmount !== undefined ? changes.totalAmount : contract.totalAmount,
+        currency: changes.currency !== undefined ? changes.currency : contract.currency,
+        clabe: changes.clabe !== undefined ? changes.clabe : contract.clabe,
+        bankName: changes.bankName !== undefined ? changes.bankName : contract.bankName,
+        beneficiaryName: changes.beneficiaryName !== undefined ? changes.beneficiaryName : contract.beneficiaryName,
+        paymentInstructions: changes.paymentInstructions !== undefined ? changes.paymentInstructions : contract.paymentInstructions,
+        status: "draft" as ContractStatus,
+        acceptedAt: undefined,
+        acceptedByName: undefined,
+        acceptedIp: undefined,
+        freelancerAcceptedAt: undefined,
+        freelancerAcceptedByName: undefined,
+        freelancerAcceptedIp: undefined,
+        contractHash: undefined,
+        clientOtpVerified: false,
+        clientOtpCode: undefined,
+        updated_at: new Date().toISOString()
+      };
+
+      await saveContract(updatedContract);
+
+      if (changes.milestones) {
+        await client.from("milestones").delete().eq("contract_id", contract.id);
+        const milestoneRecords = changes.milestones.map((m: any) => ({
+          id: m.id,
+          contract_id: contract.id,
+          label: m.label,
+          amount: m.amount,
+          due_date: m.dueDate,
+          status: m.status
+        }));
+        await client.from("milestones").insert(milestoneRecords);
+      }
+
+      await addAuditLog({
+        contractId: contract.id,
+        action: "edit_approved",
+        actor: request.requested_by === "freelancer" ? "client" : "freelancer",
+        details: `Modificación de contrato aprobada. El acuerdo se revirtió a Borrador para nueva firma.`
+      });
+    }
+  } else {
+    await addAuditLog({
+      contractId: request.contract_id,
+      action: "edit_rejected",
+      actor: request.requested_by === "freelancer" ? "client" : "freelancer",
+      details: `Modificación de contrato rechazada por ${respondedBy}.`
+    });
+  }
+
+  const contractObj = await getContractById(request.contract_id);
+  if (contractObj && request.requested_by === "freelancer") {
+    await addNotification({
+      userId: contractObj.freelancerId,
+      contractId: contractObj.id,
+      eventType: "edit_responded",
+      message: `El cliente ha ${status === "approved" ? "aprobado" : "rechazado"} los cambios propuestos al contrato.`
+    });
+  }
+
+  return {
+    id: updatedRequest.id,
+    contractId: updatedRequest.contract_id,
+    requestedBy: updatedRequest.requested_by as 'freelancer' | 'client',
+    reason: updatedRequest.reason || undefined,
+    status: updatedRequest.status as 'pending' | 'approved' | 'rejected',
+    proposedChanges: updatedRequest.proposed_changes,
+    requestedAt: updatedRequest.requested_at,
+    respondedAt: updatedRequest.responded_at || undefined,
+    respondedBy: updatedRequest.responded_by || undefined
+  };
+}
+
+export async function getNotifications(userId: string): Promise<Notification[]> {
+  const client = await getSupabaseClient();
+  const { data, error } = await client.from("notifications").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data || []).map((n: any) => ({
+    id: n.id,
+    userId: n.user_id,
+    contractId: n.contract_id || undefined,
+    eventType: n.event_type,
+    message: n.message,
+    isRead: n.is_read,
+    created_at: n.created_at
+  }));
+}
+
+export async function addNotification(notification: Omit<Notification, "id" | "created_at" | "isRead">): Promise<Notification> {
+  const client = await getSupabaseClient();
+  const { data, error } = await client
+    .from("notifications")
+    .insert({
+      user_id: notification.userId,
+      contract_id: notification.contractId || null,
+      event_type: notification.eventType,
+      message: notification.message,
+      is_read: false
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    userId: data.user_id,
+    contractId: data.contract_id || undefined,
+    eventType: data.event_type,
+    message: data.message,
+    isRead: data.is_read,
+    created_at: data.created_at
+  };
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  const client = await getSupabaseClient();
+  const { error } = await client.from("notifications").update({ is_read: true }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function cancelContract(contractId: string, actor: string, reason: string): Promise<Contract | null> {
+  const current = await getContractById(contractId);
+  if (!current) return null;
+
+  validateContractTransition(current.status, "cancelled");
+
+  const client = await getSupabaseClient();
+  const { data, error } = await client
+    .from("contracts")
+    .update({
+      status: "cancelled",
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", contractId)
+    .select()
+    .single();
+  if (error) throw error;
+
+  await addAuditLog({
+    contractId,
+    action: "contract_cancelled",
+    actor: actor === "freelancer" ? "freelancer" : "client",
+    details: `El contrato fue cancelado por el ${actor === "freelancer" ? "Freelancer" : "Cliente"}. Motivo: ${reason}`
+  });
+
+  if (actor === "client") {
+    await addNotification({
+      userId: data.freelancer_id,
+      contractId: data.id,
+      eventType: "contract_cancelled",
+      message: `El cliente ha cancelado el contrato. Motivo: ${reason}`
+    });
+  }
+
+  return getContractById(contractId);
+}
+
+export async function markContractCompleted(contractId: string, actor: "freelancer" | "client"): Promise<Contract | null> {
+  const current = await getContractById(contractId);
+  if (!current) return null;
+
+  if (current.status !== "accepted") {
+    throw new Error("Solo contratos en estado 'accepted' pueden ser marcados como completados.");
+  }
+
+  const client = await getSupabaseClient();
+  const now = new Date().toISOString();
+  const updateObj: { freelancer_completed_at?: string; client_completed_at?: string; status?: string } = {};
+  if (actor === "freelancer") {
+    updateObj.freelancer_completed_at = now;
+  } else {
+    updateObj.client_completed_at = now;
+  }
+
+  const { data: checkData, error: checkError } = await client.from("contracts").select("freelancer_completed_at, client_completed_at").eq("id", contractId).single();
+  if (checkError) throw checkError;
+
+  const freelancerComp = actor === "freelancer" ? now : checkData.freelancer_completed_at;
+  const clientComp = actor === "client" ? now : checkData.client_completed_at;
+
+  if (freelancerComp && clientComp) {
+    updateObj.status = "completed";
+    await addAuditLog({
+      contractId,
+      action: "contract_completed",
+      actor: "system",
+      details: "Ambas partes han marcado el proyecto como terminado. Contrato finalizado."
+    });
+  } else {
+    await addAuditLog({
+      contractId,
+      action: "completion_marked",
+      actor: actor === "freelancer" ? "freelancer" : "client",
+      details: `El ${actor === "freelancer" ? "freelancer" : "cliente"} marcó su lado como Completado.`
+    });
+  }
+
+  const { error } = await client.from("contracts").update(updateObj).eq("id", contractId);
+  if (error) throw error;
+
+  return getContractById(contractId);
+}
+
+export async function uploadBrandAsset(
+  fileName: string,
+  mimeType: string,
+  fileBase64: string
+): Promise<string> {
+  const buffer = Buffer.from(fileBase64, "base64");
+
+  if (buffer.length > 2 * 1024 * 1024) {
+    throw new Error("El archivo excede el límite de tamaño de 2MB.");
+  }
+
+  const allowedMimeTypes = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml"];
+  if (!allowedMimeTypes.includes(mimeType)) {
+    throw new Error("Tipo de archivo no permitido. Solo se permiten imágenes (PNG, JPEG, SVG).");
+  }
+
+  const sanitizedName = path.basename(fileName).replace(/[^a-zA-Z0-9.-]/g, "_");
+  const uniqueName = `${crypto.randomUUID()}-${sanitizedName}`;
+
+  const client = await getSupabaseClient(true);
+  
+  const { error } = await client.storage
+    .from("brand-assets")
+    .upload(uniqueName, buffer, {
+      contentType: mimeType,
+      upsert: true
+    });
+
+  if (error) {
+    throw new Error("Error subiendo el archivo de marca a Supabase Storage: " + error.message);
+  }
+
+  const { data: urlData } = client.storage
+    .from("brand-assets")
+    .getPublicUrl(uniqueName);
+
+  return urlData.publicUrl;
 }

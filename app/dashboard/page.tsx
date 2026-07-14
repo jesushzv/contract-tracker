@@ -33,7 +33,13 @@ import {
   vetAndAcceptContract,
   addAuditLog,
   loadSampleData,
-  getContractVersions
+  getContractVersions,
+  cancelContract,
+  markContractCompleted,
+  getPaymentProfiles,
+  savePaymentProfile,
+  deletePaymentProfile,
+  uploadBrandAsset
 } from "@/lib/storageClient";
 import { Contract, Milestone, Profile, AuditLog, ContractVersion } from "@/lib/types";
 import { MOCK_CLAUSES } from "@/lib/mockData";
@@ -71,6 +77,22 @@ export default function Dashboard() {
   const [phone, setPhone] = useState("");
   const [contractVersions, setContractVersions] = useState<ContractVersion[]>([]);
 
+  // Cancellation & Double-Completion Flow States
+  const [isCancellingContract, setIsCancellingContract] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
+  // Payment Profiles CRUD States
+  const [paymentProfiles, setPaymentProfiles] = useState<any[]>([]);
+  const [editingProfile, setEditingProfile] = useState<any | null>(null);
+  const [showProfileForm, setShowProfileForm] = useState(true);
+  const [profileNickname, setProfileNickname] = useState("");
+  const [profileBankName, setProfileBankName] = useState("");
+  const [profileClabe, setProfileClabe] = useState("");
+  const [profileInstructions, setProfileInstructions] = useState("");
+
+  // Upload/Error banner states
+  const [uploadError, setUploadError] = useState("");
+
   useEffect(() => {
     async function loadInitialData() {
       let demoActive = false;
@@ -98,6 +120,14 @@ export default function Dashboard() {
       setLogoUrl(prof.logoUrl || "");
       setSignatureUrl(prof.signatureUrl || "");
       setPhone(prof.phone || "");
+
+      // Load payment profiles
+      try {
+        const profilesList = await getPaymentProfiles(prof.id);
+        setPaymentProfiles(profilesList);
+      } catch (err) {
+        console.error("Error loading payment profiles:", err);
+      }
 
       const allContracts = await getContracts();
       setContracts(allContracts);
@@ -209,6 +239,111 @@ export default function Dashboard() {
       setEditTotalAmount(newSum);
       return updated;
     });
+  };
+
+  const handleCancelContract = async () => {
+    if (!selectedContract || !cancelReason.trim()) return;
+    try {
+      await cancelContract(selectedContract.id, "freelancer", cancelReason);
+      setIsCancellingContract(false);
+      setCancelReason("");
+      await refreshData();
+    } catch (err: any) {
+      alert("Error al cancelar contrato: " + err.message);
+    }
+  };
+
+  const handleMarkCompleted = async () => {
+    if (!selectedContract) return;
+    try {
+      await markContractCompleted(selectedContract.id, "freelancer");
+      await refreshData();
+    } catch (err: any) {
+      alert("Error al completar contrato: " + err.message);
+    }
+  };
+
+  const handleBrandFileUpload = async (file: File | undefined, type: "logo" | "signature") => {
+    if (!file) return;
+    setUploadError("");
+    if (file.size > 2 * 1024 * 1024) {
+      setUploadError("El archivo excede el límite de tamaño de 2MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64 = (reader.result as string).split(",")[1];
+        const uploadedUrl = await uploadBrandAsset(file.name, file.type, base64);
+        if (type === "logo") {
+          setLogoUrl(uploadedUrl);
+        } else {
+          setSignatureUrl(uploadedUrl);
+        }
+      } catch (err: any) {
+        setUploadError("Error al subir archivo: " + err.message);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile) return;
+    try {
+      const newProfile = {
+        id: editingProfile?.id || "pp-" + Math.random().toString(36).substring(2, 9),
+        freelancerId: profile.id,
+        nickname: profileNickname,
+        bankName: profileBankName,
+        clabe: profileClabe,
+        paymentInstructions: profileInstructions || undefined,
+        isDefault: editingProfile ? editingProfile.isDefault : paymentProfiles.length === 0,
+      };
+      await savePaymentProfile(newProfile);
+      
+      // Refresh list
+      const profilesList = await getPaymentProfiles(profile.id);
+      setPaymentProfiles(profilesList);
+      
+      // Reset form
+      setEditingProfile(null);
+      setProfileNickname("");
+      setProfileBankName("");
+      setProfileClabe("");
+      setProfileInstructions("");
+      setShowProfileForm(false);
+    } catch (err: any) {
+      alert("Error al guardar perfil de pago: " + err.message);
+    }
+  };
+
+  const handleDeleteProfile = async (id: string) => {
+    if (!profile || !confirm("¿Seguro que deseas eliminar este perfil de pago?")) return;
+    try {
+      await deletePaymentProfile(id);
+      const profilesList = await getPaymentProfiles(profile.id);
+      setPaymentProfiles(profilesList);
+    } catch (err: any) {
+      alert("Error al eliminar perfil de pago: " + err.message);
+    }
+  };
+
+  const handleSetDefaultProfile = async (id: string) => {
+    if (!profile) return;
+    try {
+      const updated = paymentProfiles.map(p => ({
+        ...p,
+        isDefault: p.id === id
+      }));
+      for (const p of updated) {
+        await savePaymentProfile(p);
+      }
+      const profilesList = await getPaymentProfiles(profile.id);
+      setPaymentProfiles(profilesList);
+    } catch (err: any) {
+      alert("Error al establecer perfil por defecto: " + err.message);
+    }
   };
 
   const handleSaveModification = async (e: React.FormEvent) => {
@@ -966,25 +1101,194 @@ export default function Dashboard() {
             </div>
 
             <div className="flex flex-col gap-1.5 md:col-span-2">
-              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Logo de la Empresa (URL de Imagen)</label>
-              <input
-                type="text"
-                placeholder="Ej. https://images.unsplash.com/photo-... o de tu sitio"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-              />
+              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Logo de tu Empresa (PNG, JPG, SVG - Máx 2MB)</label>
+              {profile?.tier === "free" ? (
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/50 px-4 py-2 text-xs text-slate-450">
+                  🔒 Disponible en Planes de Pago. Sube a un plan Starter o Pro para personalizar tu marca.
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept=".png,.jpg,.jpeg,.svg"
+                    onChange={(e) => handleBrandFileUpload(e.target.files?.[0], "logo")}
+                    className="flex-grow rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                  {logoUrl && (
+                    <img src={logoUrl} alt="Preview Logo" className="h-10 w-10 object-contain rounded-lg border border-slate-200 bg-white p-0.5" />
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Firma Digital (URL de Imagen)</label>
-              <input
-                type="text"
-                placeholder="Ej. https://upload.wikimedia.org/... o firma"
-                value={signatureUrl}
-                onChange={(e) => setSignatureUrl(e.target.value)}
-                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-              />
+              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Firma Digital (PNG, JPG - Máx 2MB)</label>
+              {profile?.tier === "free" ? (
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/50 px-4 py-2 text-xs text-slate-450">
+                  🔒 Disponible en Planes de Pago.
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept=".png,.jpg,.jpeg"
+                    onChange={(e) => handleBrandFileUpload(e.target.files?.[0], "signature")}
+                    className="flex-grow rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                  {signatureUrl && (
+                    <img src={signatureUrl} alt="Preview Signature" className="h-10 w-10 object-contain rounded-lg border border-slate-200 bg-white p-0.5" />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {uploadError && (
+              <div className="md:col-span-3 text-xs text-red-500 font-semibold bg-red-500/5 p-2 rounded-xl border border-red-500/10">
+                ⚠️ {uploadError}
+              </div>
+            )}
+
+            {/* Payment Profiles CRUD Section */}
+            <div className="md:col-span-3 border-t border-slate-200 dark:border-slate-800 pt-6 mt-2">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Perfiles de Pago Bancarios</h4>
+                  <p className="text-3xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Registra múltiples cuentas para prellenar datos rápidamente al generar nuevos contratos.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingProfile(null);
+                    setProfileNickname("");
+                    setProfileBankName("");
+                    setProfileClabe("");
+                    setProfileInstructions("");
+                    setShowProfileForm(!showProfileForm);
+                  }}
+                  className="rounded-xl bg-indigo-50 dark:bg-slate-900 text-indigo-650 dark:text-indigo-400 border border-indigo-200/50 dark:border-slate-800 px-4 py-2 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  {showProfileForm ? "Cerrar Formulario" : "Agregar Cuenta"}
+                </button>
+              </div>
+
+              {showProfileForm && (
+                <div className="bg-slate-50/50 dark:bg-slate-900/30 border border-slate-200/50 dark:border-slate-800 rounded-2xl p-4 mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-3xs font-semibold text-slate-455 uppercase tracking-wider">Apodo de la Cuenta (Ej. Nómina, USD Principal)</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej. Mi Cuenta Principal"
+                      value={profileNickname}
+                      onChange={(e) => setProfileNickname(e.target.value)}
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-3xs font-semibold text-slate-455 uppercase tracking-wider">Banco Receptor</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej. BBVA, Santander, STP"
+                      value={profileBankName}
+                      onChange={(e) => setProfileBankName(e.target.value)}
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-3xs font-semibold text-slate-455 uppercase tracking-wider">CLABE Interbancaria (18 dígitos)</label>
+                    <input
+                      type="text"
+                      maxLength={18}
+                      required
+                      placeholder="18 dígitos"
+                      value={profileClabe}
+                      onChange={(e) => setProfileClabe(e.target.value)}
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-3xs font-semibold text-slate-455 uppercase tracking-wider">Instrucciones de Pago Adicionales (Opcional)</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Transferir neto antes de las 5pm"
+                      value={profileInstructions}
+                      onChange={(e) => setProfileInstructions(e.target.value)}
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
+                  <div className="md:col-span-2 flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveProfile}
+                      disabled={!profileNickname || !profileBankName || profileClabe.length !== 18}
+                      className="rounded-xl bg-indigo-600 hover:bg-indigo-550 text-white font-semibold px-4 py-2 text-xs transition-colors shadow-md shadow-indigo-500/10 disabled:opacity-50 cursor-pointer"
+                    >
+                      Guardar Perfil
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {paymentProfiles.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {paymentProfiles.map((p) => (
+                    <div key={p.id} className={`rounded-2xl border p-4 text-xs flex flex-col justify-between gap-3 ${p.isDefault ? "border-indigo-500 bg-indigo-500/5" : "border-slate-200 dark:border-slate-800"}`}>
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-bold text-slate-850 dark:text-slate-200 flex items-center gap-1.5">
+                            {p.nickname}
+                            {p.isDefault && <span className="rounded-full bg-indigo-500 text-white text-3xs px-1.5 py-0.5 font-semibold">Predeterminado</span>}
+                          </span>
+                          <span className="font-mono text-slate-400">{p.bankName}</span>
+                        </div>
+                        <p className="font-mono text-slate-600 dark:text-slate-350 break-all select-all mt-1">CLABE: {p.clabe}</p>
+                        {p.paymentInstructions && (
+                          <p className="text-3xs text-slate-450 italic mt-1">Nota: {p.paymentInstructions}</p>
+                        )}
+                      </div>
+                      <div className="flex justify-end gap-2 border-t border-slate-100 dark:border-slate-850/50 pt-2.5">
+                        {!p.isDefault && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetDefaultProfile(p.id)}
+                            className="text-3xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                          >
+                            Hacer Predeterminado
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingProfile(p);
+                            setProfileNickname(p.nickname);
+                            setProfileBankName(p.bankName);
+                            setProfileClabe(p.clabe);
+                            setProfileInstructions(p.paymentInstructions || "");
+                            setShowProfileForm(true);
+                          }}
+                          className="text-3xs font-semibold text-slate-600 dark:text-slate-400 hover:underline cursor-pointer"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProfile(p.id)}
+                          className="text-3xs font-semibold text-red-650 hover:underline cursor-pointer"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-8 text-center text-xs text-slate-400 font-light leading-normal">
+                  No has registrado perfiles de pago adicionales. El sistema usará la cuenta CLABE registrada arriba por defecto.
+                </div>
+              )}
             </div>
 
             <div className="md:col-span-3 flex justify-between items-center pt-2">
@@ -1329,7 +1633,7 @@ export default function Dashboard() {
               )}
 
               {selectedContract.status === 'accepted' && (
-                <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-800 dark:text-emerald-400 flex flex-col gap-2">
+                <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-800 dark:text-emerald-400 flex flex-col gap-3">
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5 text-emerald-600" />
                     <div>
@@ -1342,6 +1646,31 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
+                  
+                  {/* Completion status info */}
+                  {selectedContract.freelancerCompletedAt ? (
+                    <div className="text-xs text-amber-600 dark:text-amber-400 font-semibold border-t border-emerald-500/10 pt-2 flex items-center gap-1.5 animate-pulse-subtle">
+                      <span className="h-2 w-2 rounded-full bg-amber-500"></span>
+                      Entregado por tu parte. Esperando confirmación del cliente.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 border-t border-emerald-500/10 pt-3">
+                      <button
+                        onClick={handleMarkCompleted}
+                        className="rounded-xl bg-emerald-600 hover:bg-emerald-550 text-white font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/10 cursor-pointer"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Marcar Proyecto como Completado
+                      </button>
+                      <button
+                        onClick={() => setIsCancellingContract(true)}
+                        className="rounded-xl border border-red-200 dark:border-red-900 bg-white/20 dark:bg-slate-900/20 text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        Cancelar Contrato (Detener Proyecto)
+                      </button>
+                    </div>
+                  )}
+
                   <div className="text-3xs text-slate-400 bg-slate-100 dark:bg-slate-900/50 rounded-lg p-2 font-mono break-all mt-2 select-all">
                     Integrity Hash: {selectedContract.contractHash}
                   </div>
@@ -2085,6 +2414,46 @@ export default function Dashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Cancellation Modal */}
+      {isCancellingContract && selectedContract && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm print:hidden">
+          <div className="bg-slate-50 dark:bg-slate-950 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-red-500/20">
+            <h3 className="text-sm font-bold text-red-650 dark:text-red-400 flex items-center gap-2 mb-4">
+              <AlertCircle className="h-5 w-5" />
+              Cancelar Contrato
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-normal">
+              Esta acción dará por terminado el proyecto y cancelará todas las solicitudes de hitos financieros pendientes. Por favor especifica el motivo:
+            </p>
+            <textarea
+              className="w-full rounded-2xl border border-slate-300 dark:border-slate-800 bg-transparent p-3 text-xs focus:border-red-500 focus:outline-none dark:text-white mb-4 resize-none h-24"
+              placeholder="Ej. Incumplimiento de entregables, cambio de prioridades..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+            <div className="flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCancellingContract(false);
+                  setCancelReason("");
+                }}
+                className="rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelContract}
+                disabled={!cancelReason.trim()}
+                className="rounded-xl bg-red-600 hover:bg-red-550 text-white font-bold px-4 py-2 text-xs transition-colors shadow-md shadow-red-500/10 disabled:opacity-50 cursor-pointer"
+              >
+                Confirmar Cancelación
+              </button>
+            </div>
           </div>
         </div>
       )}

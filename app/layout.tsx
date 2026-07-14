@@ -54,6 +54,15 @@ export default function RootLayout({
                 <a href="/contracts/new" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
                   Nuevo Contrato
                 </a>
+                <a href="/hash-verifier" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+                  Verificador
+                </a>
+                <a href="/documents" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+                  Expedientes
+                </a>
+                <a href="/notifications" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5">
+                  Notificaciones
+                </a>
               </nav>
 
               <div className="flex items-center gap-4">
