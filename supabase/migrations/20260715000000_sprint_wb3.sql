@@ -38,7 +38,7 @@ ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS payment_instructions TEXT;
 -- 3. Create edit_requests table
 CREATE TABLE IF NOT EXISTS public.edit_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    contract_id UUID NOT NULL REFERENCES public.contracts(id) ON DELETE CASCADE,
+    contract_id TEXT NOT NULL REFERENCES public.contracts(id) ON DELETE CASCADE,
     requested_by TEXT NOT NULL, -- 'freelancer' | 'client'
     reason TEXT,
     status TEXT NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'rejected'
@@ -67,7 +67,7 @@ WITH CHECK (contract_id IN (SELECT id FROM public.contracts WHERE status != 'dra
 CREATE TABLE IF NOT EXISTS public.notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-    contract_id UUID REFERENCES public.contracts(id) ON DELETE CASCADE,
+    contract_id TEXT REFERENCES public.contracts(id) ON DELETE CASCADE,
     event_type TEXT NOT NULL,
     message TEXT NOT NULL,
     is_read BOOLEAN DEFAULT false NOT NULL,
