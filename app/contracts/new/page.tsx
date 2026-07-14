@@ -20,8 +20,8 @@ import {
   Loader2
 } from "lucide-react";
 import { MOCK_CLAUSES, CONTRACT_TEMPLATES } from "@/lib/mockData";
-import { getProfile, saveContract, saveMilestones, getContracts, updateProfile } from "@/lib/storageClient";
-import { Contract, Milestone, Profile } from "@/lib/types";
+import { getProfile, saveContract, saveMilestones, getContracts, updateProfile, getPaymentProfiles } from "@/lib/storageClient";
+import { Contract, Milestone, Profile, PaymentProfile } from "@/lib/types";
 import { validateRFC } from "@/lib/rfcValidator";
 
 function generateUUID(): string {
@@ -81,6 +81,10 @@ function NewContractForm() {
   const [freelancerRegimen, setFreelancerRegimen] = useState("");
   const [freelancerPostal, setFreelancerPostal] = useState("");
 
+  // Payment profiles state
+  const [paymentProfiles, setPaymentProfiles] = useState<PaymentProfile[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
+
   const handleUpgradeToPro = async () => {
     if (!profile) return;
     setIsUpgradeLoading(true);
@@ -99,12 +103,22 @@ function NewContractForm() {
     async function loadData() {
       const prof = await getProfile();
       setProfile(prof);
-      setClabe(prof.bankDetails.clabe);
-      setBankName(prof.bankDetails.bankName);
       setBeneficiaryName(prof.bankDetails.beneficiaryName);
       setFreelancerRfc(prof.rfc || "");
       setFreelancerRegimen(prof.regimenFiscal || "");
       setFreelancerPostal(prof.codigoPostal || "");
+
+      const profilesList = await getPaymentProfiles(prof.id);
+      setPaymentProfiles(profilesList);
+      const defaultProfile = profilesList.find(p => p.isDefault);
+      if (defaultProfile) {
+        setSelectedProfileId(defaultProfile.id);
+        setClabe(defaultProfile.clabe);
+        setBankName(defaultProfile.bankName);
+      } else {
+        setClabe(prof.bankDetails.clabe);
+        setBankName(prof.bankDetails.bankName);
+      }
 
       const contracts = await getContracts();
       const userContracts = contracts.filter(c => c.freelancerId === prof.id);
@@ -261,6 +275,8 @@ function NewContractForm() {
       ivaAmount: totalAmount * 0.16,
       subtotalAmount: totalAmount,
       clientOtpVerified: false,
+      paymentProfileId: selectedProfileId || undefined,
+      selectedClauses: selectedClauses,
       
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -859,9 +875,36 @@ function NewContractForm() {
                   Datos Fiscales y Bancarios a Vincular (Tus datos)
                 </h3>
                 <p className="text-2xs text-slate-400 leading-normal mt-1">
-                  Los datos de tu perfil serán insertados en las firmas y la CLABE. Puedes modificarlos sólo para este contrato aquí.
+                  Los datos de tu perfil serán insertados en las firmas y la CLABE. Puedes modificarlos sólo para este contrato aquí o seleccionar un perfil de pago preestablecido.
                 </p>
               </div>
+
+              {paymentProfiles.length > 0 && (
+                <div className="flex flex-col gap-1.5 text-left bg-white/40 dark:bg-slate-900/40 p-4 rounded-xl border border-indigo-500/10">
+                  <label className="text-2xs font-extrabold text-indigo-500 uppercase tracking-widest">Perfil de Pago SPEI Rápido</label>
+                  <select
+                    value={selectedProfileId}
+                    onChange={(e) => {
+                      const pid = e.target.value;
+                      setSelectedProfileId(pid);
+                      const selected = paymentProfiles.find(p => p.id === pid);
+                      if (selected) {
+                        setClabe(selected.clabe);
+                        setBankName(selected.bankName);
+                      } else if (profile) {
+                        setClabe(profile.bankDetails.clabe);
+                        setBankName(profile.bankDetails.bankName);
+                      }
+                    }}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-2 text-xs focus:border-indigo-500 focus:outline-none dark:text-white transition-all cursor-pointer"
+                  >
+                    <option value="">-- Datos de perfil por defecto --</option>
+                    {paymentProfiles.map(p => (
+                      <option key={p.id} value={p.id}>{p.nickname} ({p.bankName} - {p.clabe.slice(-4)})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>

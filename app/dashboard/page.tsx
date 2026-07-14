@@ -13,13 +13,15 @@ import {
   CreditCard, 
   AlertCircle, 
   Eye, 
+  Edit3,
   Settings, 
   ExternalLink, 
   ShieldCheck, 
   Briefcase, 
   RotateCcw,
   BarChart3,
-  Printer
+  Printer,
+  X
 } from "lucide-react";
 import { 
   getContracts, 
@@ -33,9 +35,17 @@ import {
   vetAndAcceptContract,
   addAuditLog,
   loadSampleData,
-  getContractVersions
+  getContractVersions,
+  cancelContract,
+  markContractCompleted,
+  getPaymentProfiles,
+  savePaymentProfile,
+  deletePaymentProfile,
+  uploadBrandAsset,
+  markMilestoneAsTransferred,
+  uploadReceiptFile
 } from "@/lib/storageClient";
-import { Contract, Milestone, Profile, AuditLog, ContractVersion } from "@/lib/types";
+import { Contract, Milestone, Profile, AuditLog, ContractVersion, PaymentProfile } from "@/lib/types";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -56,6 +66,17 @@ export default function Dashboard() {
   const [editScopeDescription, setEditScopeDescription] = useState("");
   const [editTotalAmount, setEditTotalAmount] = useState(0);
   const [editMilestones, setEditMilestones] = useState<Milestone[]>([]);
+  const [editClientName, setEditClientName] = useState("");
+  const [editClientEmail, setEditClientEmail] = useState("");
+  const [editClientPhone, setEditClientPhone] = useState("");
+  const [editClientRfc, setEditClientRfc] = useState("");
+  const [editClientRegimen, setEditClientRegimen] = useState("");
+  const [editClientPostal, setEditClientPostal] = useState("");
+  const [editCurrency, setEditCurrency] = useState<'MXN' | 'USD'>("MXN");
+  const [editRetencionIsr, setEditRetencionIsr] = useState(false);
+  const [editRetencionIva, setEditRetencionIva] = useState(false);
+  const [editSelectedClauses, setEditSelectedClauses] = useState<string[]>([]);
+
 
   const [fullName, setFullName] = useState("");
   const [clabe, setClabe] = useState("");
@@ -70,6 +91,52 @@ export default function Dashboard() {
   const [isDemo, setIsDemo] = useState(false);
   const [phone, setPhone] = useState("");
   const [contractVersions, setContractVersions] = useState<ContractVersion[]>([]);
+
+  // Cancellation & Double-Completion Flow States
+  const [isCancellingContract, setIsCancellingContract] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
+  // Payment Profiles CRUD States
+  const [paymentProfiles, setPaymentProfiles] = useState<PaymentProfile[]>([]);
+  const [editingProfile, setEditingProfile] = useState<PaymentProfile | null>(null);
+  const [showProfileForm, setShowProfileForm] = useState(true);
+  const [profileNickname, setProfileNickname] = useState("");
+  const [profileBankName, setProfileBankName] = useState("");
+  const [profileClabe, setProfileClabe] = useState("");
+  const [profileInstructions, setProfileInstructions] = useState("");
+
+  // Upload/Error banner states
+  const [uploadError, setUploadError] = useState("");
+
+  // Freelancer Payment Proof States
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMilestone, setPaymentMilestone] = useState<Milestone | null>(null);
+  const [trackingReference, setTrackingReference] = useState("");
+  const [transferredAmount, setTransferredAmount] = useState<number>(0);
+  const [receiptUrl, setReceiptUrl] = useState("");
+  const [receiptFileType, setReceiptFileType] = useState<'file' | 'url'>('file');
+  const [receiptFileBase64, setReceiptFileBase64] = useState("");
+  const [receiptFileName, setReceiptFileName] = useState("");
+  const [receiptFileMimeType, setReceiptFileMimeType] = useState("");
+  const [overrideExchangeRate, setOverrideExchangeRate] = useState("20.15");
+  const [modalError, setModalError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Warning/Confirmation Modal State
+  const [warningModal, setWarningModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: (() => Promise<void>) | null;
+    isError?: boolean;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+    isError: false
+  });
+
 
   useEffect(() => {
     async function loadInitialData() {
@@ -98,6 +165,14 @@ export default function Dashboard() {
       setLogoUrl(prof.logoUrl || "");
       setSignatureUrl(prof.signatureUrl || "");
       setPhone(prof.phone || "");
+
+      // Load payment profiles
+      try {
+        const profilesList = await getPaymentProfiles(prof.id);
+        setPaymentProfiles(profilesList);
+      } catch (err) {
+        console.error("Error loading payment profiles:", err);
+      }
 
       const allContracts = await getContracts();
       setContracts(allContracts);
@@ -155,9 +230,128 @@ export default function Dashboard() {
   };
 
   const handleUpdateMilestone = async (milestoneId: string, newStatus: 'pending' | 'requested' | 'marked_paid' | 'confirmed') => {
-    await updateMilestoneStatus(milestoneId, newStatus);
-    await refreshData();
+    const milestone = allMilestones.find(m => m.id === milestoneId);
+    const currentStatus = milestone ? milestone.status : 'pending';
+    const statusOrder = ['pending', 'requested', 'marked_paid', 'confirmed'];
+    const isRevert = statusOrder.indexOf(newStatus) < statusOrder.indexOf(currentStatus);
+
+    const executeUpdate = async () => {
+      try {
+        await updateMilestoneStatus(milestoneId, newStatus);
+        await refreshData();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setWarningModal({
+          isOpen: true,
+          title: "Error de Transición",
+          message: `No se pudo actualizar el hito: ${msg}`,
+          onConfirm: null,
+          isError: true
+        });
+      }
+    };
+
+    if (isRevert) {
+      setWarningModal({
+        isOpen: true,
+        title: "Revertir Estado de Hito",
+        message: `¿Estás seguro de que deseas revertir el estado del hito "${milestone?.label || ''}" de "${currentStatus}" a "${newStatus}"? Esto podría alterar el flujo del contrato.`,
+        onConfirm: executeUpdate,
+        isError: false
+      });
+    } else {
+      await executeUpdate();
+    }
   };
+
+  const handleOpenPaymentModal = (milestone: Milestone) => {
+    setPaymentMilestone(milestone);
+    setTrackingReference("");
+    setTransferredAmount(milestone.amount);
+    setReceiptUrl("");
+    setReceiptFileType("file");
+    setReceiptFileBase64("");
+    setReceiptFileName("");
+    setReceiptFileMimeType("");
+    setModalError("");
+    setOverrideExchangeRate("20.15");
+    setShowPaymentModal(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setReceiptFileBase64("");
+      setReceiptFileName("");
+      setReceiptFileMimeType("");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setModalError("El archivo excede el límite de tamaño de 5MB.");
+      return;
+    }
+
+    const allowedMimeTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+    if (!allowedMimeTypes.includes(file.type)) {
+      setModalError("Solo se permiten archivos PDF o imágenes (PNG, JPG).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const base64Data = result.split(",")[1];
+      setReceiptFileBase64(base64Data);
+      setReceiptFileName(file.name);
+      setReceiptFileMimeType(file.type);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleMarkAsTransferred = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentMilestone || !trackingReference || !selectedContract) return;
+
+    setLoading(true);
+    setModalError("");
+    try {
+      let resolvedReceiptUrl = undefined;
+      if (receiptFileType === 'file') {
+        if (!receiptFileBase64) {
+          throw new Error("Por favor, seleccione un archivo de comprobante de pago.");
+        }
+        resolvedReceiptUrl = await uploadReceiptFile(
+          receiptFileName,
+          receiptFileMimeType,
+          receiptFileBase64
+        );
+      } else {
+        resolvedReceiptUrl = receiptUrl || undefined;
+      }
+
+      const fxRate = parseFloat(overrideExchangeRate) || 20.15;
+      const mxnSum = selectedContract.currency === "USD" ? (transferredAmount * fxRate) : undefined;
+
+      await markMilestoneAsTransferred(
+        paymentMilestone.id,
+        trackingReference,
+        transferredAmount,
+        resolvedReceiptUrl,
+        selectedContract.currency === "USD" ? fxRate : undefined,
+        mxnSum
+      );
+      await refreshData();
+      setShowPaymentModal(false);
+      setPaymentMilestone(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al guardar referencia de transferencia.";
+      setModalError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleUpdateContractStatus = async (newStatus: Contract['status']) => {
     if (!selectedContract) return;
@@ -172,15 +366,34 @@ export default function Dashboard() {
 
   const handleVetAndCounterSign = async () => {
     if (!selectedContract) return;
-    try {
-      const updated = await vetAndAcceptContract(selectedContract.id, profile?.fullName || "Héctor J. Guerrero");
-      if (updated) {
-        await refreshData();
+
+    const executeVet = async () => {
+      try {
+        const updated = await vetAndAcceptContract(selectedContract.id, profile?.fullName || "Héctor J. Guerrero");
+        if (updated) {
+          await refreshData();
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Contra-firmar",
+          message: `No se pudo contra-firmar y sellar el contrato: ${msg}`,
+          onConfirm: null,
+          isError: true
+        });
       }
-    } catch (err) {
-      alert("Error al validar y contra-firmar el contrato: " + err);
-    }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Contra-firmar y Sellar Contrato",
+      message: "¿Estás seguro de que deseas contra-firmar y sellar este contrato? Esto formalizará legalmente el acuerdo bajo los términos actuales y no podrá editarse.",
+      onConfirm: executeVet,
+      isError: false
+    });
   };
+
 
   const handleEditTotalAmountChange = (newTotal: number) => {
     setEditTotalAmount(newTotal);
@@ -211,43 +424,288 @@ export default function Dashboard() {
     });
   };
 
+  const handleEditAddMilestone = () => {
+    setEditMilestones(prev => [
+      ...prev,
+      {
+        id: "new-" + Math.random().toString(36).substring(2, 9),
+        contractId: selectedContract?.id || "",
+        label: "",
+        amount: 0,
+        dueDate: new Date(Date.now() + (prev.length + 1) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: 'pending',
+        created_at: new Date().toISOString()
+      }
+    ]);
+  };
+
+  const handleEditRemoveMilestone = (idx: number) => {
+    if (editMilestones.length <= 1) return;
+    setEditMilestones(prev => {
+      const updated = prev.filter((_, i) => i !== idx);
+      const newSum = updated.reduce((sum, m) => sum + m.amount, 0);
+      setEditTotalAmount(newSum);
+      return updated;
+    });
+  };
+
+  const handleCancelContract = async () => {
+    if (!selectedContract || !cancelReason.trim()) return;
+
+    const executeCancel = async () => {
+      try {
+        await cancelContract(selectedContract.id, "freelancer", cancelReason);
+        setIsCancellingContract(false);
+        setCancelReason("");
+        await refreshData();
+      } catch (err) {
+        const error = err as Error;
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Cancelar Contrato",
+          message: `No se pudo cancelar el contrato: ${error.message}`,
+          onConfirm: null,
+          isError: true
+        });
+      }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Cancelar Contrato",
+      message: "¿Estás seguro de que deseas cancelar este contrato? Esta acción es irreversible y anulará todos los hitos pendientes.",
+      onConfirm: executeCancel,
+      isError: false
+    });
+  };
+
+  const handleMarkCompleted = async () => {
+    if (!selectedContract) return;
+
+    const executeComplete = async () => {
+      try {
+        await markContractCompleted(selectedContract.id, "freelancer");
+        await refreshData();
+      } catch (err) {
+        const error = err as Error;
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Completar Contrato",
+          message: `No se pudo marcar el contrato como completado: ${error.message}`,
+          onConfirm: null,
+          isError: true
+        });
+      }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Completar Contrato",
+      message: "¿Estás seguro de que deseas marcar este contrato como completado? Esto finalizará la relación comercial bajo este acuerdo.",
+      onConfirm: executeComplete,
+      isError: false
+    });
+  };
+
+
+  const handleBrandFileUpload = async (file: File | undefined, type: "logo" | "signature") => {
+    if (!file) return;
+    setUploadError("");
+    if (file.size > 2 * 1024 * 1024) {
+      setUploadError("El archivo excede el límite de tamaño de 2MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64 = (reader.result as string).split(",")[1];
+        const uploadedUrl = await uploadBrandAsset(file.name, file.type, base64);
+        if (type === "logo") {
+          setLogoUrl(uploadedUrl);
+        } else {
+          setSignatureUrl(uploadedUrl);
+        }
+      } catch (err) {
+        const error = err as Error;
+        setUploadError("Error al subir archivo: " + error.message);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile) return;
+    try {
+      const newProfile = {
+        id: editingProfile?.id || "pp-" + Math.random().toString(36).substring(2, 9),
+        freelancerId: profile.id,
+        nickname: profileNickname,
+        bankName: profileBankName,
+        clabe: profileClabe,
+        paymentInstructions: profileInstructions || undefined,
+        isDefault: editingProfile ? editingProfile.isDefault : paymentProfiles.length === 0,
+      };
+      await savePaymentProfile(newProfile);
+      
+      // Refresh list
+      const profilesList = await getPaymentProfiles(profile.id);
+      setPaymentProfiles(profilesList);
+      
+      // Reset form
+      setEditingProfile(null);
+      setProfileNickname("");
+      setProfileBankName("");
+      setProfileClabe("");
+      setProfileInstructions("");
+      setShowProfileForm(false);
+    } catch (err) {
+      const error = err as Error;
+      alert("Error al guardar perfil de pago: " + error.message);
+    }
+  };
+
+  const handleDeleteProfile = async (id: string) => {
+    if (!profile || !confirm("¿Seguro que deseas eliminar este perfil de pago?")) return;
+    try {
+      await deletePaymentProfile(id);
+      const profilesList = await getPaymentProfiles(profile.id);
+      setPaymentProfiles(profilesList);
+    } catch (err) {
+      const error = err as Error;
+      alert("Error al eliminar perfil de pago: " + error.message);
+    }
+  };
+
+  const handleSetDefaultProfile = async (id: string) => {
+    if (!profile) return;
+    try {
+      const updated = paymentProfiles.map(p => ({
+        ...p,
+        isDefault: p.id === id
+      }));
+      for (const p of updated) {
+        await savePaymentProfile(p);
+      }
+      const profilesList = await getPaymentProfiles(profile.id);
+      setPaymentProfiles(profilesList);
+    } catch (err) {
+      const error = err as Error;
+      alert("Error al establecer perfil por defecto: " + error.message);
+    }
+  };
+  const startEditingContract = () => {
+    if (!selectedContract) return;
+    setEditScopeDescription(selectedContract.scopeDescription);
+    setEditTotalAmount(selectedContract.totalAmount);
+    setEditMilestones(milestones.map(m => ({ ...m })));
+    setEditClientName(selectedContract.clientName);
+    setEditClientEmail(selectedContract.clientEmail);
+    setEditClientPhone(selectedContract.clientPhone || "");
+    setEditClientRfc(selectedContract.clientRfc || "");
+    setEditClientRegimen(selectedContract.clientRegimen || "");
+    setEditClientPostal(selectedContract.clientPostal || "");
+    setEditCurrency(selectedContract.currency);
+    setEditRetencionIsr(!!selectedContract.retencionIsr);
+    setEditRetencionIva(!!selectedContract.retencionIva);
+    setEditSelectedClauses(selectedContract.selectedClauses || []);
+    setIsEditingContract(true);
+  };
+
   const handleSaveModification = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedContract) return;
 
-    try {
-      const updatedContract: Contract = {
-        ...selectedContract,
-        scopeDescription: editScopeDescription,
-        totalAmount: editTotalAmount,
-        status: 'sent',
-        acceptedAt: undefined,
-        acceptedByName: undefined,
-        acceptedIp: undefined,
-        freelancerAcceptedAt: undefined,
-        freelancerAcceptedByName: undefined,
-        freelancerAcceptedIp: undefined,
-        contractHash: undefined
-      };
-
-      await saveContract(updatedContract);
-      await saveMilestones(editMilestones);
-
-      await addAuditLog({
-        contractId: selectedContract.id,
-        action: 'modified',
-        actor: 'freelancer',
-        details: `El freelancer modificó el alcance y presupuesto del contrato (Nuevo monto: ${editTotalAmount} ${selectedContract.currency}). El acuerdo regresó a estado Enviado.`,
-        ip: '127.0.0.1'
-      });
-
-      setIsEditingContract(false);
-      await refreshData();
-      alert("Propuesta modificada con éxito. El estado se ha restablecido a 'Enviado' para la aceptación y firma del cliente.");
-    } catch (err) {
-      alert("Error al guardar modificaciones: " + err);
+    // Validate milestone sums
+    const milestoneSum = editMilestones.reduce((sum, m) => sum + m.amount, 0);
+    if (Math.abs(milestoneSum - editTotalAmount) > 0.01) {
+      alert(`La suma de los hitos (${milestoneSum} ${editCurrency}) debe ser exactamente igual al monto total del contrato (${editTotalAmount} ${editCurrency}). Por favor, ajusta los importes de tus hitos.`);
+      return;
     }
+
+    const executeSaveModification = async () => {
+      try {
+        const total = editTotalAmount;
+        const subtotalAmount = total;
+        const taxWithholdingAmount = (editRetencionIsr ? total * 0.10 : 0) + (editRetencionIva ? total * 0.16 * (2 / 3) : 0);
+        const ivaAmount = total * 0.16;
+
+        const updatedContract: Contract = {
+          ...selectedContract,
+          clientName: editClientName,
+          clientEmail: editClientEmail,
+          clientPhone: editClientPhone || undefined,
+          clientRfc: editClientRfc || undefined,
+          clientRegimen: editClientRegimen || undefined,
+          clientPostal: editClientPostal || undefined,
+          scopeDescription: editScopeDescription,
+          totalAmount: total,
+          currency: editCurrency,
+          retencionIsr: editRetencionIsr,
+          retencionIva: editRetencionIva,
+          taxWithholdingAmount,
+          ivaAmount,
+          subtotalAmount,
+          selectedClauses: editSelectedClauses,
+          status: 'sent',
+          acceptedAt: undefined,
+          acceptedByName: undefined,
+          acceptedIp: undefined,
+          freelancerAcceptedAt: undefined,
+          freelancerAcceptedByName: undefined,
+          freelancerAcceptedIp: undefined,
+          contractHash: undefined
+        };
+
+        // Ensure newly added milestones have cryptographically secure UUIDs
+        const finalMilestones = editMilestones.map((m) => {
+          const finalId = m.id.startsWith("new-") ? (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+            const r = (Math.random() * 16) | 0;
+            const v = c === "x" ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+          })) : m.id;
+          return {
+            ...m,
+            id: finalId,
+            contractId: selectedContract.id
+          };
+        });
+
+        await saveContract(updatedContract);
+        await saveMilestones(finalMilestones);
+
+        await addAuditLog({
+          contractId: selectedContract.id,
+          action: 'modified',
+          actor: 'freelancer',
+          details: `El freelancer modificó los componentes del contrato (Nuevo monto: ${editTotalAmount} ${editCurrency}). El acuerdo regresó a estado Enviado.`,
+          ip: '127.0.0.1'
+        });
+
+        setIsEditingContract(false);
+        await refreshData();
+        alert("Propuesta modificada con éxito. El estado se ha restablecido a 'Enviado' para la aceptación y firma del cliente.");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Modificar Propuesta",
+          message: `No se pudieron guardar las modificaciones: ${msg}`,
+          onConfirm: null,
+          isError: true
+        });
+      }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Guardar Modificaciones",
+      message: "¿Estás seguro de que deseas guardar estas modificaciones? El contrato se restablecerá a estado 'Enviado' y requerirá la firma del cliente nuevamente.",
+      onConfirm: executeSaveModification,
+      isError: false
+    });
   };
+
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -966,25 +1424,194 @@ export default function Dashboard() {
             </div>
 
             <div className="flex flex-col gap-1.5 md:col-span-2">
-              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Logo de la Empresa (URL de Imagen)</label>
-              <input
-                type="text"
-                placeholder="Ej. https://images.unsplash.com/photo-... o de tu sitio"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-              />
+              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Logo de tu Empresa (PNG, JPG, SVG - Máx 2MB)</label>
+              {profile?.tier === "free" ? (
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/50 px-4 py-2 text-xs text-slate-450">
+                  🔒 Disponible en Planes de Pago. Sube a un plan Starter o Pro para personalizar tu marca.
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept=".png,.jpg,.jpeg,.svg"
+                    onChange={(e) => handleBrandFileUpload(e.target.files?.[0], "logo")}
+                    className="flex-grow rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                  {logoUrl && (
+                    <img src={logoUrl} alt="Preview Logo" className="h-10 w-10 object-contain rounded-lg border border-slate-200 bg-white p-0.5" />
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Firma Digital (URL de Imagen)</label>
-              <input
-                type="text"
-                placeholder="Ej. https://upload.wikimedia.org/... o firma"
-                value={signatureUrl}
-                onChange={(e) => setSignatureUrl(e.target.value)}
-                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-              />
+              <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Firma Digital (PNG, JPG - Máx 2MB)</label>
+              {profile?.tier === "free" ? (
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/50 px-4 py-2 text-xs text-slate-450">
+                  🔒 Disponible en Planes de Pago.
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept=".png,.jpg,.jpeg"
+                    onChange={(e) => handleBrandFileUpload(e.target.files?.[0], "signature")}
+                    className="flex-grow rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                  {signatureUrl && (
+                    <img src={signatureUrl} alt="Preview Signature" className="h-10 w-10 object-contain rounded-lg border border-slate-200 bg-white p-0.5" />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {uploadError && (
+              <div className="md:col-span-3 text-xs text-red-500 font-semibold bg-red-500/5 p-2 rounded-xl border border-red-500/10">
+                ⚠️ {uploadError}
+              </div>
+            )}
+
+            {/* Payment Profiles CRUD Section */}
+            <div className="md:col-span-3 border-t border-slate-200 dark:border-slate-800 pt-6 mt-2">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Perfiles de Pago Bancarios</h4>
+                  <p className="text-3xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Registra múltiples cuentas para prellenar datos rápidamente al generar nuevos contratos.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingProfile(null);
+                    setProfileNickname("");
+                    setProfileBankName("");
+                    setProfileClabe("");
+                    setProfileInstructions("");
+                    setShowProfileForm(!showProfileForm);
+                  }}
+                  className="rounded-xl bg-indigo-50 dark:bg-slate-900 text-indigo-650 dark:text-indigo-400 border border-indigo-200/50 dark:border-slate-800 px-4 py-2 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  {showProfileForm ? "Cerrar Formulario" : "Agregar Cuenta"}
+                </button>
+              </div>
+
+              {showProfileForm && (
+                <div className="bg-slate-50/50 dark:bg-slate-900/30 border border-slate-200/50 dark:border-slate-800 rounded-2xl p-4 mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-3xs font-semibold text-slate-455 uppercase tracking-wider">Apodo de la Cuenta (Ej. Nómina, USD Principal)</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej. Mi Cuenta Principal"
+                      value={profileNickname}
+                      onChange={(e) => setProfileNickname(e.target.value)}
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-3xs font-semibold text-slate-455 uppercase tracking-wider">Banco Receptor</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej. BBVA, Santander, STP"
+                      value={profileBankName}
+                      onChange={(e) => setProfileBankName(e.target.value)}
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-3xs font-semibold text-slate-455 uppercase tracking-wider">CLABE Interbancaria (18 dígitos)</label>
+                    <input
+                      type="text"
+                      maxLength={18}
+                      required
+                      placeholder="18 dígitos"
+                      value={profileClabe}
+                      onChange={(e) => setProfileClabe(e.target.value)}
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-3xs font-semibold text-slate-455 uppercase tracking-wider">Instrucciones de Pago Adicionales (Opcional)</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Transferir neto antes de las 5pm"
+                      value={profileInstructions}
+                      onChange={(e) => setProfileInstructions(e.target.value)}
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
+                  <div className="md:col-span-2 flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveProfile}
+                      disabled={!profileNickname || !profileBankName || profileClabe.length !== 18}
+                      className="rounded-xl bg-indigo-600 hover:bg-indigo-550 text-white font-semibold px-4 py-2 text-xs transition-colors shadow-md shadow-indigo-500/10 disabled:opacity-50 cursor-pointer"
+                    >
+                      Guardar Perfil
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {paymentProfiles.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {paymentProfiles.map((p) => (
+                    <div key={p.id} className={`rounded-2xl border p-4 text-xs flex flex-col justify-between gap-3 ${p.isDefault ? "border-indigo-500 bg-indigo-500/5" : "border-slate-200 dark:border-slate-800"}`}>
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-bold text-slate-850 dark:text-slate-200 flex items-center gap-1.5">
+                            {p.nickname}
+                            {p.isDefault && <span className="rounded-full bg-indigo-500 text-white text-3xs px-1.5 py-0.5 font-semibold">Predeterminado</span>}
+                          </span>
+                          <span className="font-mono text-slate-400">{p.bankName}</span>
+                        </div>
+                        <p className="font-mono text-slate-600 dark:text-slate-350 break-all select-all mt-1">CLABE: {p.clabe}</p>
+                        {p.paymentInstructions && (
+                          <p className="text-3xs text-slate-450 italic mt-1">Nota: {p.paymentInstructions}</p>
+                        )}
+                      </div>
+                      <div className="flex justify-end gap-2 border-t border-slate-100 dark:border-slate-850/50 pt-2.5">
+                        {!p.isDefault && (
+                          <button
+                            type="button"
+                            onClick={() => handleSetDefaultProfile(p.id)}
+                            className="text-3xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                          >
+                            Hacer Predeterminado
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingProfile(p);
+                            setProfileNickname(p.nickname);
+                            setProfileBankName(p.bankName);
+                            setProfileClabe(p.clabe);
+                            setProfileInstructions(p.paymentInstructions || "");
+                            setShowProfileForm(true);
+                          }}
+                          className="text-3xs font-semibold text-slate-600 dark:text-slate-400 hover:underline cursor-pointer"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProfile(p.id)}
+                          className="text-3xs font-semibold text-red-650 hover:underline cursor-pointer"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-8 text-center text-xs text-slate-400 font-light leading-normal">
+                  No has registrado perfiles de pago adicionales. El sistema usará la cuenta CLABE registrada arriba por defecto.
+                </div>
+              )}
             </div>
 
             <div className="md:col-span-3 flex justify-between items-center pt-2">
@@ -1182,7 +1809,19 @@ export default function Dashboard() {
             <div className="glass rounded-3xl p-6 flex flex-col gap-6 text-left animate-in fade-in-50 duration-300">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b border-slate-100 dark:border-slate-800 pb-5">
                 <div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Detalles de Contrato</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Detalles de Contrato</span>
+                    {['draft', 'sent', 'client_signed', 'accepted'].includes(selectedContract.status) && (
+                      <button
+                        onClick={startEditingContract}
+                        className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                        title="Modificar Datos de Cliente"
+                      >
+                        <Edit3 className="h-2.5 w-2.5" />
+                        Editar
+                      </button>
+                    )}
+                  </div>
                   <h2 className="text-2xl font-extrabold mt-0.5 text-slate-900 dark:text-white">
                     {selectedContract.clientName}
                   </h2>
@@ -1258,12 +1897,7 @@ export default function Dashboard() {
                       Marcar como Enviado
                     </button>
                     <button
-                      onClick={() => {
-                        setEditScopeDescription(selectedContract.scopeDescription);
-                        setEditTotalAmount(selectedContract.totalAmount);
-                        setEditMilestones(milestones.map(m => ({ ...m })));
-                        setIsEditingContract(true);
-                      }}
+                      onClick={startEditingContract}
                       className="border border-amber-300 dark:border-amber-700 bg-white/20 dark:bg-slate-900/20 hover:bg-white dark:hover:bg-slate-900 text-amber-800 dark:text-amber-400 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
                     >
                       Modificar Propuesta
@@ -1281,12 +1915,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <button
-                    onClick={() => {
-                      setEditScopeDescription(selectedContract.scopeDescription);
-                      setEditTotalAmount(selectedContract.totalAmount);
-                      setEditMilestones(milestones.map(m => ({ ...m })));
-                      setIsEditingContract(true);
-                    }}
+                    onClick={startEditingContract}
                     className="w-full mt-1 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 text-indigo-650 dark:text-indigo-400 font-bold py-2 text-xs transition-colors flex items-center justify-center gap-1.5"
                   >
                     Modificar Propuesta
@@ -1314,12 +1943,7 @@ export default function Dashboard() {
                       Validar y Contra-firmar
                     </button>
                     <button
-                      onClick={() => {
-                        setEditScopeDescription(selectedContract.scopeDescription);
-                        setEditTotalAmount(selectedContract.totalAmount);
-                        setEditMilestones(milestones.map(m => ({ ...m })));
-                        setIsEditingContract(true);
-                      }}
+                      onClick={startEditingContract}
                       className="rounded-xl border border-purple-200 dark:border-purple-800 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 text-purple-750 dark:text-purple-400 font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
                       Modificar Propuesta
@@ -1329,7 +1953,7 @@ export default function Dashboard() {
               )}
 
               {selectedContract.status === 'accepted' && (
-                <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-800 dark:text-emerald-400 flex flex-col gap-2">
+                <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-800 dark:text-emerald-400 flex flex-col gap-3">
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5 text-emerald-600" />
                     <div>
@@ -1342,6 +1966,53 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
+                  
+                  {/* Completion status info */}
+                  {selectedContract.freelancerCompletedAt ? (
+                    <div className="flex flex-col gap-3 border-t border-emerald-500/10 pt-3">
+                      <div className="text-xs text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1.5 animate-pulse-subtle">
+                        <span className="h-2 w-2 rounded-full bg-amber-500"></span>
+                        Entregado por tu parte. Esperando confirmación del cliente.
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          onClick={startEditingContract}
+                          className="w-full rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 text-indigo-650 dark:text-indigo-400 font-bold py-2 text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          Modificar Propuesta
+                        </button>
+                        <button
+                          onClick={() => setIsCancellingContract(true)}
+                          className="w-full rounded-xl border border-red-200 dark:border-red-900 bg-white/20 dark:bg-slate-900/20 text-red-650 dark:text-red-400 hover:bg-red-550/10 font-bold py-2 text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          Cancelar Contrato
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border-t border-emerald-500/10 pt-3">
+                      <button
+                        onClick={handleMarkCompleted}
+                        className="rounded-xl bg-emerald-600 hover:bg-emerald-550 text-white font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/10 cursor-pointer"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Marcar Proyecto como Terminado
+                      </button>
+                      <button
+                        onClick={startEditingContract}
+                        className="rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white/20 dark:bg-slate-900/20 hover:bg-white dark:hover:bg-slate-900 text-emerald-800 dark:text-emerald-400 font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        Modificar Propuesta
+                      </button>
+                      <button
+                        onClick={() => setIsCancellingContract(true)}
+                        className="rounded-xl border border-red-200 dark:border-red-900 bg-white/20 dark:bg-slate-900/20 text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        Cancelar Contrato
+                      </button>
+                    </div>
+                  )}
+
                   <div className="text-3xs text-slate-400 bg-slate-100 dark:bg-slate-900/50 rounded-lg p-2 font-mono break-all mt-2 select-all">
                     Integrity Hash: {selectedContract.contractHash}
                   </div>
@@ -1488,7 +2159,19 @@ export default function Dashboard() {
               )}
 
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Alcance de Trabajo</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Alcance de Trabajo</span>
+                  {['draft', 'sent', 'client_signed', 'accepted'].includes(selectedContract.status) && (
+                    <button
+                      onClick={startEditingContract}
+                      className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                      title="Modificar Alcance"
+                    >
+                      <Edit3 className="h-2.5 w-2.5" />
+                      Editar
+                    </button>
+                  )}
+                </div>
                 <div className="bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl p-4 text-sm leading-relaxed border border-slate-100 dark:border-slate-800/50">
                   {selectedContract.scopeDescription}
                 </div>
@@ -1496,7 +2179,19 @@ export default function Dashboard() {
 
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Esquema de Anticipos e Hitos</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Esquema de Anticipos e Hitos</span>
+                    {['draft', 'sent', 'client_signed', 'accepted'].includes(selectedContract.status) && (
+                      <button
+                        onClick={startEditingContract}
+                        className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                        title="Modificar Hitos y Presupuesto"
+                      >
+                        <Edit3 className="h-2.5 w-2.5" />
+                        Editar
+                      </button>
+                    )}
+                  </div>
                   <span className="text-xs font-bold text-indigo-500">
                     Total: {formatMoney(selectedContract.totalAmount, selectedContract.currency)}
                   </span>
@@ -1605,7 +2300,7 @@ export default function Dashboard() {
                                       <RotateCcw className="h-3.5 w-3.5" />
                                     </button>
                                     <button
-                                      onClick={() => handleUpdateMilestone(milestone.id, 'marked_paid')}
+                                      onClick={() => handleOpenPaymentModal(milestone)}
                                       className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
                                     >
                                       Marcar como Pagado
@@ -1884,19 +2579,37 @@ export default function Dashboard() {
               </div>
 
               {/* Legal Clauses */}
-              {MOCK_CLAUSES && MOCK_CLAUSES.length > 0 && (
-                <div>
-                  <h3 className="text-3xs font-bold text-slate-400 uppercase tracking-widest mb-3">Cláusulas de Acuerdo</h3>
-                  <div className="flex flex-col gap-4 text-xs font-light text-slate-500 dark:text-slate-400 leading-relaxed">
-                    {MOCK_CLAUSES.map((clause, idx) => (
+              <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-3xs font-bold text-slate-400 uppercase tracking-widest">Cláusulas de Acuerdo</h3>
+                  {['draft', 'sent', 'client_signed', 'accepted'].includes(selectedContract.status) && (
+                    <button
+                      onClick={startEditingContract}
+                      className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                      title="Modificar Cláusulas"
+                    >
+                      <Edit3 className="h-2.5 w-2.5" />
+                      Editar
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-4 text-xs font-light text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {(() => {
+                    const renderedClauses = selectedContract.selectedClauses && selectedContract.selectedClauses.length > 0
+                      ? MOCK_CLAUSES.filter(c => selectedContract.selectedClauses?.includes(c.id))
+                      : MOCK_CLAUSES;
+                    if (renderedClauses.length === 0) {
+                      return <p className="text-2xs text-slate-400 italic">No se seleccionaron cláusulas para este acuerdo.</p>;
+                    }
+                    return renderedClauses.map((clause, idx) => (
                       <div key={clause.id || idx}>
                         <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{idx + 1}. {clause.title}</h4>
                         <p>{clause.content}</p>
                       </div>
-                    ))}
-                  </div>
+                    ));
+                  })()}
                 </div>
-              )}
+              </div>
 
               {/* Signatures & Seal Box */}
               <div className="border-t border-slate-200 dark:border-slate-800 pt-6 flex flex-col gap-6">
@@ -1959,7 +2672,7 @@ export default function Dashboard() {
               </h3>
               <button
                 onClick={() => setIsEditingContract(false)}
-                className="rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-bold transition-colors"
+                className="rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1967,71 +2680,316 @@ export default function Dashboard() {
 
             {/* Content */}
             <form onSubmit={handleSaveModification} className="p-6 flex flex-col gap-6 text-left">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Scope Input */}
-                <div className="md:col-span-2 flex flex-col gap-1.5">
-                  <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Concepto y Alcance de Trabajo</label>
-                  <textarea
-                    rows={6}
-                    required
-                    value={editScopeDescription}
-                    onChange={(e) => setEditScopeDescription(e.target.value)}
-                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-                  />
+              
+              {/* Section 1: Client Details */}
+              <div className="flex flex-col gap-4">
+                <h4 className="text-2xs font-extrabold text-indigo-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">1. Datos del Cliente</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Nombre / Razón Social</label>
+                    <input
+                      type="text"
+                      required
+                      value={editClientName}
+                      onChange={(e) => setEditClientName(e.target.value)}
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Correo Electrónico</label>
+                    <input
+                      type="email"
+                      required
+                      value={editClientEmail}
+                      onChange={(e) => setEditClientEmail(e.target.value)}
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Teléfono de Contacto</label>
+                    <input
+                      type="text"
+                      value={editClientPhone}
+                      onChange={(e) => setEditClientPhone(e.target.value)}
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                      placeholder="Ej. +525512345678"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">RFC Cliente</label>
+                    <input
+                      type="text"
+                      value={editClientRfc}
+                      onChange={(e) => setEditClientRfc(e.target.value.toUpperCase())}
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                      placeholder="Ej. GUEH860710MX3"
+                      maxLength={13}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Régimen Fiscal</label>
+                    <select
+                      value={editClientRegimen}
+                      onChange={(e) => setEditClientRegimen(e.target.value)}
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white bg-slate-900"
+                    >
+                      <option value="">-- Selecciona Régimen --</option>
+                      <option value="601 - General de Ley Personas Morales">601 - General de Ley Personas Morales</option>
+                      <option value="603 - Personas Morales con Fines no Lucrativos">603 - Personas Morales con Fines no Lucrativos</option>
+                      <option value="605 - Sueldos y Salarios e Ingresos Asimilados a Salarios">605 - Sueldos y Salarios e Ingresos Asimilados a Salarios</option>
+                      <option value="606 - Arrendamiento">606 - Arrendamiento</option>
+                      <option value="612 - Personas Físicas con Actividades Empresariales y Profesionales">612 - Personas Físicas con Actividades Empresariales y Profesionales</option>
+                      <option value="625 - Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas">625 - Régimen de Plataformas</option>
+                      <option value="626 - Régimen Simplificado de Confianza (RESICO)">626 - Régimen RESICO</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Código Postal</label>
+                    <input
+                      type="text"
+                      value={editClientPostal}
+                      onChange={(e) => setEditClientPostal(e.target.value)}
+                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                      placeholder="Ej. 06000"
+                      maxLength={5}
+                    />
+                  </div>
                 </div>
+              </div>
 
-                {/* Amount Input */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Presupuesto Total ({selectedContract.currency})</label>
-                  <input
-                    type="number"
-                    min={1}
-                    required
-                    value={editTotalAmount || ""}
-                    onChange={(e) => handleEditTotalAmountChange(Number(e.target.value))}
-                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-bold"
-                  />
-                  <p className="text-3xs text-slate-500 dark:text-slate-400 leading-normal mt-1">
-                    Tip: Edita el total para escalar proporcionalmente los hitos, o modifica los montos individuales abajo.
-                  </p>
-                </div>
+              {/* Section 2: Scope, Budget, and Taxes */}
+              <div className="flex flex-col gap-4">
+                <h4 className="text-2xs font-extrabold text-indigo-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">2. Configuración del Proyecto y Retenciones</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Scope Input */}
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Concepto y Alcance de Trabajo</label>
+                    <textarea
+                      rows={4}
+                      required
+                      value={editScopeDescription}
+                      onChange={(e) => setEditScopeDescription(e.target.value)}
+                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    />
+                  </div>
 
-                {/* Individual Milestones Editing Section */}
-                <div className="md:col-span-2 flex flex-col gap-3.5 bg-slate-50/50 dark:bg-slate-900/10 p-4 rounded-2xl border border-slate-200 dark:border-slate-800/80 mt-2">
-                  <span className="text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Desglose e Importes de Hitos</span>
+                  {/* Budget & Currency */}
                   <div className="flex flex-col gap-3">
-                    {editMilestones.map((m, idx) => (
-                      <div key={m.id || idx} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-                        <div className="sm:col-span-7">
-                          <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Concepto</label>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Presupuesto Total</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                        <input
+                          type="number"
+                          min={1}
+                          required
+                          value={editTotalAmount || ""}
+                          onChange={(e) => handleEditTotalAmountChange(Number(e.target.value))}
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent pl-6 pr-3 py-1.5 text-xs font-bold focus:border-indigo-500 focus:outline-none dark:text-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Moneda</label>
+                      <select
+                        value={editCurrency}
+                        onChange={(e) => setEditCurrency(e.target.value as 'MXN' | 'USD')}
+                        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white bg-slate-900 font-bold"
+                      >
+                        <option value="MXN">Pesos Mexicanos (MXN)</option>
+                        <option value="USD">Dólares Americanos (USD)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tax Checkboxes */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start mt-2">
+                  <div className="flex flex-col gap-3 bg-slate-100/50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <span className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block">Retención de Impuestos (México)</span>
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-350 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editRetencionIsr}
+                          onChange={(e) => setEditRetencionIsr(e.target.checked)}
+                          className="rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        Retención ISR (10% Freelancer)
+                      </label>
+                      <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-350 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editRetencionIva}
+                          onChange={(e) => setEditRetencionIva(e.target.checked)}
+                          className="rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        Retención IVA (10.667% / 2/3 partes)
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Tax Breakdown */}
+                  <div className="md:col-span-2 bg-indigo-500/5 p-4 rounded-xl border border-indigo-500/10 flex flex-col gap-2 text-xs">
+                    <span className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block">Desglose Fiscal Estimado</span>
+                    <div className="flex justify-between border-b border-slate-200/50 dark:border-slate-800 pb-1 text-slate-650 dark:text-slate-450">
+                      <span>Subtotal (Monto del Proyecto):</span>
+                      <span className="font-semibold">{formatMoney(editTotalAmount, editCurrency)}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-200/50 dark:border-slate-800 pb-1 text-slate-650 dark:text-slate-450">
+                      <span>IVA Trasladado (16%):</span>
+                      <span className="font-semibold">{formatMoney(editTotalAmount * 0.16, editCurrency)}</span>
+                    </div>
+                    {editRetencionIsr && (
+                      <div className="flex justify-between text-red-500 border-b border-slate-200/50 dark:border-slate-800 pb-1">
+                        <span>Retención ISR (10%):</span>
+                        <span className="font-semibold">-{formatMoney(editTotalAmount * 0.10, editCurrency)}</span>
+                      </div>
+                    )}
+                    {editRetencionIva && (
+                      <div className="flex justify-between text-red-500 border-b border-slate-200/50 dark:border-slate-800 pb-1">
+                        <span>Retención IVA (10.667%):</span>
+                        <span className="font-semibold">-{formatMoney(editTotalAmount * 0.16 * (2 / 3), editCurrency)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-slate-800 dark:text-white font-bold pt-1">
+                      <span>Neto Estimado a Recibir:</span>
+                      <span className="text-indigo-500">
+                        {formatMoney(
+                          editTotalAmount +
+                          (editTotalAmount * 0.16) -
+                          (editRetencionIsr ? editTotalAmount * 0.10 : 0) -
+                          (editRetencionIva ? editTotalAmount * 0.16 * (2 / 3) : 0),
+                          editCurrency
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Milestones Schedule */}
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-1.5">
+                  <h4 className="text-2xs font-extrabold text-indigo-500 uppercase tracking-wider">3. Esquema de Cobro y Entregables</h4>
+                  <button
+                    type="button"
+                    onClick={handleEditAddMilestone}
+                    className="flex items-center gap-1 rounded bg-indigo-550/10 hover:bg-indigo-550/20 text-indigo-500 border border-indigo-500/20 px-2 py-1 text-4xs font-bold uppercase transition-colors cursor-pointer"
+                  >
+                    + Agregar Hito
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {editMilestones.map((m, idx) => (
+                    <div key={m.id || idx} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-slate-100/30 dark:bg-slate-900/10 border border-slate-200/60 dark:border-slate-900/60 rounded-xl p-3">
+                      <div className="sm:col-span-6">
+                        <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Concepto del Entregable</label>
+                        <input
+                          type="text"
+                          required
+                          value={m.label}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, label: val } : item));
+                          }}
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                          placeholder="Ej. Anticipo o Entrega final"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Fecha Vencimiento</label>
+                        <input
+                          type="date"
+                          required
+                          value={m.dueDate ? m.dueDate.split('T')[0] : ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, dueDate: val } : item));
+                          }}
+                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Importe ({editCurrency})</label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-3xs font-bold text-slate-400">$</span>
                           <input
-                            type="text"
+                            type="number"
                             required
-                            value={m.label}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, label: val } : item));
-                            }}
-                            className="w-full rounded-lg border border-slate-350 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                            min={1}
+                            value={m.amount || ""}
+                            onChange={(e) => handleEditMilestoneAmount(idx, Number(e.target.value))}
+                            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent pl-5 pr-2 py-1.5 text-xs font-bold focus:border-indigo-500 focus:outline-none dark:text-white"
                           />
                         </div>
-                        <div className="sm:col-span-5">
-                          <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Importe ({selectedContract.currency})</label>
-                          <div className="relative">
-                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-3xs font-bold text-slate-400">$</span>
-                            <input
-                              type="number"
-                              required
-                              min={0}
-                              value={m.amount || ""}
-                              onChange={(e) => handleEditMilestoneAmount(idx, Number(e.target.value))}
-                              className="w-full rounded-lg border border-slate-350 dark:border-slate-700 bg-transparent pl-5 pr-3 py-1.5 text-xs font-bold focus:border-indigo-500 focus:outline-none dark:text-white"
-                            />
-                          </div>
+                      </div>
+                      <div className="sm:col-span-1 flex justify-center pb-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleEditRemoveMilestone(idx)}
+                          disabled={editMilestones.length <= 1}
+                          className="text-red-500 hover:text-red-600 disabled:opacity-30 p-1.5 rounded bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 cursor-pointer"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Milestone Balance Help Message */}
+                {(() => {
+                  const currentSum = editMilestones.reduce((sum, m) => sum + m.amount, 0);
+                  const difference = editTotalAmount - currentSum;
+                  if (Math.abs(difference) <= 0.01) {
+                    return (
+                      <p className="text-3xs text-emerald-500 font-semibold bg-emerald-500/5 border border-emerald-500/10 rounded-xl px-4 py-2 mt-1">
+                        ¡Balance Correcto! La suma de los hitos coincide con el presupuesto total: {formatMoney(currentSum, editCurrency)}.
+                      </p>
+                    );
+                  } else {
+                    return (
+                      <p className="text-3xs text-amber-500 font-semibold bg-amber-500/5 border border-amber-500/10 rounded-xl px-4 py-2 mt-1">
+                        Suma Incorrecta: La suma de los hitos es {formatMoney(currentSum, editCurrency)}. {difference > 0 ? "Faltan" : "Exceden"} {formatMoney(Math.abs(difference), editCurrency)} para coincidir con el total de {formatMoney(editTotalAmount, editCurrency)}.
+                      </p>
+                    );
+                  }
+                })()}
+              </div>
+
+              {/* Section 4: Clauses Checklist */}
+              <div className="flex flex-col gap-4">
+                <h4 className="text-2xs font-extrabold text-indigo-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">4. Cláusulas del Acuerdo</h4>
+                <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 bg-slate-100/20 dark:bg-slate-900/10">
+                  {MOCK_CLAUSES.map((clause) => {
+                    const isChecked = editSelectedClauses.includes(clause.id);
+                    return (
+                      <div
+                        key={clause.id}
+                        onClick={() => {
+                          setEditSelectedClauses(prev =>
+                            prev.includes(clause.id)
+                              ? prev.filter(id => id !== clause.id)
+                              : [...prev, clause.id]
+                          );
+                        }}
+                        className={`flex gap-3 items-start p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 cursor-pointer select-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50 ${isChecked ? 'bg-indigo-500/5 border-indigo-500/30! ring-1 ring-indigo-500/20' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}} // handled by parent div onClick
+                          className="rounded border-slate-350 dark:border-slate-700 text-indigo-650 focus:ring-indigo-500 mt-0.5 pointer-events-none"
+                        />
+                        <div className="text-xs">
+                          <h5 className="font-bold text-slate-850 dark:text-slate-200">{clause.title} <span className="text-4xs text-slate-400 bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.25 font-normal uppercase ml-1.5">{clause.category}</span></h5>
+                          <p className="text-3xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{clause.content}</p>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -2048,8 +3006,12 @@ export default function Dashboard() {
                         {formatMoney(selectedContract.totalAmount, selectedContract.currency)}
                       </span>
                     </div>
-                    <div className="whitespace-pre-wrap text-xs text-slate-650 dark:text-slate-450 line-through leading-relaxed">
-                      {selectedContract.scopeDescription}
+                    <div className="text-xs text-slate-600 dark:text-slate-400 flex flex-col gap-2">
+                      <div><strong className="text-4xs uppercase tracking-wider text-slate-400">Cliente:</strong> {selectedContract.clientName} ({selectedContract.clientEmail})</div>
+                      <div><strong className="text-4xs uppercase tracking-wider text-slate-400">Alcance:</strong></div>
+                      <div className="whitespace-pre-wrap line-through leading-relaxed">
+                        {selectedContract.scopeDescription}
+                      </div>
                     </div>
                   </div>
 
@@ -2058,11 +3020,15 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <span className="text-3xs font-extrabold text-emerald-600 uppercase tracking-wider">Nueva Propuesta</span>
                       <span className="text-xs font-black text-emerald-600">
-                        {formatMoney(editTotalAmount, selectedContract.currency)}
+                        {formatMoney(editTotalAmount, editCurrency)}
                       </span>
                     </div>
-                    <div className="whitespace-pre-wrap text-xs text-slate-800 dark:text-white leading-relaxed">
-                      {editScopeDescription}
+                    <div className="text-xs text-slate-800 dark:text-white flex flex-col gap-2">
+                      <div><strong className="text-4xs uppercase tracking-wider text-slate-500">Cliente:</strong> {editClientName} ({editClientEmail})</div>
+                      <div><strong className="text-4xs uppercase tracking-wider text-slate-500">Alcance:</strong></div>
+                      <div className="whitespace-pre-wrap leading-relaxed">
+                        {editScopeDescription}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2073,18 +3039,313 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => setIsEditingContract(false)}
-                  className="rounded-xl bg-slate-100 dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                  className="rounded-xl bg-slate-100 dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-indigo-500/10"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 text-xs transition-colors flex items-center gap-1.5 shadow-md shadow-indigo-500/10 cursor-pointer"
                 >
                   Confirmar y Solicitar Firma
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Cancellation Modal */}
+      {isCancellingContract && selectedContract && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden animate-fade-in">
+          <div className="relative bg-slate-50 dark:bg-slate-950 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-red-500/20 animate-in zoom-in-95 duration-200">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCancellingContract(false);
+                setCancelReason("");
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors z-20"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-base font-bold text-red-650 dark:text-red-400 flex items-center gap-2 mb-4">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              Cancelar Contrato
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-normal">
+              Esta acción dará por terminado el proyecto y cancelará todas las solicitudes de hitos financieros pendientes. Por favor especifica el motivo:
+            </p>
+            <textarea
+              className="w-full rounded-2xl border border-slate-300 dark:border-slate-800 bg-transparent p-3.5 text-xs focus:border-red-500 focus:ring-2 focus:ring-red-500/10 focus:outline-none dark:text-white mb-4 resize-none h-24 transition-all duration-300"
+              placeholder="Ej. Incumplimiento de entregables, cambio de prioridades..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+            <div className="flex justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCancellingContract(false);
+                  setCancelReason("");
+                }}
+                className="rounded-xl px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelContract}
+                disabled={!cancelReason.trim()}
+                className="rounded-xl bg-red-650 hover:bg-red-600 text-white font-bold px-5 py-2.5 text-xs transition-colors shadow-md shadow-red-500/10 disabled:opacity-50 cursor-pointer"
+              >
+                Confirmar Cancelación
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Freelancer Payment Modal */}
+      {showPaymentModal && paymentMilestone && selectedContract && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
+          <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+            <button
+              type="button"
+              onClick={() => {
+                setShowPaymentModal(false);
+                setPaymentMilestone(null);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors z-20"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-base font-bold flex items-center gap-2 text-indigo-500">
+              <CreditCard className="h-5 w-5" />
+              Notificar Transferencia SPEI
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+              Ingresa la **Clave de Rastreo** de tu transferencia bancaria (se obtiene de tu recibo SPEI, CEP o banca móvil). Esto ayudará al freelancer a asociar tu pago de forma instantánea.
+            </p>
+
+            <form onSubmit={handleMarkAsTransferred} className="mt-5 flex flex-col gap-4">
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider mb-1.5">Clave de Rastreo SPEI / Referencia</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. 182746182903485761 o folio"
+                  value={trackingReference}
+                  onChange={(e) => setTrackingReference(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-750 bg-transparent px-4 py-2.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider mb-1.5">Monto Transferido ({selectedContract.currency})</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                  <input
+                    type="number"
+                    required
+                    value={transferredAmount}
+                    onChange={(e) => setTransferredAmount(Number(e.target.value))}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-750 bg-transparent pl-7 pr-4 py-2.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white font-bold"
+                  />
+                </div>
+              </div>
+
+              {selectedContract.currency === "USD" && (
+                <>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider mb-1.5">Tipo de Cambio (Sugerido: 20.15)</label>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      required
+                      value={overrideExchangeRate}
+                      onChange={(e) => setOverrideExchangeRate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-750 bg-transparent px-4 py-2.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                    />
+                  </div>
+
+                  <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-3.5 text-xs flex flex-col gap-1.5">
+                    <div className="flex justify-between text-slate-400 font-medium">
+                      <span>Monto en USD:</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-350">${transferredAmount.toFixed(2)} USD</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 font-medium">
+                      <span>Tipo de Cambio:</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-350">${(parseFloat(overrideExchangeRate) || 20.15).toFixed(4)} MXN</span>
+                    </div>
+                    <div className="flex justify-between text-indigo-500 font-bold border-t border-slate-200 dark:border-slate-800/80 pt-2">
+                      <span>Total a Transferir:</span>
+                      <span>${(transferredAmount * (parseFloat(overrideExchangeRate) || 20.15)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  Método de Comprobante
+                </label>
+                <div className="flex gap-4 mb-3">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-605 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="receiptFileType"
+                      checked={receiptFileType === 'file'}
+                      onChange={() => setReceiptFileType('file')}
+                      className="text-indigo-650 focus:ring-indigo-500"
+                    />
+                    Subir Archivo (PDF, PNG, JPG)
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-605 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="receiptFileType"
+                      checked={receiptFileType === 'url'}
+                      onChange={() => setReceiptFileType('url')}
+                      className="text-indigo-650 focus:ring-indigo-500"
+                    />
+                    Enlace URL
+                  </label>
+                </div>
+
+                {receiptFileType === 'file' ? (
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="file"
+                      id="receipt-file-input"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={handleFileChange}
+                      className="block w-full text-xs text-slate-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-xl file:border-0
+                        file:text-xs file:font-bold
+                        file:bg-indigo-50 dark:file:bg-indigo-950/40 file:text-indigo-700 dark:file:text-indigo-400
+                        hover:file:bg-indigo-100 dark:hover:file:bg-indigo-950/60
+                        file:cursor-pointer"
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      Formatos permitidos: PDF, PNG, JPG. Máx. 5MB.
+                    </p>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Ej. https://dropbox.com/s/recibo.pdf o captura.png"
+                    value={receiptUrl}
+                    onChange={(e) => setReceiptUrl(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-755 bg-transparent px-4 py-2.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                )}
+              </div>
+
+              {modalError && (
+                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-3 text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{modalError}</span>
+                </div>
+              )}
+
+              <div className="flex gap-2.5 justify-end mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setPaymentMilestone(null);
+                  }}
+                  className="rounded-xl px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || !trackingReference}
+                  className="rounded-xl bg-indigo-650 hover:bg-indigo-600 disabled:opacity-50 text-white font-bold px-5 py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/10 cursor-pointer"
+                >
+                  {loading ? (
+                    <>
+                      <Clock className="h-4 w-4 animate-spin" />
+                      <span>Procesando...</span>
+                    </>
+                  ) : (
+                    <span>Registrar Pago</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Warning/Confirmation Modal */}
+      {warningModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
+          <div className="relative bg-slate-50 dark:bg-slate-950 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-indigo-500/20 animate-in zoom-in-95 duration-200 text-left">
+            <button
+              type="button"
+              onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors z-20"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className={`text-base font-bold flex items-center gap-2 ${warningModal.isError ? 'text-red-500' : 'text-amber-500'}`}>
+              <AlertCircle className="h-5 w-5 animate-pulse" />
+              {warningModal.title}
+            </h3>
+            <p className="text-xs text-slate-650 dark:text-slate-350 mt-3 leading-relaxed whitespace-pre-wrap">
+              {warningModal.message}
+            </p>
+            <div className="flex gap-2.5 justify-end mt-6">
+              {warningModal.isError ? (
+                <button
+                  type="button"
+                  onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
+                  className="rounded-xl bg-red-650 hover:bg-red-600 text-white font-bold px-5 py-2.5 text-xs transition-colors shadow-md shadow-red-500/10 cursor-pointer"
+                >
+                  Entendido
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
+                    className="rounded-xl px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (warningModal.onConfirm) {
+                        try {
+                          const confirmFn = warningModal.onConfirm;
+                          setWarningModal(prev => ({ ...prev, isOpen: false }));
+                          await confirmFn();
+                        } catch (err) {
+                          const msg = err instanceof Error ? err.message : String(err);
+                          setWarningModal({
+                            isOpen: true,
+                            title: "Error de Transición",
+                            message: `No se pudo completar la acción: ${msg}`,
+                            onConfirm: null,
+                            isError: true
+                          });
+                        }
+                      }
+                    }}
+                    className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 py-2.5 text-xs transition-colors shadow-md shadow-amber-500/10 cursor-pointer"
+                  >
+                    Confirmar
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

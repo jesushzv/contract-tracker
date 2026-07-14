@@ -4,10 +4,35 @@ import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { headers } from "next/headers";
-import { Contract, Milestone, Profile, MilestoneStatus, AuditLog, ContractVersion } from "./types";
+import { Contract, ContractStatus, Milestone, Profile, MilestoneStatus, AuditLog, ContractVersion, PaymentProfile, EditRequest, Notification } from "./types";
 import { sendSimulatedEmail } from "./emails";
 
 const DB_PATH = path.join(process.cwd(), "data", "db.json");
+
+// ── Contract State Machine ──────────────────────────────────────────────────
+// Formal transition map enforcing the contract lifecycle:
+//   draft → sent → client_signed → accepted → completed
+//   Any active state (sent/client_signed/accepted) can also → cancelled
+const CONTRACT_VALID_TRANSITIONS: Record<ContractStatus, ContractStatus[]> = {
+  draft: ["sent"],
+  sent: ["client_signed", "cancelled", "draft"],
+  client_signed: ["accepted", "sent", "cancelled", "draft"],
+  accepted: ["completed", "cancelled", "draft"],
+  completed: [],
+  cancelled: [],
+};
+
+function validateContractTransition(
+  currentStatus: ContractStatus,
+  newStatus: ContractStatus
+): void {
+  const allowed = CONTRACT_VALID_TRANSITIONS[currentStatus];
+  if (!allowed || !allowed.includes(newStatus)) {
+    throw new Error(
+      `Transición de estado inválida: No se puede pasar de '${currentStatus}' a '${newStatus}'. Transiciones permitidas: ${allowed?.join(", ") || "ninguna"}.`
+    );
+  }
+}
 
 interface DbSchema {
   profile: Profile;
@@ -15,6 +40,9 @@ interface DbSchema {
   milestones: Milestone[];
   auditLogs?: AuditLog[];
   contractVersions?: ContractVersion[];
+  paymentProfiles?: PaymentProfile[];
+  editRequests?: EditRequest[];
+  notifications?: Notification[];
 }
 
 function sanitizeInput(text: string | undefined): string {
@@ -257,6 +285,12 @@ export async function saveContract(contract: Contract): Promise<Contract> {
   const index = contracts.findIndex((c: Contract) => c.id === sanitizedContract.id);
   if (index >= 0) {
     const oldContract = contracts[index];
+
+    // Enforce state machine: validate any status change
+    if (oldContract.status !== sanitizedContract.status) {
+      validateContractTransition(oldContract.status, sanitizedContract.status);
+    }
+
     const hasChanges = oldContract.scopeDescription !== sanitizedContract.scopeDescription ||
                        oldContract.totalAmount !== sanitizedContract.totalAmount ||
                        oldContract.currency !== sanitizedContract.currency;
@@ -349,6 +383,23 @@ export async function updateMilestoneStatus(
   
   const milestone = allMilestones[idx];
   const oldStatus = milestone.status;
+
+  // Enforce sequential state transitions
+  const statusOrder = ['pending', 'requested', 'marked_paid', 'confirmed'];
+  const isRevert = statusOrder.indexOf(status) < statusOrder.indexOf(oldStatus);
+
+  if (!isRevert) {
+    if (status === "requested" && oldStatus !== "pending") {
+      throw new Error("Un hito solo puede ser solicitado si está en estado 'Pendiente'.");
+    }
+    if (status === "marked_paid" && oldStatus !== "requested") {
+      throw new Error("Un hito solo puede ser marcado como transferido si está en estado 'Solicitado'.");
+    }
+    if (status === "confirmed" && oldStatus !== "marked_paid") {
+      throw new Error("Un hito solo puede ser confirmado si está en estado 'Transferido (Verificando)'.");
+    }
+  }
+
   milestone.status = status;
   
   if (status === "marked_paid") {
@@ -638,6 +689,9 @@ export async function acceptContract(
     .update(JSON.stringify(payload))
     .digest("hex");
     
+  // Enforce state machine: sent → client_signed
+  validateContractTransition(contract.status, "client_signed");
+
   // Update Contract status and client acceptance signatures
   contract.status = "client_signed";
   contract.acceptedAt = new Date().toISOString();
@@ -841,4 +895,354 @@ export async function saveContractVersion(
   db.contractVersions.push(newVersion);
   await writeDb(db);
   return newVersion;
+}
+
+export async function getPaymentProfiles(freelancerId?: string): Promise<PaymentProfile[]> {
+  const db = await readDb();
+  const profiles = db.paymentProfiles || [];
+  if (freelancerId) {
+    return profiles.filter((p) => p.freelancerId === freelancerId);
+  }
+  return profiles;
+}
+
+export async function savePaymentProfile(profile: PaymentProfile): Promise<PaymentProfile> {
+  const db = await readDb();
+  if (!db.paymentProfiles) {
+    db.paymentProfiles = [];
+  }
+  
+  const sanitizedProfile: PaymentProfile = {
+    ...profile,
+    nickname: sanitizeInput(profile.nickname),
+    bankName: sanitizeInput(profile.bankName),
+    clabe: sanitizeInput(profile.clabe),
+    paymentInstructions: profile.paymentInstructions ? sanitizeInput(profile.paymentInstructions) : undefined
+  };
+
+  if (sanitizedProfile.isDefault) {
+    db.paymentProfiles.forEach(p => {
+      if (p.freelancerId === sanitizedProfile.freelancerId) {
+        p.isDefault = false;
+      }
+    });
+  }
+
+  const idx = db.paymentProfiles.findIndex((p) => p.id === sanitizedProfile.id);
+  if (idx >= 0) {
+    db.paymentProfiles[idx] = sanitizedProfile;
+  } else {
+    db.paymentProfiles.push(sanitizedProfile);
+  }
+
+  await writeDb(db);
+  return sanitizedProfile;
+}
+
+export async function deletePaymentProfile(id: string): Promise<void> {
+  const db = await readDb();
+  if (!db.paymentProfiles) return;
+  db.paymentProfiles = db.paymentProfiles.filter((p) => p.id !== id);
+  await writeDb(db);
+}
+
+export async function getEditRequests(contractId: string): Promise<EditRequest[]> {
+  const db = await readDb();
+  const requests = db.editRequests || [];
+  return requests.filter((r) => r.contractId === contractId);
+}
+
+export async function proposeEditRequest(editRequest: Omit<EditRequest, "id" | "requestedAt" | "status">): Promise<EditRequest> {
+  const db = await readDb();
+  if (!db.editRequests) {
+    db.editRequests = [];
+  }
+
+  const newRequest: EditRequest = {
+    ...editRequest,
+    id: "req-" + Math.random().toString(36).substring(2, 9),
+    status: "pending",
+    requestedAt: new Date().toISOString()
+  };
+
+  db.editRequests.push(newRequest);
+  await writeDb(db);
+
+  // Send notifications & emails
+  const contract = db.contracts?.find(c => c.id === editRequest.contractId);
+  if (contract) {
+    const isFreelancer = editRequest.requestedBy === "freelancer";
+    const recipientEmail = isFreelancer ? contract.clientEmail : db.profile.email;
+    const senderName = isFreelancer ? db.profile.fullName : contract.clientName;
+    
+    sendSimulatedEmail({
+      to: recipientEmail,
+      subject: `Modificación de Contrato Propuesta - ${senderName}`,
+      html: `<p>Hola,</p><p>Se ha propuesto una modificación al contrato. Por favor ingresa a la plataforma para revisar los cambios propuestos (antes/después).</p><p>Motivo: ${editRequest.reason || 'Sin motivo especificado'}</p>`
+    }).catch(console.error);
+
+    // Add notification for freelancer if requested by client
+    if (!isFreelancer) {
+      await addNotification({
+        userId: db.profile.id,
+        contractId: contract.id,
+        eventType: "edit_requested",
+        message: `El cliente ${contract.clientName} ha propuesto una modificación al contrato.`
+      });
+    }
+  }
+
+  return newRequest;
+}
+
+export async function respondToEditRequest(id: string, status: "approved" | "rejected", respondedBy: string): Promise<EditRequest | null> {
+  const db = await readDb();
+  if (!db.editRequests) return null;
+  const idx = db.editRequests.findIndex((r) => r.id === id);
+  if (idx < 0) return null;
+
+  const request = db.editRequests[idx];
+  request.status = status;
+  request.respondedAt = new Date().toISOString();
+  request.respondedBy = respondedBy;
+
+  db.editRequests[idx] = request;
+
+  const contractIdx = db.contracts.findIndex(c => c.id === request.contractId);
+  if (contractIdx >= 0 && status === "approved") {
+    const contract = db.contracts[contractIdx];
+    
+    // Save version snapshot before applying changes
+    if (!db.contractVersions) {
+      db.contractVersions = [];
+    }
+    const versions = db.contractVersions.filter(v => v.contractId === contract.id);
+    const nextVer = versions.length > 0 ? Math.max(...versions.map(v => v.versionNumber)) + 1 : 1;
+    db.contractVersions.push({
+      id: "ver-" + Math.random().toString(36).substring(2, 9),
+      contractId: contract.id,
+      versionNumber: nextVer,
+      scopeDescription: contract.scopeDescription,
+      totalAmount: contract.totalAmount,
+      currency: contract.currency,
+      taxWithholdingAmount: contract.taxWithholdingAmount,
+      ivaAmount: contract.ivaAmount,
+      subtotalAmount: contract.subtotalAmount,
+      modifiedAt: new Date().toISOString(),
+      reason: `Modificación aprobada por ${respondedBy}`
+    });
+
+    // Apply proposed changes to contract
+    const changes = request.proposedChanges;
+    if (changes.scopeDescription !== undefined) contract.scopeDescription = changes.scopeDescription;
+    if (changes.totalAmount !== undefined) contract.totalAmount = changes.totalAmount;
+    if (changes.currency !== undefined) contract.currency = changes.currency;
+    if (changes.clabe !== undefined) contract.clabe = changes.clabe;
+    if (changes.bankName !== undefined) contract.bankName = changes.bankName;
+    if (changes.beneficiaryName !== undefined) contract.beneficiaryName = changes.beneficiaryName;
+    if (changes.paymentInstructions !== undefined) contract.paymentInstructions = changes.paymentInstructions;
+
+    // Reset status to draft for editing and require new signatures/OTP
+    contract.status = "draft";
+    contract.acceptedAt = undefined;
+    contract.acceptedByName = undefined;
+    contract.acceptedIp = undefined;
+    contract.freelancerAcceptedAt = undefined;
+    contract.freelancerAcceptedByName = undefined;
+    contract.freelancerAcceptedIp = undefined;
+    contract.contractHash = undefined;
+    contract.clientOtpVerified = false;
+    contract.clientOtpCode = undefined;
+    contract.updated_at = new Date().toISOString();
+
+    db.contracts[contractIdx] = contract;
+
+    // Apply proposed changes to milestones if present
+    if (changes.milestones) {
+      db.milestones = db.milestones.filter(m => m.contractId !== contract.id);
+      changes.milestones.forEach((m: Omit<Milestone, 'created_at'>) => {
+        db.milestones.push({
+          ...m,
+          created_at: new Date().toISOString()
+        });
+      });
+    }
+
+    await addAuditLog({
+      contractId: contract.id,
+      action: "edit_approved",
+      actor: request.requestedBy === "freelancer" ? "client" : "freelancer",
+      details: `Modificación de contrato aprobada. El acuerdo se revirtió a Borrador para nueva firma.`
+    });
+  } else if (contractIdx >= 0 && status === "rejected") {
+    await addAuditLog({
+      contractId: request.contractId,
+      action: "edit_rejected",
+      actor: request.requestedBy === "freelancer" ? "client" : "freelancer",
+      details: `Modificación de contrato rechazada por ${respondedBy}.`
+    });
+  }
+
+  await writeDb(db);
+
+  // Notifications
+  const contractObj = db.contracts?.find(c => c.id === request.contractId);
+  if (contractObj) {
+    const isFreelancer = request.requestedBy === "freelancer";
+    if (isFreelancer) {
+      await addNotification({
+        userId: db.profile.id,
+        contractId: contractObj.id,
+        eventType: "edit_responded",
+        message: `El cliente ha ${status === "approved" ? "aprobado" : "rechazado"} los cambios propuestos al contrato.`
+      });
+    }
+  }
+
+  return request;
+}
+
+export async function getNotifications(userId: string): Promise<Notification[]> {
+  const db = await readDb();
+  const notifications = db.notifications || [];
+  return notifications
+    .filter((n) => n.userId === userId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function addNotification(notification: Omit<Notification, "id" | "created_at" | "isRead">): Promise<Notification> {
+  const db = await readDb();
+  if (!db.notifications) {
+    db.notifications = [];
+  }
+
+  const newNotification: Notification = {
+    ...notification,
+    id: "notif-" + Math.random().toString(36).substring(2, 9),
+    isRead: false,
+    created_at: new Date().toISOString()
+  };
+
+  db.notifications.push(newNotification);
+  await writeDb(db);
+  return newNotification;
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  const db = await readDb();
+  if (!db.notifications) return;
+  const idx = db.notifications.findIndex((n) => n.id === id);
+  if (idx >= 0) {
+    db.notifications[idx].isRead = true;
+    await writeDb(db);
+  }
+}
+
+export async function cancelContract(contractId: string, actor: string, reason: string): Promise<Contract | null> {
+  const db = await readDb();
+  const contracts = db.contracts || [];
+  const idx = contracts.findIndex(c => c.id === contractId);
+  if (idx < 0) return null;
+
+  const contract = contracts[idx];
+
+  // Enforce state machine: current → cancelled
+  validateContractTransition(contract.status, "cancelled");
+
+  contract.status = "cancelled";
+  contract.updated_at = new Date().toISOString();
+  contracts[idx] = contract;
+
+  await writeDb(db);
+
+  await addAuditLog({
+    contractId,
+    action: "contract_cancelled",
+    actor: actor === "freelancer" ? "freelancer" : "client",
+    details: `El contrato fue cancelado por el ${actor === "freelancer" ? "Freelancer" : "Cliente"}. Motivo: ${reason}`
+  });
+
+  if (actor === "client") {
+    await addNotification({
+      userId: db.profile.id,
+      contractId: contract.id,
+      eventType: "contract_cancelled",
+      message: `El cliente ha cancelado el contrato. Motivo: ${reason}`
+    });
+  }
+
+  return contract;
+}
+
+export async function markContractCompleted(contractId: string, actor: "freelancer" | "client"): Promise<Contract | null> {
+  const db = await readDb();
+  const contracts = db.contracts || [];
+  const idx = contracts.findIndex(c => c.id === contractId);
+  if (idx < 0) return null;
+
+  const contract = contracts[idx];
+  const now = new Date().toISOString();
+
+  // Enforce state machine: only accepted contracts can be marked completed
+  if (contract.status !== "accepted") {
+    throw new Error("Solo contratos en estado 'accepted' pueden ser marcados como completados.");
+  }
+
+  if (actor === "freelancer") {
+    contract.freelancerCompletedAt = now;
+  } else {
+    contract.clientCompletedAt = now;
+  }
+
+  // If both have completed, move to 'completed'
+  if (contract.freelancerCompletedAt && contract.clientCompletedAt) {
+    contract.status = "completed";
+    await addAuditLog({
+      contractId,
+      action: "contract_completed",
+      actor: "system",
+      details: "Ambas partes han marcado el proyecto como terminado. Contrato finalizado."
+    });
+  } else {
+    await addAuditLog({
+      contractId,
+      action: "completion_marked",
+      actor: actor === "freelancer" ? "freelancer" : "client",
+      details: `El ${actor === "freelancer" ? "freelancer" : "cliente"} marcó su lado como Completado.`
+    });
+  }
+
+  contracts[idx] = contract;
+  await writeDb(db);
+  return contract;
+}
+
+export async function uploadBrandAsset(
+  fileName: string,
+  mimeType: string,
+  fileBase64: string
+): Promise<string> {
+  const buffer = Buffer.from(fileBase64, "base64");
+
+  // 1. File size validation (2MB)
+  if (buffer.length > 2 * 1024 * 1024) {
+    throw new Error("El archivo excede el límite de tamaño de 2MB.");
+  }
+
+  // 2. Mimetype validation
+  const allowedMimeTypes = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml"];
+  if (!allowedMimeTypes.includes(mimeType)) {
+    throw new Error("Tipo de archivo no permitido. Solo se permiten imágenes (PNG, JPEG, SVG).");
+  }
+
+  // Sanitize filename to prevent path traversal
+  const sanitizedName = path.basename(fileName).replace(/[^a-zA-Z0-9.-]/g, "_");
+  const uniqueName = `${crypto.randomUUID()}-${sanitizedName}`;
+
+  // Write to public/uploads/branding
+  const uploadDir = path.join(process.cwd(), "public", "uploads", "branding");
+  await fs.mkdir(uploadDir, { recursive: true });
+  await fs.writeFile(path.join(uploadDir, uniqueName), buffer);
+
+  return `/uploads/branding/${uniqueName}`;
 }

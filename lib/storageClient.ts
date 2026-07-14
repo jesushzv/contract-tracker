@@ -1,9 +1,9 @@
 import * as localActions from "./storage";
 import * as supabaseActions from "./storageSupabase";
-import { Contract, Milestone, Profile, MilestoneStatus, AuditLog, ContractVersion } from "./types";
+import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog, ContractVersion, PaymentProfile, EditRequest, Notification } from "./types";
 
 // Determine if we should use the cloud Supabase database
-const shouldUseSupabase = (): boolean => {
+export const shouldUseSupabase = (): boolean => {
   // If running in a Vercel Staging/Preview environment, we bypass the cloud DB
   // to avoid persistent data storage or requiring a secondary DB.
   if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") {
@@ -11,6 +11,7 @@ const shouldUseSupabase = (): boolean => {
   }
   return !!process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== "";
 };
+
 
 // Dispatch server actions based on config
 const serverActions = shouldUseSupabase() ? supabaseActions : localActions;
@@ -472,11 +473,16 @@ export async function updateMilestoneStatus(
     const milestone = allList[idx];
     const oldStatus = milestone.status;
 
-    if (status === "confirmed" && oldStatus !== "marked_paid") {
-      throw new Error("El hito debe haber sido reportado como transferido por el cliente antes de ser confirmado.");
-    }
-    if (status === "marked_paid" && oldStatus !== "requested") {
-      throw new Error("Un hito solo puede ser marcado como transferido si ha sido solicitado previamente.");
+    const statusOrder = ['pending', 'requested', 'marked_paid', 'confirmed'];
+    const isRevert = statusOrder.indexOf(status) < statusOrder.indexOf(oldStatus);
+
+    if (!isRevert) {
+      if (status === "confirmed" && oldStatus !== "marked_paid") {
+        throw new Error("El hito debe haber sido reportado como transferido por el cliente antes de ser confirmado.");
+      }
+      if (status === "marked_paid" && oldStatus !== "requested") {
+        throw new Error("Un hito solo puede ser marcado como transferido si ha sido solicitado previamente.");
+      }
     }
 
     milestone.status = status;
@@ -871,8 +877,6 @@ export async function uploadReceiptFile(
   fileBase64: string
 ): Promise<string> {
   if (isDemoMode()) {
-    // In Demo mode, we validate the file, then return a fake/mock URL to save space
-    // to avoid overloading localStorage
     const buffer = Buffer.from(fileBase64, "base64");
     if (buffer.length > 5 * 1024 * 1024) {
       throw new Error("El archivo excede el límite de tamaño de 5MB.");
@@ -882,7 +886,6 @@ export async function uploadReceiptFile(
       throw new Error("Tipo de archivo no permitido. Solo se permiten PDFs e imágenes (PNG, JPEG).");
     }
     
-    // Magic bytes verification
     const hex = buffer.toString("hex", 0, 8).toUpperCase();
     let isValidMagic = false;
     if (mimeType === "application/pdf" && hex.startsWith("25504446")) isValidMagic = true;
@@ -896,4 +899,309 @@ export async function uploadReceiptFile(
     return `https://demo-mode-receipts.local/${fileName}`;
   }
   return serverActions.uploadReceiptFile(fileName, mimeType, fileBase64);
+}
+
+export async function getPaymentProfiles(freelancerId?: string): Promise<PaymentProfile[]> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem("sandbox_payment_profiles");
+    const list: PaymentProfile[] = data ? JSON.parse(data) : [];
+    if (freelancerId) {
+      return list.filter((p) => p.freelancerId === freelancerId);
+    }
+    return list;
+  }
+  return serverActions.getPaymentProfiles(freelancerId);
+}
+
+export async function savePaymentProfile(profile: PaymentProfile): Promise<PaymentProfile> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem("sandbox_payment_profiles");
+    const list: PaymentProfile[] = data ? JSON.parse(data) : [];
+    
+    if (profile.isDefault) {
+      list.forEach(p => {
+        if (p.freelancerId === profile.freelancerId) p.isDefault = false;
+      });
+    }
+
+    const idx = list.findIndex(p => p.id === profile.id);
+    if (idx >= 0) {
+      list[idx] = profile;
+    } else {
+      list.push(profile);
+    }
+    localStorage.setItem("sandbox_payment_profiles", JSON.stringify(list));
+    return profile;
+  }
+  return serverActions.savePaymentProfile(profile);
+}
+
+export async function deletePaymentProfile(id: string): Promise<void> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem("sandbox_payment_profiles");
+    let list: PaymentProfile[] = data ? JSON.parse(data) : [];
+    list = list.filter(p => p.id !== id);
+    localStorage.setItem("sandbox_payment_profiles", JSON.stringify(list));
+    return;
+  }
+  return serverActions.deletePaymentProfile(id);
+}
+
+export async function getEditRequests(contractId: string): Promise<EditRequest[]> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem("sandbox_edit_requests");
+    const list: EditRequest[] = data ? JSON.parse(data) : [];
+    return list.filter(r => r.contractId === contractId);
+  }
+  return serverActions.getEditRequests(contractId);
+}
+
+export async function proposeEditRequest(editRequest: Omit<EditRequest, "id" | "requestedAt" | "status">): Promise<EditRequest> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem("sandbox_edit_requests");
+    const list: EditRequest[] = data ? JSON.parse(data) : [];
+    const newRequest: EditRequest = {
+      ...editRequest,
+      id: "req-" + Math.random().toString(36).substring(2, 9),
+      status: "pending",
+      requestedAt: new Date().toISOString()
+    };
+    list.push(newRequest);
+    localStorage.setItem("sandbox_edit_requests", JSON.stringify(list));
+
+    const contract = await getContractById(editRequest.contractId);
+    if (contract && editRequest.requestedBy === "client") {
+      await addNotification({
+        userId: contract.freelancerId,
+        contractId: contract.id,
+        eventType: "edit_requested",
+        message: `El cliente ${contract.clientName} ha propuesto una modificación al contrato.`
+      });
+    }
+
+    return newRequest;
+  }
+  return serverActions.proposeEditRequest(editRequest);
+}
+
+export async function respondToEditRequest(id: string, status: "approved" | "rejected", respondedBy: string): Promise<EditRequest | null> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem("sandbox_edit_requests");
+    const list: EditRequest[] = data ? JSON.parse(data) : [];
+    const idx = list.findIndex(r => r.id === id);
+    if (idx < 0) return null;
+
+    const request = list[idx];
+    request.status = status;
+    request.respondedAt = new Date().toISOString();
+    request.respondedBy = respondedBy;
+    list[idx] = request;
+    localStorage.setItem("sandbox_edit_requests", JSON.stringify(list));
+
+    if (status === "approved") {
+      const contract = await getContractById(request.contractId);
+      if (contract) {
+        await saveContractVersion({
+          contractId: contract.id,
+          versionNumber: 0,
+          scopeDescription: contract.scopeDescription,
+          totalAmount: contract.totalAmount,
+          currency: contract.currency,
+          taxWithholdingAmount: contract.taxWithholdingAmount,
+          ivaAmount: contract.ivaAmount,
+          subtotalAmount: contract.subtotalAmount,
+          reason: `Modificación aprobada por ${respondedBy}`
+        });
+
+        const changes = request.proposedChanges;
+        const updated = {
+          ...contract,
+          scopeDescription: changes.scopeDescription !== undefined ? changes.scopeDescription : contract.scopeDescription,
+          totalAmount: changes.totalAmount !== undefined ? changes.totalAmount : contract.totalAmount,
+          currency: changes.currency !== undefined ? changes.currency : contract.currency,
+          clabe: changes.clabe !== undefined ? changes.clabe : contract.clabe,
+          bankName: changes.bankName !== undefined ? changes.bankName : contract.bankName,
+          beneficiaryName: changes.beneficiaryName !== undefined ? changes.beneficiaryName : contract.beneficiaryName,
+          paymentInstructions: changes.paymentInstructions !== undefined ? changes.paymentInstructions : contract.paymentInstructions,
+          status: "draft" as ContractStatus,
+          acceptedAt: undefined,
+          acceptedByName: undefined,
+          acceptedIp: undefined,
+          freelancerAcceptedAt: undefined,
+          freelancerAcceptedByName: undefined,
+          freelancerAcceptedIp: undefined,
+          contractHash: undefined,
+          clientOtpVerified: false,
+          clientOtpCode: undefined,
+          updated_at: new Date().toISOString()
+        };
+        await saveContract(updated);
+
+        if (changes.milestones) {
+          const mData = localStorage.getItem(KEYS.MILESTONES);
+          let mList: Milestone[] = mData ? JSON.parse(mData) : [];
+          mList = mList.filter(m => m.contractId !== contract.id);
+          changes.milestones.forEach((m: Omit<Milestone, 'created_at'>) => {
+            mList.push({
+              ...m,
+              created_at: new Date().toISOString()
+            });
+          });
+          localStorage.setItem(KEYS.MILESTONES, JSON.stringify(mList));
+        }
+
+        await addAuditLog({
+          contractId: contract.id,
+          action: "edit_approved",
+          actor: request.requestedBy === "freelancer" ? "client" : "freelancer",
+          details: `Modificación de contrato aprobada. El acuerdo se revirtió a Borrador para nueva firma.`
+        });
+      }
+    } else {
+      await addAuditLog({
+        contractId: request.contractId,
+        action: "edit_rejected",
+        actor: request.requestedBy === "freelancer" ? "client" : "freelancer",
+        details: `Modificación de contrato rechazada por ${respondedBy}.`
+      });
+    }
+
+    const contractObj = await getContractById(request.contractId);
+    if (contractObj && request.requestedBy === "freelancer") {
+      await addNotification({
+        userId: contractObj.freelancerId,
+        contractId: contractObj.id,
+        eventType: "edit_responded",
+        message: `El cliente ha ${status === "approved" ? "aprobado" : "rechazado"} los cambios propuestos al contrato.`
+      });
+    }
+
+    return request;
+  }
+  return serverActions.respondToEditRequest(id, status, respondedBy);
+}
+
+export async function getNotifications(userId: string): Promise<Notification[]> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem("sandbox_notifications");
+    const list: Notification[] = data ? JSON.parse(data) : [];
+    return list
+      .filter(n => n.userId === userId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }
+  return serverActions.getNotifications(userId);
+}
+
+export async function addNotification(notification: Omit<Notification, "id" | "created_at" | "isRead">): Promise<Notification> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem("sandbox_notifications");
+    const list: Notification[] = data ? JSON.parse(data) : [];
+    const newNotification: Notification = {
+      ...notification,
+      id: "notif-" + Math.random().toString(36).substring(2, 9),
+      isRead: false,
+      created_at: new Date().toISOString()
+    };
+    list.push(newNotification);
+    localStorage.setItem("sandbox_notifications", JSON.stringify(list));
+    return newNotification;
+  }
+  return serverActions.addNotification(notification);
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem("sandbox_notifications");
+    const list: Notification[] = data ? JSON.parse(data) : [];
+    const idx = list.findIndex(n => n.id === id);
+    if (idx >= 0) {
+      list[idx].isRead = true;
+      localStorage.setItem("sandbox_notifications", JSON.stringify(list));
+    }
+    return;
+  }
+  return serverActions.markNotificationRead(id);
+}
+
+export async function cancelContract(contractId: string, actor: string, reason: string): Promise<Contract | null> {
+  if (isDemoMode()) {
+    const contract = await getContractById(contractId);
+    if (!contract) return null;
+    contract.status = "cancelled";
+    contract.updated_at = new Date().toISOString();
+    await saveContract(contract);
+
+    await addAuditLog({
+      contractId,
+      action: "contract_cancelled",
+      actor: actor === "freelancer" ? "freelancer" : "client",
+      details: `El contrato fue cancelado por el ${actor === "freelancer" ? "Freelancer" : "Cliente"}. Motivo: ${reason}`
+    });
+
+    if (actor === "client") {
+      await addNotification({
+        userId: contract.freelancerId,
+        contractId: contract.id,
+        eventType: "contract_cancelled",
+        message: `El cliente ha cancelado el contrato. Motivo: ${reason}`
+      });
+    }
+
+    return contract;
+  }
+  return serverActions.cancelContract(contractId, actor, reason);
+}
+
+export async function markContractCompleted(contractId: string, actor: "freelancer" | "client"): Promise<Contract | null> {
+  if (isDemoMode()) {
+    const contract = await getContractById(contractId);
+    if (!contract) return null;
+    const now = new Date().toISOString();
+
+    if (actor === "freelancer") {
+      contract.freelancerCompletedAt = now;
+    } else {
+      contract.clientCompletedAt = now;
+    }
+
+    if (contract.freelancerCompletedAt && contract.clientCompletedAt) {
+      contract.status = "completed";
+      await addAuditLog({
+        contractId,
+        action: "contract_completed",
+        actor: "system",
+        details: "Ambas partes han marcado el proyecto como terminado. Contrato finalizado."
+      });
+    } else {
+      await addAuditLog({
+        contractId,
+        action: "completion_marked",
+        actor: actor === "freelancer" ? "freelancer" : "client",
+        details: `El ${actor === "freelancer" ? "freelancer" : "cliente"} marcó su lado como Completado.`
+      });
+    }
+
+    await saveContract(contract);
+    return contract;
+  }
+  return serverActions.markContractCompleted(contractId, actor);
+}
+
+export async function uploadBrandAsset(
+  fileName: string,
+  mimeType: string,
+  fileBase64: string
+): Promise<string> {
+  if (isDemoMode()) {
+    const buffer = Buffer.from(fileBase64, "base64");
+    if (buffer.length > 2 * 1024 * 1024) {
+      throw new Error("El archivo excede el límite de tamaño de 2MB.");
+    }
+    const allowedMimeTypes = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml"];
+    if (!allowedMimeTypes.includes(mimeType)) {
+      throw new Error("Tipo de archivo no permitido. Solo se permiten imágenes (PNG, JPEG, SVG).");
+    }
+    return `https://demo-mode-brand-assets.local/${fileName}`;
+  }
+  return serverActions.uploadBrandAsset(fileName, mimeType, fileBase64);
 }

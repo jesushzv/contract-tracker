@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { updateProfile } from "@/lib/storageClient";
+import { updateProfile, uploadBrandAsset } from "@/lib/storageClient";
 import { Profile } from "@/lib/types";
 import { ShieldCheck, ArrowRight, AlertCircle, Loader2, Landmark } from "lucide-react";
 import { validateRFC } from "@/lib/rfcValidator";
@@ -23,6 +23,29 @@ export default function OnboardingPage() {
   const [phone, setPhone] = useState("");
   
   const [error, setError] = useState("");
+
+  const handleFileUpload = async (file: File, type: "logo" | "signature") => {
+    setError("");
+    if (file.size > 2 * 1024 * 1024) {
+      setError("El archivo excede el límite de tamaño de 2MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64 = (reader.result as string).split(",")[1];
+        const uploadedUrl = await uploadBrandAsset(file.name, file.type, base64);
+        if (type === "logo") {
+          setLogoUrl(uploadedUrl);
+        } else {
+          setSignatureUrl(uploadedUrl);
+        }
+      } catch (err: unknown) {
+        setError("Error al subir archivo: " + (err instanceof Error ? err.message : String(err)));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
   const [loading, setLoading] = useState(false);
   const [sessionCheckLoading, setSessionCheckLoading] = useState(true);
 
@@ -322,27 +345,61 @@ export default function OnboardingPage() {
           </div>
 
           <div className="flex flex-col gap-1.5 relative">
-            <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Logo de tu Empresa (URL de Imagen)</label>
-            <input
-              type="text"
-              disabled={tier === "free"}
-              placeholder={tier === "free" ? "🔒 Carga de logo deshabilitada en Plan Gratuito" : "https://tudominio.com/logo.png"}
-              value={tier === "free" ? "" : logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
-            />
+            <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Logo de tu Empresa (PNG, JPG, SVG - Máx 2MB)</label>
+            {tier === "free" ? (
+              <input
+                type="text"
+                disabled
+                placeholder="🔒 Carga de logo deshabilitada en Plan Gratuito"
+                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+              />
+            ) : (
+              <div className="flex flex-col gap-2 text-left">
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/jpg, image/svg+xml"
+                  onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], "logo")}
+                  className="w-full text-xs text-slate-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-xl file:border-0
+                    file:text-xs file:font-semibold
+                    file:bg-indigo-50 file:text-indigo-700
+                    hover:file:bg-indigo-100"
+                />
+                {logoUrl && (
+                  <img src={logoUrl} alt="Logo preview" className="h-10 w-auto object-contain border border-slate-200 dark:border-slate-850 rounded-lg self-start" />
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5 relative">
-            <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Tu Firma Digital (URL de Imagen)</label>
-            <input
-              type="text"
-              disabled={tier === "free"}
-              placeholder={tier === "free" ? "🔒 Carga de firma deshabilitada en Plan Gratuito" : "https://tudominio.com/firma.png"}
-              value={tier === "free" ? "" : signatureUrl}
-              onChange={(e) => setSignatureUrl(e.target.value)}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
-            />
+            <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Tu Firma Digital (PNG, JPG - Máx 2MB)</label>
+            {tier === "free" ? (
+              <input
+                type="text"
+                disabled
+                placeholder="🔒 Carga de firma deshabilitada en Plan Gratuito"
+                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+              />
+            ) : (
+              <div className="flex flex-col gap-2 text-left">
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg, image/jpg"
+                  onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], "signature")}
+                  className="w-full text-xs text-slate-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-xl file:border-0
+                    file:text-xs file:font-semibold
+                    file:bg-indigo-50 file:text-indigo-700
+                    hover:file:bg-indigo-100"
+                />
+                {signatureUrl && (
+                  <img src={signatureUrl} alt="Firma preview" className="h-10 w-auto object-contain border border-slate-200 dark:border-slate-850 rounded-lg self-start" />
+                )}
+              </div>
+            )}
           </div>
 
           <div className="md:col-span-2 border-t border-slate-100 dark:border-slate-850 pt-5 flex justify-end">

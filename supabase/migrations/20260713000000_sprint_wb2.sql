@@ -13,7 +13,7 @@ ALTER TABLE public.milestones ADD COLUMN IF NOT EXISTS mxn_amount NUMERIC;
 -- 4. Create contract_versions table
 CREATE TABLE IF NOT EXISTS public.contract_versions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    contract_id UUID NOT NULL REFERENCES public.contracts(id) ON DELETE CASCADE,
+    contract_id TEXT NOT NULL REFERENCES public.contracts(id) ON DELETE CASCADE,
     version_number INTEGER NOT NULL,
     scope_description TEXT NOT NULL,
     total_amount NUMERIC NOT NULL,

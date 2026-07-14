@@ -13,9 +13,16 @@ import {
   Printer,
   CreditCard,
   ExternalLink,
-  Loader2
+  Loader2,
+  Star,
+  Edit3,
+  X,
+  Upload,
+  AlertTriangle,
+  User,
+  Check
 } from "lucide-react";
-import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision, uploadReceiptFile } from "@/lib/storageClient";
+import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision, uploadReceiptFile, cancelContract, markContractCompleted, isDemoMode, saveContract, saveMilestones } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 import { Contract, Milestone, AuditLog, Profile } from "@/lib/types";
 
@@ -40,6 +47,22 @@ export default function ClientContractView() {
   const [showRevisionModal, setShowRevisionModal] = useState(false);
   const [revisionReason, setRevisionReason] = useState("");
   const [revisionSuccess, setRevisionSuccess] = useState(false);
+
+  // States for client editing the contract components
+  const [editClientName, setEditClientName] = useState("");
+  const [editClientEmail, setEditClientEmail] = useState("");
+  const [editClientPhone, setEditClientPhone] = useState("");
+  const [editClientRfc, setEditClientRfc] = useState("");
+  const [editClientRegimen, setEditClientRegimen] = useState("");
+  const [editClientPostal, setEditClientPostal] = useState("");
+  const [editScopeDescription, setEditScopeDescription] = useState("");
+  const [editTotalAmount, setEditTotalAmount] = useState(0);
+  const [editCurrency, setEditCurrency] = useState<'MXN' | 'USD'>("MXN");
+  const [editRetencionIsr, setEditRetencionIsr] = useState(false);
+  const [editRetencionIva, setEditRetencionIva] = useState(false);
+  const [editMilestones, setEditMilestones] = useState<Milestone[]>([]);
+  const [editSelectedClauses, setEditSelectedClauses] = useState<string[]>([]);
+
   
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMilestone, setPaymentMilestone] = useState<Milestone | null>(null);
@@ -59,6 +82,26 @@ export default function ClientContractView() {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [lastPaidMilestoneLabel, setLastPaidMilestoneLabel] = useState("");
   const [lastPaidMilestoneAmount, setLastPaidMilestoneAmount] = useState(0);
+
+  // Cancellation State
+  const [isCancellingContract, setIsCancellingContract] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
+  // Warning/Confirmation Modal State
+  const [warningModal, setWarningModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: (() => Promise<void>) | null;
+    isError?: boolean;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+    isError: false
+  });
+
 
   useEffect(() => {
     async function loadData() {
@@ -140,42 +183,86 @@ export default function ClientContractView() {
           setAcceptStep('otp');
           setOtpAttempts(0);
         } else {
-          alert("Error al generar el código de verificación OTP.");
+          setWarningModal({
+            isOpen: true,
+            title: "Error al generar OTP",
+            message: "No se pudo generar el código de verificación OTP.",
+            onConfirm: null,
+            isError: true
+          });
         }
+        setLoading(false);
       } else {
+        setLoading(false);
         if (otpAttempts >= 3) {
           throw new Error("Límite de intentos OTP excedido. Genera un nuevo código.");
         }
-        const updated = await acceptContract(contractId, signerName, otpInput);
-        if (updated) {
-          setContract(updated);
-          const mList = await getMilestones(contractId);
-          setMilestones(mList);
-          const logs = await getAuditLogs(contractId);
-          setAuditLogs(logs);
-          setAcceptedSuccess(true);
-          setAcceptStep('name');
-          setOtpInput("");
-          setDebugOtp(null);
-          setShowAcceptModal(false);
-          setOtpAttempts(0);
-          setTimeout(() => setAcceptedSuccess(false), 5050);
+
+        const isOtpCorrect = !isDemoMode() || (otpInput === debugOtp);
+        if (!isOtpCorrect) {
+          const nextAttempts = otpAttempts + 1;
+          setOtpAttempts(nextAttempts);
+          let errMsg = "";
+          if (nextAttempts >= 3) {
+            errMsg = "Has alcanzado el límite de 3 intentos fallidos. Por motivos de seguridad, este intento se ha bloqueado. Por favor, genera un nuevo código OTP.";
+          } else {
+            errMsg = `El código de verificación ingresado es incorrecto. Intentos restantes: ${3 - nextAttempts}`;
+          }
+          setOtpError(errMsg);
+          return;
         }
+
+        const executeAccept = async () => {
+          setLoading(true);
+          try {
+            const updated = await acceptContract(contractId, signerName, otpInput);
+            if (updated) {
+              setContract(updated);
+              const mList = await getMilestones(contractId);
+              setMilestones(mList);
+              const logs = await getAuditLogs(contractId);
+              setAuditLogs(logs);
+              setAcceptedSuccess(true);
+              setAcceptStep('name');
+              setOtpInput("");
+              setDebugOtp(null);
+              setShowAcceptModal(false);
+              setOtpAttempts(0);
+              setTimeout(() => setAcceptedSuccess(false), 5050);
+            }
+          } catch (err) {
+            const error = err as Error;
+            const nextAttempts = otpAttempts + 1;
+            setOtpAttempts(nextAttempts);
+            let errMsg = "";
+            if (nextAttempts >= 3) {
+              errMsg = "Has alcanzado el límite de 3 intentos fallidos. Por motivos de seguridad, este intento se ha bloqueado. Por favor, genera un nuevo código OTP.";
+            } else {
+              errMsg = `${error.message || "Código incorrecto."} Intentos restantes: ${3 - nextAttempts}`;
+            }
+            setOtpError(errMsg);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        setWarningModal({
+          isOpen: true,
+          title: "Firmar Contrato",
+          message: `¿Estás seguro de que deseas firmar digitalmente el contrato como "${signerName}"? Esta acción confirmará tu aceptación de todos los términos y condiciones.`,
+          onConfirm: executeAccept,
+          isError: false
+        });
       }
     } catch (err) {
       const error = err as Error;
-      if (acceptStep === 'otp') {
-        const nextAttempts = otpAttempts + 1;
-        setOtpAttempts(nextAttempts);
-        if (nextAttempts >= 3) {
-          setOtpError("Has alcanzado el límite de 3 intentos fallidos. Por motivos de seguridad, este intento se ha bloqueado. Por favor, genera un nuevo código OTP.");
-        } else {
-          setOtpError(`${error.message || "Código incorrecto."} Intentos restantes: ${3 - nextAttempts}`);
-        }
-      } else {
-        alert("Error al firmar el contrato: " + error.message);
-      }
-    } finally {
+      setWarningModal({
+        isOpen: true,
+        title: "Error de Firma",
+        message: error.message,
+        onConfirm: null,
+        isError: true
+      });
       setLoading(false);
     }
   };
@@ -190,34 +277,252 @@ export default function ClientContractView() {
         setOtpAttempts(0);
         setOtpInput("");
       } else {
-        alert("Error al generar el código de verificación OTP.");
+        setWarningModal({
+          isOpen: true,
+          title: "Error de Generación OTP",
+          message: "No se pudo generar el código de verificación OTP.",
+          onConfirm: null,
+          isError: true
+        });
       }
     } catch (err) {
-      alert("Error al regenerar OTP: " + err);
+      setWarningModal({
+        isOpen: true,
+        title: "Error al regenerar OTP",
+        message: err instanceof Error ? err.message : String(err),
+        onConfirm: null,
+        isError: true
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCancelContract = async () => {
+    if (!contractId || !cancelReason.trim()) return;
+
+    const executeCancel = async () => {
+      try {
+        await cancelContract(contractId, "client", cancelReason);
+        setIsCancellingContract(false);
+        setCancelReason("");
+        await refreshData();
+      } catch (err) {
+        const error = err as Error;
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Cancelar Contrato",
+          message: `No se pudo cancelar el contrato: ${error.message}`,
+          onConfirm: null,
+          isError: true
+        });
+      }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Cancelar Contrato",
+      message: "¿Estás seguro de que deseas cancelar este contrato? Esta acción es irreversible y anulará todos los hitos pendientes.",
+      onConfirm: executeCancel,
+      isError: false
+    });
+  };
+
+  const handleMarkCompleted = async () => {
+    if (!contractId) return;
+
+    const executeComplete = async () => {
+      try {
+        await markContractCompleted(contractId, "client");
+        await refreshData();
+      } catch (err) {
+        const error = err as Error;
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Completar Contrato",
+          message: `No se pudo marcar el contrato como completado: ${error.message}`,
+          onConfirm: null,
+          isError: true
+        });
+      }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Completar Contrato",
+      message: "¿Estás seguro de que deseas marcar este contrato como completado? Esto finalizará la relación comercial bajo este acuerdo.",
+      onConfirm: executeComplete,
+      isError: false
+    });
+  };
+
+  const startProposingRevision = () => {
+    if (!contract) return;
+    setEditClientName(contract.clientName);
+    setEditClientEmail(contract.clientEmail);
+    setEditClientPhone(contract.clientPhone || "");
+    setEditClientRfc(contract.clientRfc || "");
+    setEditClientRegimen(contract.clientRegimen || "");
+    setEditClientPostal(contract.clientPostal || "");
+    setEditScopeDescription(contract.scopeDescription);
+    setEditTotalAmount(contract.totalAmount);
+    setEditCurrency(contract.currency);
+    setEditRetencionIsr(!!contract.retencionIsr);
+    setEditRetencionIva(!!contract.retencionIva);
+    setEditMilestones(milestones.map(m => ({ ...m })));
+    setEditSelectedClauses(contract.selectedClauses || []);
+    setRevisionReason("");
+    setShowRevisionModal(true);
+  };
+
+  const handleEditTotalAmountChange = (newTotal: number) => {
+    setEditTotalAmount(newTotal);
+    setEditMilestones(prev => {
+      if (prev.length === 0) return prev;
+      const oldSum = prev.reduce((sum, m) => sum + m.amount, 0) || 1;
+      const scaleFactor = newTotal / oldSum;
+      let runningSum = 0;
+      return prev.map((m, idx) => {
+        const isLast = idx === prev.length - 1;
+        let newAmt = Math.round(m.amount * scaleFactor);
+        if (isLast) {
+          newAmt = newTotal - runningSum;
+        } else {
+          runningSum += newAmt;
+        }
+        return { ...m, amount: newAmt };
+      });
+    });
+  };
+
+  const handleEditMilestoneAmount = (idx: number, newAmt: number) => {
+    setEditMilestones(prev => {
+      const updated = prev.map((m, i) => i === idx ? { ...m, amount: newAmt } : m);
+      const newSum = updated.reduce((sum, m) => sum + m.amount, 0);
+      setEditTotalAmount(newSum);
+      return updated;
+    });
+  };
+
+  const handleEditAddMilestone = () => {
+    setEditMilestones(prev => [
+      ...prev,
+      {
+        id: "new-" + Math.random().toString(36).substring(2, 9),
+        contractId: contract?.id || "",
+        label: "",
+        amount: 0,
+        dueDate: new Date(Date.now() + (prev.length + 1) * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: 'pending',
+        created_at: new Date().toISOString()
+      }
+    ]);
+  };
+
+  const handleEditRemoveMilestone = (idx: number) => {
+    if (editMilestones.length <= 1) return;
+    setEditMilestones(prev => {
+      const updated = prev.filter((_, i) => i !== idx);
+      const newSum = updated.reduce((sum, m) => sum + m.amount, 0);
+      setEditTotalAmount(newSum);
+      return updated;
+    });
+  };
+
   const handleProposeRevision = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contractId || !revisionReason) return;
-    setLoading(true);
-    try {
-      const updated = await proposeContractRevision(contractId, revisionReason);
-      if (updated) {
-        setContract(updated);
-        await refreshData();
-        setShowRevisionModal(false);
-        setRevisionReason("");
-        setRevisionSuccess(true);
-        setTimeout(() => setRevisionSuccess(false), 5050);
-      }
-    } catch (err) {
-      alert("Error al solicitar revisión: " + err);
-    } finally {
-      setLoading(false);
+    if (!contractId || !revisionReason || !contract) return;
+
+    // Validate milestone sums
+    const milestoneSum = editMilestones.reduce((sum, m) => sum + m.amount, 0);
+    if (Math.abs(milestoneSum - editTotalAmount) > 0.01) {
+      alert(`La suma de los hitos (${milestoneSum} ${editCurrency}) debe ser exactamente igual al monto total del contrato (${editTotalAmount} ${editCurrency}). Por favor, ajusta los importes de tus hitos.`);
+      return;
     }
+
+    const executeProposeRevision = async () => {
+      setLoading(true);
+      try {
+        const total = editTotalAmount;
+        const subtotalAmount = total;
+        const taxWithholdingAmount = (editRetencionIsr ? total * 0.10 : 0) + (editRetencionIva ? total * 0.16 * (2 / 3) : 0);
+        const ivaAmount = total * 0.16;
+
+        const updatedContract: Contract = {
+          ...contract,
+          clientName: editClientName,
+          clientEmail: editClientEmail,
+          clientPhone: editClientPhone || undefined,
+          clientRfc: editClientRfc || undefined,
+          clientRegimen: editClientRegimen || undefined,
+          clientPostal: editClientPostal || undefined,
+          scopeDescription: editScopeDescription,
+          totalAmount: total,
+          currency: editCurrency,
+          retencionIsr: editRetencionIsr,
+          retencionIva: editRetencionIva,
+          taxWithholdingAmount,
+          ivaAmount,
+          subtotalAmount,
+          selectedClauses: editSelectedClauses,
+          status: 'draft',
+          acceptedAt: undefined,
+          acceptedByName: undefined,
+          acceptedIp: undefined,
+          freelancerAcceptedAt: undefined,
+          freelancerAcceptedByName: undefined,
+          freelancerAcceptedIp: undefined,
+          contractHash: undefined
+        };
+
+        // Ensure newly added milestones have secure UUIDs
+        const finalMilestones = editMilestones.map((m) => {
+          const finalId = m.id.startsWith("new-") ? (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+            const r = (Math.random() * 16) | 0;
+            const v = c === "x" ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+          })) : m.id;
+          return {
+            ...m,
+            id: finalId,
+            contractId: contract.id
+          };
+        });
+
+        await saveContract(updatedContract);
+        await saveMilestones(finalMilestones);
+
+        // Call storage API to register proposal with status draft and log revision
+        const updated = await proposeContractRevision(contractId, `${revisionReason} (Cambios de componentes guardados)`);
+        if (updated) {
+          setContract(updated);
+          await refreshData();
+          setShowRevisionModal(false);
+          setRevisionReason("");
+          setRevisionSuccess(true);
+          setTimeout(() => setRevisionSuccess(false), 5050);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Solicitar Revisión",
+          message: `No se pudo solicitar la revisión: ${msg}`,
+          onConfirm: null,
+          isError: true
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Solicitar Revisión de Contrato",
+      message: "¿Estás seguro de que deseas proponer estos cambios y solicitar una revisión? El contrato volverá a estado de borrador con tus términos actualizados.",
+      onConfirm: executeProposeRevision,
+      isError: false
+    });
   };
 
 
@@ -425,7 +730,7 @@ export default function ClientContractView() {
                 Revisar y Firmar Aceptación
               </button>
               <button
-                onClick={() => setShowRevisionModal(true)}
+                onClick={startProposingRevision}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
               >
                 Solicitar Revisión
@@ -434,10 +739,27 @@ export default function ClientContractView() {
           )}
 
           {contract.status === 'client_signed' && (
-            <div className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2 text-xs font-semibold text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20">
-              <Clock className="h-4 w-4" />
-              Esperando Validación Final
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2.5 text-xs font-semibold text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20">
+                <Clock className="h-4 w-4" />
+                Esperando Validación Final
+              </div>
+              <button
+                onClick={startProposingRevision}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
+              >
+                Solicitar Revisión
+              </button>
             </div>
+          )}
+
+          {contract.status === 'accepted' && (
+            <button
+              onClick={startProposingRevision}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
+            >
+              Solicitar Revisión
+            </button>
           )}
         </div>
       </div>
@@ -560,7 +882,19 @@ export default function ClientContractView() {
               </div>
               
               <div className="rounded-xl border border-slate-100 dark:border-slate-900 p-4">
-                <span className="text-slate-400 font-semibold block uppercase tracking-wider text-3xs">Cliente</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-semibold block uppercase tracking-wider text-3xs">Cliente</span>
+                  {['sent', 'client_signed', 'accepted'].includes(contract.status) && (
+                    <button
+                      onClick={startProposingRevision}
+                      className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                      title="Proponer cambios a datos de cliente"
+                    >
+                      <Edit3 className="h-2.5 w-2.5" />
+                      Editar
+                    </button>
+                  )}
+                </div>
                 <span className="font-bold text-slate-800 dark:text-slate-200 mt-1 block">{contract.clientName}</span>
                 <span className="text-slate-500 dark:text-slate-400 mt-0.5 block">{contract.clientEmail}</span>
                 {contract.clientRfc ? (
@@ -578,23 +912,52 @@ export default function ClientContractView() {
 
           {/* Scope details */}
           <div className="py-6 border-b border-slate-100 dark:border-slate-900 flex flex-col gap-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Declaraciones & Alcance del Proyecto</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Declaraciones & Alcance del Proyecto</h3>
+              {['sent', 'client_signed', 'accepted'].includes(contract.status) && (
+                <button
+                  onClick={startProposingRevision}
+                  className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                  title="Proponer cambios al alcance del proyecto"
+                >
+                  <Edit3 className="h-2.5 w-2.5" />
+                  Editar
+                </button>
+              )}
+            </div>
             <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-350 font-light">{contract.scopeDescription}</p>
           </div>
 
           {/* Clause list */}
           <div className="py-6 border-b border-slate-100 dark:border-slate-900 flex flex-col gap-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cláusulas Legales Generales</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cláusulas Legales Generales</h3>
+              {['sent', 'client_signed', 'accepted'].includes(contract.status) && (
+                <button
+                  onClick={startProposingRevision}
+                  className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                  title="Proponer cambios a cláusulas legales"
+                >
+                  <Edit3 className="h-2.5 w-2.5" />
+                  Editar
+                </button>
+              )}
+            </div>
             <div className="flex flex-col gap-4 text-xs">
-              {MOCK_CLAUSES.map((clause, idx) => (
-                <div key={clause.id} className="flex gap-3">
-                  <span className="font-mono font-bold text-indigo-500 bg-indigo-500/5 h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">{idx + 1}</span>
-                  <div>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-200">{clause.title}</h4>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1 leading-relaxed font-light">{clause.content}</p>
+              {(() => {
+                const renderedClauses = contract.selectedClauses && contract.selectedClauses.length > 0
+                  ? MOCK_CLAUSES.filter(c => contract.selectedClauses?.includes(c.id))
+                  : MOCK_CLAUSES;
+                return renderedClauses.map((clause, idx) => (
+                  <div key={clause.id} className="flex gap-3">
+                    <span className="font-mono font-bold text-indigo-500 bg-indigo-500/5 h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">{idx + 1}</span>
+                    <div>
+                      <h4 className="font-bold text-slate-800 dark:text-slate-200">{clause.title}</h4>
+                      <p className="text-slate-500 dark:text-slate-400 mt-1 leading-relaxed font-light">{clause.content}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </div>
 
@@ -769,8 +1132,31 @@ export default function ClientContractView() {
           </div>
         </div>
 
-        {/* Right Column: Financial Milestones & SPEI Clabe (Interactive) */}
         <div className="lg:col-span-4 flex flex-col gap-6 print:hidden">
+          {/* Freelancer Reputation / Standing Card */}
+          <div className="glass rounded-3xl p-5 border-emerald-500/20 bg-emerald-500/5 flex flex-col gap-4 text-left">
+            <h3 className="text-sm font-bold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <Star className="h-4 w-4 fill-emerald-500 text-emerald-500" />
+              Freelancer en Buena Posición
+            </h3>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                Reputación de Confianza de Anticipo MX
+              </div>
+              <ul className="text-3xs text-slate-500 dark:text-slate-450 flex flex-col gap-1.5 leading-normal pl-1">
+                <li className="flex items-center gap-1.5">✓ Identidad fiscal emisor validada (RFC {contract.freelancerRfc ? "Registrado" : "N/A"})</li>
+                <li className="flex items-center gap-1.5">✓ Sello de integridad criptográfica activo</li>
+                <li className="flex items-center gap-1.5">✓ 0 penalizaciones ni disputas vigentes</li>
+                <li className="flex items-center gap-1.5">✓ Hitos financieros protegidos por escrow</li>
+              </ul>
+              <div className="border-t border-slate-100 dark:border-slate-800/80 pt-2.5 mt-1 flex justify-between items-center text-3xs text-slate-400">
+                <span>Miembro desde</span>
+                <span className="font-semibold text-slate-600 dark:text-slate-300">Julio 2026</span>
+              </div>
+            </div>
+          </div>
+
           {/* SPEI bank details card */}
           <div className="glass rounded-3xl p-5 border-indigo-500/20 bg-white/70 dark:bg-slate-950/70 flex flex-col gap-4 text-left">
             <h3 className="text-sm font-bold flex items-center gap-1.5 text-indigo-500">
@@ -820,6 +1206,41 @@ export default function ClientContractView() {
             )}
           </div>
 
+          {contract.status === 'accepted' && (
+            <div className="glass rounded-3xl p-5 border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/10 flex flex-col gap-4 text-left">
+              <h3 className="text-sm font-bold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-4 w-4" />
+                Entrega y Finalización del Proyecto
+              </h3>
+              <p className="text-2xs text-slate-500 dark:text-slate-400 leading-normal">
+                Si el freelancer ha completado la entrega de los servicios/productos acordados, puedes marcar tu confirmación de conformidad a continuación.
+              </p>
+              
+              <div className="flex flex-col gap-2">
+                {contract.clientCompletedAt ? (
+                  <div className="text-xs text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1.5">
+                    <span className="animate-pulse h-2 w-2 rounded-full bg-amber-500"></span>
+                    Has confirmado la entrega. Esperando que el freelancer confirme por su parte para cerrar el contrato.
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleMarkCompleted}
+                    className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 text-xs transition-colors shadow-lg shadow-emerald-500/10 cursor-pointer"
+                  >
+                    Confirmar Proyecto como Terminado / Recibido
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setIsCancellingContract(true)}
+                  className="w-full rounded-xl border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-650 font-semibold py-2.5 text-xs transition-colors cursor-pointer"
+                >
+                  Cancelar Contrato (Detener Proyecto)
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Active invoice request */}
           {activePayment && contract.status === 'accepted' ? (
             <div className="glass rounded-3xl p-5 border-amber-500/20 bg-amber-500/5 flex flex-col gap-4 text-left animate-pulse-subtle">
@@ -859,7 +1280,19 @@ export default function ClientContractView() {
 
           {/* Milestones chronology sidebar */}
           <div className="flex flex-col gap-3 text-left">
-            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Calendario de Hitos</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Calendario de Hitos</h4>
+              {['sent', 'client_signed', 'accepted'].includes(contract.status) && (
+                <button
+                  onClick={startProposingRevision}
+                  className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                  title="Proponer cambios a hitos y presupuesto"
+                >
+                  <Edit3 className="h-2.5 w-2.5" />
+                  Editar
+                </button>
+              )}
+            </div>
             <div className="flex flex-col gap-3">
               {milestones.map((m, idx) => {
                 const overdue = isMilestoneOverdue(m);
@@ -913,8 +1346,19 @@ export default function ClientContractView() {
 
       {/* SPEI Payment Reference Input Modal Dialog */}
       {showPaymentModal && paymentMilestone && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
-          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
+          <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+            <button
+              type="button"
+              onClick={() => {
+                setShowPaymentModal(false);
+                setPaymentMilestone(null);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
             <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-500">
               <CreditCard className="h-6 w-6" />
               Notificar Transferencia SPEI
@@ -925,19 +1369,19 @@ export default function ClientContractView() {
 
             <form onSubmit={handleMarkAsTransferred} className="mt-6 flex flex-col gap-4">
               <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Clave de Rastreo SPEI / Referencia</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Clave de Rastreo SPEI / Referencia</label>
                 <input
                   type="text"
                   required
                   placeholder="Ej. 182746182903485761 o folio"
                   value={trackingReference}
                   onChange={(e) => setTrackingReference(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                  className="w-full rounded-xl border border-slate-350 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white font-mono transition-all duration-300"
                 />
               </div>
 
               <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Monto Transferido ({contract.currency})</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Monto Transferido ({contract?.currency})</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
                   <input
@@ -945,47 +1389,49 @@ export default function ClientContractView() {
                     required
                     value={transferredAmount}
                     onChange={(e) => setTransferredAmount(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent pl-7 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-bold"
+                    className="w-full rounded-xl border border-slate-350 dark:border-slate-700 bg-transparent pl-7 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white font-bold transition-all duration-300"
                   />
                 </div>
               </div>
-              {contract.currency === "USD" && (
+              {contract?.currency === "USD" && (
                 <>
                   <div>
-                    <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tipo de Cambio (Banxico sugerido: 20.15)</label>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Tipo de Cambio (Banxico sugerido: 20.15)</label>
                     <input
                       type="number"
                       step="0.0001"
                       required
                       value={overrideExchangeRate}
                       onChange={(e) => setOverrideExchangeRate(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                      className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white font-mono transition-all duration-300"
                     />
                   </div>
 
-                  <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-3.5 text-xs flex flex-col gap-1.5">
-                    <div className="flex justify-between text-slate-400 font-medium">
+                  <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-pink-500/5 dark:from-indigo-950/20 dark:via-purple-950/10 dark:to-pink-950/10 border border-indigo-500/15 rounded-xl p-4 text-xs flex flex-col gap-2 shadow-inner">
+                    <div className="flex justify-between text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                       <span>Monto en USD:</span>
                       <span className="font-bold text-slate-700 dark:text-slate-300">${transferredAmount.toFixed(2)} USD</span>
                     </div>
-                    <div className="flex justify-between text-slate-400 font-medium">
+                    <div className="flex justify-between text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                       <span>Tipo de Cambio:</span>
                       <span className="font-bold text-slate-700 dark:text-slate-300">${(parseFloat(overrideExchangeRate) || 20.15).toFixed(4)} MXN</span>
                     </div>
-                    <div className="flex justify-between text-indigo-500 font-bold border-t border-slate-200 dark:border-slate-800/80 pt-2">
-                      <span>Total a Transferir:</span>
-                      <span>${(transferredAmount * (parseFloat(overrideExchangeRate) || 20.15)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                    <div className="flex justify-between items-center text-indigo-600 dark:text-indigo-400 font-bold border-t border-slate-200 dark:border-slate-800/80 pt-2.5 mt-1">
+                      <span className="text-[11px] uppercase tracking-wider">Total a Transferir:</span>
+                      <span className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-650 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+                        ${(transferredAmount * (parseFloat(overrideExchangeRate) || 20.15)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+                      </span>
                     </div>
                   </div>
                 </>
               )}
 
               <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
                   Método de Comprobante
                 </label>
                 <div className="flex gap-4 mb-3">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-655 dark:text-slate-350 cursor-pointer">
                     <input
                       type="radio"
                       name="receiptFileType"
@@ -995,7 +1441,7 @@ export default function ClientContractView() {
                     />
                     Subir Archivo (PDF, PNG, JPG)
                   </label>
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-655 dark:text-slate-350 cursor-pointer">
                     <input
                       type="radio"
                       name="receiptFileType"
@@ -1009,22 +1455,27 @@ export default function ClientContractView() {
 
                 {receiptFileType === 'file' ? (
                   <div className="flex flex-col gap-2">
-                    <input
-                      type="file"
-                      id="receipt-file-input"
-                      accept=".pdf,.png,.jpg,.jpeg"
-                      onChange={handleFileChange}
-                      className="block w-full text-xs text-slate-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-xl file:border-0
-                        file:text-xs file:font-semibold
-                        file:bg-indigo-50 file:text-indigo-700
-                        hover:file:bg-indigo-100
-                        dark:file:bg-indigo-950/30 dark:file:text-indigo-400"
-                    />
-                    <p className="text-3xs text-slate-400">
-                      Formatos permitidos: PDF, PNG, JPG. Máx. 5MB.
-                    </p>
+                    <label 
+                      htmlFor="receipt-file-input"
+                      className="group relative flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-750 hover:border-indigo-500 dark:hover:border-indigo-500/80 rounded-2xl cursor-pointer bg-slate-50/50 dark:bg-slate-900/20 hover:bg-indigo-50/10 dark:hover:bg-indigo-950/10 transition-all duration-300"
+                    >
+                      <input
+                        type="file"
+                        id="receipt-file-input"
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      <div className="p-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:bg-indigo-100/50 dark:group-hover:bg-indigo-950/50 group-hover:text-indigo-500 transition-colors duration-300">
+                        <Upload className="h-6 w-6 group-hover:animate-bounce" />
+                      </div>
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-350 mt-3 group-hover:text-indigo-500 transition-colors">
+                        {receiptFileName ? receiptFileName : "Selecciona o arrastra tu comprobante"}
+                      </span>
+                      <p className="text-[10px] text-slate-450 dark:text-slate-500 mt-1">
+                        PDF, PNG, JPG hasta 5MB
+                      </p>
+                    </label>
                   </div>
                 ) : (
                   <input
@@ -1032,13 +1483,13 @@ export default function ClientContractView() {
                     placeholder="Ej. https://dropbox.com/s/recibo.pdf o captura.png"
                     value={receiptUrl}
                     onChange={(e) => setReceiptUrl(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white transition-all duration-300"
                   />
                 )}
               </div>
 
               {modalError && (
-                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-3 text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
+                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-3 text-xs text-red-655 dark:text-red-400 flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                   <span>{modalError}</span>
                 </div>
@@ -1051,18 +1502,18 @@ export default function ClientContractView() {
                     setShowPaymentModal(false);
                     setPaymentMilestone(null);
                   }}
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={loading || !trackingReference}
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/10"
                 >
                   {loading ? (
                     <>
-                      <Clock className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       Registrando...
                     </>
                   ) : (
@@ -1080,54 +1531,90 @@ export default function ClientContractView() {
 
       {/* Acceptance Modal Dialog */}
       {showAcceptModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
-          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
+          <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+            <button
+              type="button"
+              onClick={() => {
+                setShowAcceptModal(false);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
             <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-500">
               <ShieldCheck className="h-6 w-6" />
               Aceptar Contrato de Servicios
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-              Al escribir tu nombre completo a continuación, confirmas tu consentimiento y aceptación de todos los términos detallados en esta propuesta, incluyendo el alcance, la tarifa de {formatMoney(contract.totalAmount, contract.currency)}, el esquema de anticipos y las cláusulas de ley adjuntas.
-            </p>
-            <p className="text-4xs text-slate-400 mt-2 leading-normal">
-              Guardaremos tu nombre completo, marca de tiempo y tu dirección IP pública para el registro de auditoría digital de conformidad con el Art. 89 del Código de Comercio de México.
+              Al escribir tu nombre completo a continuación, confirmas tu consentimiento y aceptación de todos los términos detallados en esta propuesta, incluyendo el alcance, la tarifa de {formatMoney(contract?.totalAmount || 0, contract?.currency || 'MXN')}, el esquema de anticipos y las cláusulas de ley adjuntas.
             </p>
 
-            <form onSubmit={handleAcceptContract} className="mt-6 flex flex-col gap-4">
+            {/* Steps indicator */}
+            <div className="flex items-center justify-between w-full mt-4 mb-5 border-b border-slate-100 dark:border-slate-900 pb-3">
+              <div className="flex items-center gap-2">
+                <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${acceptStep === 'name' ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : 'bg-emerald-500 text-white'}`}>
+                  {acceptStep === 'otp' ? <Check className="h-3.5 w-3.5" /> : "1"}
+                </span>
+                <span className={`text-xs font-semibold ${acceptStep === 'name' ? 'text-indigo-650 dark:text-indigo-400 font-bold' : 'text-slate-450 dark:text-slate-500'}`}>
+                  Identidad
+                </span>
+              </div>
+              <div className="h-[1px] flex-1 mx-3 bg-slate-200 dark:bg-slate-800" />
+              <div className="flex items-center gap-2">
+                <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${acceptStep === 'otp' ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : 'bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-655'}`}>
+                  2
+                </span>
+                <span className={`text-xs font-semibold ${acceptStep === 'otp' ? 'text-indigo-650 dark:text-indigo-400 font-bold' : 'text-slate-450 dark:text-slate-650'}`}>
+                  Código OTP
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleAcceptContract} className="mt-4 flex flex-col gap-4">
               {acceptStep === 'name' ? (
                 <div>
-                  <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Nombre completo del Firmante</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Escribe tu nombre y apellido"
-                    value={signerName}
-                    onChange={(e) => setSignerName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-                  />
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Nombre completo del Firmante</label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="Escribe tu nombre y apellido"
+                      value={signerName}
+                      onChange={(e) => setSignerName(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-transparent pl-10 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
                   {debugOtp && (
-                    <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 p-3 rounded-xl text-3xs text-indigo-700 dark:text-indigo-400 font-semibold leading-relaxed">
-                      💡 <strong>Demo Debug Info:</strong> El código de firma enviado al cliente es: <span className="font-extrabold underline text-sm tracking-widest">{debugOtp}</span>
+                    <div className="bg-gradient-to-r from-slate-900 to-indigo-950 dark:from-slate-950 dark:to-indigo-950 border border-indigo-500/30 rounded-2xl p-4 text-xs text-indigo-300 dark:text-indigo-400 font-mono leading-relaxed shadow-lg flex items-start gap-3">
+                      <span className="text-base select-none mt-0.5">📟</span>
+                      <div className="flex-1">
+                        <strong className="text-indigo-455 font-bold block mb-1">SYSTEM_DEBUG_OTP</strong>
+                        <span>El código de firma OTP es: </span>
+                        <span className="font-black text-white bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 tracking-wider select-all">{debugOtp}</span>
+                      </div>
                     </div>
                   )}
                   <div>
-                    <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Código de Firma Electrónica (OTP de 6 dígitos)</label>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Código de Firma Electrónica (OTP de 6 dígitos)</label>
                     <input
                       type="text"
                       maxLength={6}
                       required
                       disabled={otpAttempts >= 3}
-                      placeholder="Ej. 123456"
+                      placeholder="••••••"
                       value={otpInput}
                       onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm font-bold text-center tracking-widest focus:border-indigo-500 focus:outline-none dark:text-white disabled:opacity-50"
+                      className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 px-4 py-3 text-2xl font-black text-center tracking-[0.5em] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none dark:text-white disabled:opacity-50 font-mono transition-all duration-300"
                     />
                   </div>
                   {otpError && (
-                    <span className="text-3xs text-red-500 font-semibold">{otpError}</span>
+                    <span className="text-xs text-red-500 dark:text-red-400 font-semibold">{otpError}</span>
                   )}
                   {otpAttempts >= 3 && (
                     <button
@@ -1141,6 +1628,10 @@ export default function ClientContractView() {
                 </div>
               )}
 
+              <p className="text-[11px] text-slate-450 dark:text-slate-500 leading-normal">
+                Guardaremos tu nombre completo, marca de tiempo y tu dirección IP pública para el registro de auditoría digital de conformidad con el Art. 89 del Código de Comercio de México.
+              </p>
+
               <div className="flex gap-3 justify-end mt-2">
                 <button
                   type="button"
@@ -1151,18 +1642,18 @@ export default function ClientContractView() {
                       setShowAcceptModal(false);
                     }
                   }}
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
                 >
                   {acceptStep === 'otp' ? "Atrás" : "Cancelar"}
                 </button>
                 <button
                   type="submit"
                   disabled={loading || (acceptStep === 'name' ? !signerName : (otpInput.length < 6 || otpAttempts >= 3))}
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/10"
                 >
                   {loading ? (
                     <>
-                      <Clock className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       Procesando...
                     </>
                   ) : acceptStep === 'name' ? (
@@ -1183,51 +1674,556 @@ export default function ClientContractView() {
         </div>
       )}
 
-      {/* Revision Modal Dialog */}
-      {showRevisionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
-          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-red-500/20">
-            <h3 className="text-xl font-bold flex items-center gap-2 text-red-500">
-              <AlertCircle className="h-6 w-6" />
-              Solicitar Revisión de la Propuesta
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-              ¿Hay algún cambio que desees realizar antes de firmar? Describe el motivo para que el freelancer pueda corregir el documento y volver a enviártelo. El contrato volverá a estado de **Borrador**.
-            </p>
+      {showRevisionModal && contract && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md overflow-y-auto print:hidden">
+          <div className="relative bg-white dark:bg-slate-950 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl border border-rose-500/20 animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900 sticky top-0 z-10 rounded-t-3xl">
+              <h3 className="font-extrabold text-rose-600 dark:text-rose-400 flex items-center gap-2 text-lg">
+                <AlertTriangle className="h-5 w-5 animate-pulse text-rose-500" />
+                Proponer Cambios y Solicitar Revisión
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowRevisionModal(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors z-20"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-            <form onSubmit={handleProposeRevision} className="mt-6 flex flex-col gap-4">
-              <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Comentarios o Motivo de la Revisión</label>
-                <textarea
-                  required
-                  rows={4}
-                  placeholder="Ej. Favor de corregir el monto del segundo hito..."
-                  value={revisionReason}
-                  onChange={(e) => setRevisionReason(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-red-500 focus:outline-none dark:text-white"
-                />
+            {/* Content */}
+            <form onSubmit={handleProposeRevision} className="p-6 flex flex-col gap-6 text-left">
+              
+              {/* Section 1: Client Details */}
+              <div className="flex flex-col gap-4">
+                <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">1. Tus Datos de Facturación (Cliente)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nombre / Razón Social</label>
+                    <input
+                      type="text"
+                      required
+                      value={editClientName}
+                      onChange={(e) => setEditClientName(e.target.value)}
+                      className="rounded-xl border border-slate-350 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Correo Electrónico</label>
+                    <input
+                      type="email"
+                      required
+                      value={editClientEmail}
+                      onChange={(e) => setEditClientEmail(e.target.value)}
+                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Teléfono de Contacto</label>
+                    <input
+                      type="text"
+                      value={editClientPhone}
+                      onChange={(e) => setEditClientPhone(e.target.value)}
+                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                      placeholder="Ej. +525512345678"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Tu RFC</label>
+                    <input
+                      type="text"
+                      value={editClientRfc}
+                      onChange={(e) => setEditClientRfc(e.target.value.toUpperCase())}
+                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white font-mono transition-all duration-300"
+                      placeholder="Ej. GUEH860710MX3"
+                      maxLength={13}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Régimen Fiscal</label>
+                    <select
+                      value={editClientRegimen}
+                      onChange={(e) => setEditClientRegimen(e.target.value)}
+                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white bg-slate-900 transition-all duration-300"
+                    >
+                      <option value="">-- Selecciona Régimen --</option>
+                      <option value="601 - General de Ley Personas Morales">601 - General de Ley Personas Morales</option>
+                      <option value="603 - Personas Morales con Fines no Lucrativos">603 - Personas Morales con Fines no Lucrativos</option>
+                      <option value="605 - Sueldos y Salarios e Ingresos Asimilados a Salarios">605 - Sueldos y Salarios e Ingresos Asimilados a Salarios</option>
+                      <option value="606 - Arrendamiento">606 - Arrendamiento</option>
+                      <option value="612 - Personas Físicas con Actividades Empresariales y Profesionales">612 - Personas Físicas con Actividades Empresariales y Profesionales</option>
+                      <option value="625 - Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas">625 - Régimen de Plataformas</option>
+                      <option value="626 - Régimen Simplificado de Confianza (RESICO)">626 - Régimen RESICO</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Código Postal</label>
+                    <input
+                      type="text"
+                      value={editClientPostal}
+                      onChange={(e) => setEditClientPostal(e.target.value)}
+                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                      placeholder="Ej. 06000"
+                      maxLength={5}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="flex gap-3 justify-end mt-2">
+              {/* Section 2: Scope, Budget, and Taxes */}
+              <div className="flex flex-col gap-4">
+                <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">2. Configuración del Proyecto y Retenciones</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Scope Input */}
+                  <div className="md:col-span-2 flex flex-col gap-1.5">
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Concepto y Alcance de Trabajo</label>
+                    <textarea
+                      rows={4}
+                      required
+                      value={editScopeDescription}
+                      onChange={(e) => setEditScopeDescription(e.target.value)}
+                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-4 py-2.5 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                    />
+                  </div>
+
+                  {/* Budget & Currency */}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Presupuesto Total</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                        <input
+                          type="number"
+                          min={1}
+                          required
+                          value={editTotalAmount || ""}
+                          onChange={(e) => handleEditTotalAmountChange(Number(e.target.value))}
+                          className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent pl-6 pr-3 py-2 text-xs font-bold focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Moneda</label>
+                      <select
+                        value={editCurrency}
+                        onChange={(e) => setEditCurrency(e.target.value as 'MXN' | 'USD')}
+                        className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white bg-slate-900 font-bold transition-all duration-300"
+                      >
+                        <option value="MXN">Pesos Mexicanos (MXN)</option>
+                        <option value="USD">Dólares Americanos (USD)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tax Checkboxes */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start mt-2">
+                  <div className="flex flex-col gap-3 bg-slate-100/50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 block">Retención de Impuestos (México)</span>
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-center gap-2 text-xs text-slate-750 dark:text-slate-350 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editRetencionIsr}
+                          onChange={(e) => setEditRetencionIsr(e.target.checked)}
+                          className="rounded border-slate-300 dark:border-slate-700 text-indigo-650 focus:ring-indigo-500"
+                        />
+                        Retención ISR (10% Freelancer)
+                      </label>
+                      <label className="flex items-center gap-2 text-xs text-slate-750 dark:text-slate-350 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editRetencionIva}
+                          onChange={(e) => setEditRetencionIva(e.target.checked)}
+                          className="rounded border-slate-300 dark:border-slate-700 text-indigo-650 focus:ring-indigo-500"
+                        />
+                        Retención IVA (10.667% / 2/3 partes)
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Tax Breakdown */}
+                  <div className="md:col-span-2 bg-rose-500/5 p-4 rounded-xl border border-rose-500/10 flex flex-col gap-2 text-xs">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-550 dark:text-slate-400 mb-1 block">Desglose Fiscal Estimado</span>
+                    <div className="flex justify-between border-b border-slate-200/50 dark:border-slate-800/80 pb-1 text-slate-650 dark:text-slate-400">
+                      <span>Subtotal (Monto del Proyecto):</span>
+                      <span className="font-semibold">{formatMoney(editTotalAmount, editCurrency)}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-200/50 dark:border-slate-800/80 pb-1 text-slate-650 dark:text-slate-400">
+                      <span>IVA Trasladado (16%):</span>
+                      <span className="font-semibold">{formatMoney(editTotalAmount * 0.16, editCurrency)}</span>
+                    </div>
+                    {editRetencionIsr && (
+                      <div className="flex justify-between text-rose-600 border-b border-slate-200/50 dark:border-slate-800/80 pb-1">
+                        <span>Retención ISR (10%):</span>
+                        <span className="font-semibold">-{formatMoney(editTotalAmount * 0.10, editCurrency)}</span>
+                      </div>
+                    )}
+                    {editRetencionIva && (
+                      <div className="flex justify-between text-rose-600 border-b border-slate-200/50 dark:border-slate-800/80 pb-1">
+                        <span>Retención IVA (10.667%):</span>
+                        <span className="font-semibold">-{formatMoney(editTotalAmount * 0.16 * (2 / 3), editCurrency)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-slate-800 dark:text-white font-bold pt-1">
+                      <span>Neto Estimado a Recibir:</span>
+                      <span className="text-rose-600 dark:text-rose-400">
+                        {formatMoney(
+                          editTotalAmount +
+                          (editTotalAmount * 0.16) -
+                          (editRetencionIsr ? editTotalAmount * 0.10 : 0) -
+                          (editRetencionIva ? editTotalAmount * 0.16 * (2 / 3) : 0),
+                          editCurrency
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Milestones Schedule */}
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider">3. Esquema de Cobro y Entregables</h4>
+                  <button
+                    type="button"
+                    onClick={handleEditAddMilestone}
+                    className="flex items-center gap-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-3 py-1 text-xs font-bold uppercase transition-colors cursor-pointer"
+                  >
+                    + Agregar Hito
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {editMilestones.map((m, idx) => (
+                    <div key={m.id || idx} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-slate-100/30 dark:bg-slate-900/10 border border-slate-200/60 dark:border-slate-900/60 rounded-xl p-3">
+                      <div className="sm:col-span-6">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">Concepto del Entregable</label>
+                        <input
+                          type="text"
+                          required
+                          value={m.label}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, label: val } : item));
+                          }}
+                          className="w-full rounded-xl border border-slate-350 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                          placeholder="Ej. Anticipo o Entrega final"
+                        />
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">Fecha Vencimiento</label>
+                        <input
+                          type="date"
+                          required
+                          value={m.dueDate ? m.dueDate.split('T')[0] : ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, dueDate: val } : item));
+                          }}
+                          className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">Importe ({editCurrency})</label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                          <input
+                            type="number"
+                            required
+                            min={1}
+                            value={m.amount || ""}
+                            onChange={(e) => handleEditMilestoneAmount(idx, Number(e.target.value))}
+                            className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent pl-5 pr-2 py-2 text-xs font-bold focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                          />
+                        </div>
+                      </div>
+                      <div className="sm:col-span-1 flex justify-center pb-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleEditRemoveMilestone(idx)}
+                          disabled={editMilestones.length <= 1}
+                          className="text-rose-500 hover:text-rose-600 disabled:opacity-30 p-2 rounded-xl bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 transition-colors cursor-pointer text-xs font-semibold"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Milestone Balance Help Message */}
+                {(() => {
+                  const currentSum = editMilestones.reduce((sum, m) => sum + m.amount, 0);
+                  const difference = editTotalAmount - currentSum;
+                  if (Math.abs(difference) <= 0.01) {
+                    return (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/5 border border-emerald-500/10 rounded-xl px-4 py-2 mt-1">
+                        ¡Balance Correcto! La suma de los hitos coincide con el presupuesto total: {formatMoney(currentSum, editCurrency)}.
+                      </p>
+                    );
+                  } else {
+                    return (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold bg-amber-500/5 border border-amber-500/10 rounded-xl px-4 py-2 mt-1">
+                        Suma Incorrecta: La suma de los hitos es {formatMoney(currentSum, editCurrency)}. {difference > 0 ? "Faltan" : "Exceden"} {formatMoney(Math.abs(difference), editCurrency)} para coincidir con el total de {formatMoney(editTotalAmount, editCurrency)}.
+                      </p>
+                    );
+                  }
+                })()}
+              </div>
+
+              {/* Section 4: Clauses Checklist */}
+              <div className="flex flex-col gap-4">
+                <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">4. Cláusulas del Acuerdo</h4>
+                <div className="grid grid-cols-1 gap-2 max-h-[250px] overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 bg-slate-100/20 dark:bg-slate-900/10">
+                  {MOCK_CLAUSES.map((clause) => {
+                    const isChecked = editSelectedClauses.includes(clause.id);
+                    return (
+                      <div
+                        key={clause.id}
+                        onClick={() => {
+                          setEditSelectedClauses(prev =>
+                            prev.includes(clause.id)
+                              ? prev.filter(id => id !== clause.id)
+                              : [...prev, clause.id]
+                          );
+                        }}
+                        className={`flex gap-3 items-start p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 cursor-pointer select-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50 ${isChecked ? 'bg-rose-500/5 border-rose-500/30! ring-1 ring-rose-500/20' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}} // handled by parent div onClick
+                          className="rounded border-slate-355 dark:border-slate-700 text-rose-500 focus:ring-rose-500 mt-0.5 pointer-events-none"
+                        />
+                        <div className="text-xs">
+                          <h5 className="font-bold text-slate-850 dark:text-slate-200">{clause.title} <span className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded px-2 py-0.5 font-semibold uppercase ml-2">{clause.category}</span></h5>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{clause.content}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Section 5: Revision Reason */}
+              <div className="flex flex-col gap-1.5 border-t border-slate-200 dark:border-slate-800 pt-6">
+                <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider pb-2">5. Comentarios de la Revisión (Requerido)</h4>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Explica los motivos de estos cambios al freelancer</label>
+                <div className="relative">
+                  <textarea
+                    required
+                    rows={3}
+                    maxLength={1000}
+                    placeholder="Ej. Favor de corregir el monto de los hitos y modificar el alcance del proyecto de acuerdo a lo platicado..."
+                    value={revisionReason}
+                    onChange={(e) => setRevisionReason(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/10 px-4 py-3 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300 resize-none"
+                  />
+                  <span className="absolute bottom-3 right-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 select-none">
+                    {revisionReason.length}/1000
+                  </span>
+                </div>
+              </div>
+
+              {/* Visual Diff Panel */}
+              <div className="border-t border-slate-200 dark:border-slate-800 pt-6">
+                <span className="text-xs font-bold text-slate-900 dark:text-white block mb-4 uppercase tracking-wider">Comparativa de Cambios (Diff Visual)</span>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left: Original */}
+                  <div className="flex flex-col gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-3xs font-extrabold text-red-600 uppercase tracking-wider">Versión Original</span>
+                      <span className="text-xs font-bold text-red-600 line-through">
+                        {formatMoney(contract.totalAmount, contract.currency)}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-650 dark:text-slate-450 flex flex-col gap-2">
+                      <div><strong className="text-4xs uppercase tracking-wider text-slate-400">Cliente:</strong> {contract.clientName} ({contract.clientEmail})</div>
+                      <div><strong className="text-4xs uppercase tracking-wider text-slate-400">Alcance:</strong></div>
+                      <div className="whitespace-pre-wrap line-through leading-relaxed">
+                        {contract.scopeDescription}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Proposed */}
+                  <div className="flex flex-col gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-3xs font-extrabold text-emerald-600 uppercase tracking-wider">Nueva Propuesta</span>
+                      <span className="text-xs font-black text-emerald-600">
+                        {formatMoney(editTotalAmount, editCurrency)}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-850 dark:text-white flex flex-col gap-2">
+                      <div><strong className="text-4xs uppercase tracking-wider text-slate-500">Cliente:</strong> {editClientName} ({editClientEmail})</div>
+                      <div><strong className="text-4xs uppercase tracking-wider text-slate-500">Alcance:</strong></div>
+                      <div className="whitespace-pre-wrap leading-relaxed">
+                        {editScopeDescription}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="border-t border-slate-200 dark:border-slate-800 pt-6 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowRevisionModal(false)}
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  className="rounded-xl bg-slate-100 dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={loading || !revisionReason}
-                  className="rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                  className="rounded-xl bg-red-650 hover:bg-red-600 disabled:opacity-50 text-white px-6 py-2.5 text-xs font-bold transition-colors flex items-center gap-1.5 shadow-md shadow-red-500/10 cursor-pointer"
                 >
-                  {loading ? "Procesando..." : "Enviar Solicitud"}
+                  {loading ? "Procesando..." : "Proponer Cambios y Solicitar Revisión"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+      {isCancellingContract && contract && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
+          <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-rose-500/20">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCancellingContract(false);
+                setCancelReason("");
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-xl font-bold flex items-center gap-2 text-rose-600 dark:text-rose-455">
+              <AlertTriangle className="h-6 w-6 text-rose-500 animate-pulse" />
+              Cancelar Contrato
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+              Ingresa el motivo de cancelación del contrato. Se notificará al freelancer y quedará registrado en la bitácora de auditoría.
+            </p>
+
+            <div className="mt-4 flex flex-col gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Motivo de Cancelación</label>
+                <div className="relative">
+                  <textarea
+                    rows={4}
+                    required
+                    maxLength={500}
+                    placeholder="Ej. Mutuo acuerdo, cambio de proveedor, etc..."
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/10 px-4 py-3 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300 resize-none"
+                  />
+                  <span className="absolute bottom-3 right-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 select-none">
+                    {cancelReason.length}/500
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCancellingContract(false);
+                    setCancelReason("");
+                  }}
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelContract}
+                  disabled={!cancelReason.trim()}
+                  className="rounded-xl bg-rose-650 hover:bg-rose-600 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-rose-600/10"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  Confirmar Cancelación
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Warning/Confirmation Modal */}
+      {warningModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
+          <div className={`relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border ${warningModal.isError ? 'border-red-500/20' : 'border-amber-500/20'}`}>
+            <button
+              type="button"
+              onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className={`text-xl font-bold flex items-center gap-2 ${warningModal.isError ? 'text-red-500' : 'text-amber-500'}`}>
+              <AlertTriangle className={`h-6 w-6 ${warningModal.isError ? 'text-red-500 animate-pulse' : 'text-amber-500 animate-pulse'}`} />
+              {warningModal.title}
+            </h3>
+            <p className="text-xs text-slate-650 dark:text-slate-400 mt-3 leading-relaxed whitespace-pre-wrap">
+              {warningModal.message}
+            </p>
+            <div className="flex gap-3 justify-end mt-6">
+              {warningModal.isError ? (
+                <button
+                  type="button"
+                  onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
+                  className="rounded-xl bg-red-650 hover:bg-red-600 text-white px-5 py-2.5 text-xs font-bold transition-colors cursor-pointer shadow-lg shadow-red-600/10"
+                >
+                  Entendido
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
+                    className="rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (warningModal.onConfirm) {
+                        try {
+                          const confirmFn = warningModal.onConfirm;
+                          setWarningModal(prev => ({ ...prev, isOpen: false }));
+                          await confirmFn();
+                        } catch (err) {
+                          const msg = err instanceof Error ? err.message : String(err);
+                          setWarningModal({
+                            isOpen: true,
+                            title: "Error de Transición",
+                            message: `No se pudo completar la acción: ${msg}`,
+                            onConfirm: null,
+                            isError: true
+                          });
+                        }
+                      }
+                    }}
+                    className="rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-5 py-2.5 text-xs font-bold transition-colors cursor-pointer shadow-lg shadow-amber-600/10"
+                  >
+                    Confirmar
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

@@ -80,15 +80,17 @@ test.describe("Sprint WB2: SPEI CEP Reconciler, USD FX, Version History & WhatsA
     await page.click('button:has-text("Enviar Código de Firma")');
     
     // Fill OTP
-    const debugBox = page.locator('div:has-text("Demo Debug Info:")').last();
-    await expect(debugBox).toContainText(/es: \d{6}/);
+    const debugBox = page.locator('div:has-text("SYSTEM_DEBUG_OTP")').last();
+    await debugBox.waitFor({ timeout: 10000 });
+    await expect(debugBox).toContainText(/\d{6}/, { timeout: 10000 });
     const debugText = await debugBox.textContent() || "";
     const match = debugText.match(/\b\d{6}\b/);
     const otpCode = match ? match[0] : "";
     console.log("Extracted OTP Code:", otpCode);
     
-    await page.fill('input[placeholder="Ej. 123456"]', otpCode);
+    await page.fill('input[placeholder="••••••"]', otpCode);
     await page.click('button:has-text("Verificar y Firmar")');
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
     
     // Wait for the modal to close and show acceptance success
     await expect(page.locator("body")).toContainText("Contrato firmado exitosamente!");
@@ -97,6 +99,7 @@ test.describe("Sprint WB2: SPEI CEP Reconciler, USD FX, Version History & WhatsA
     await page.goto("/dashboard?demo=true");
     await page.locator('text=Sofía Garza').first().click();
     await page.click('button:has-text("Validar y Contra-firmar")');
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
     
     // Go back to the client page to notify payment
     await page.goto(href);

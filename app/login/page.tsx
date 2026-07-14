@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { shouldUseSupabase } from "@/lib/storageClient";
 import { Lock, Key, ArrowLeft, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
@@ -17,6 +18,17 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    // Check if we are running in local/demo mode (without Supabase database)
+    if (!shouldUseSupabase()) {
+      // Set mock authentication cookies and localStorage
+      document.cookie = "sb-mock-auth-token=true; path=/";
+      document.cookie = "demo_mode=true; path=/";
+      localStorage.setItem("demo_mode", "true");
+
+      router.push("/dashboard");
+      return;
+    }
 
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword({

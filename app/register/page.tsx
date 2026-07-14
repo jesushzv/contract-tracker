@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { shouldUseSupabase } from "@/lib/storageClient";
 import { UserPlus, Key, ArrowLeft, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
@@ -14,6 +15,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +31,23 @@ export default function RegisterPage() {
     if (password.length < 6) {
       setError("La contraseña debe tener al menos 6 caracteres.");
       setLoading(false);
+      return;
+    }
+
+    // Check if we are running in local/demo mode (without Supabase database)
+    if (!shouldUseSupabase()) {
+      // Simulate registration success
+      setSuccess(true);
+      setSuccessMessage("¡Registro exitoso (Modo Demo)! Redirigiéndote...");
+      
+      // Set mock authentication cookies and localStorage
+      document.cookie = "sb-mock-auth-token=true; path=/";
+      document.cookie = "demo_mode=true; path=/";
+      localStorage.setItem("demo_mode", "true");
+
+      setTimeout(() => {
+        router.push("/onboarding");
+      }, 2000);
       return;
     }
 
@@ -49,11 +68,15 @@ export default function RegisterPage() {
 
       if (data.user) {
         setSuccess(true);
-        // Supabase auto-logs in after sign up in some configurations.
-        // We will wait 2 seconds and redirect to onboarding.
-        setTimeout(() => {
-          router.push("/onboarding");
-        }, 2000);
+        if (data.session) {
+          setSuccessMessage("¡Registro exitoso! Redirigiéndote a la configuración de perfil...");
+          setTimeout(() => {
+            router.push("/onboarding");
+          }, 2000);
+        } else {
+          setSuccessMessage("¡Registro exitoso! Por favor, verifica tu correo electrónico para confirmar tu cuenta antes de iniciar sesión.");
+          setLoading(false);
+        }
       }
     } catch (err) {
       const error = err as Error;
@@ -87,8 +110,7 @@ export default function RegisterPage() {
 
         {success && (
           <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3.5 text-xs text-emerald-800 dark:text-emerald-400">
-            <p className="font-bold">¡Registro exitoso!</p>
-            <p className="text-2xs text-slate-450 mt-1">Redirigiéndote a la configuración de perfil...</p>
+            <p className="font-bold">{successMessage}</p>
           </div>
         )}
 
