@@ -1411,6 +1411,7 @@ export async function getPaymentProfiles(freelancerId?: string): Promise<Payment
   }
   const { data, error } = await query;
   if (error) throw error;
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   return (data || []).map((p: any) => ({
     id: p.id,
     freelancerId: p.freelancer_id,
@@ -1459,6 +1460,7 @@ export async function getEditRequests(contractId: string): Promise<EditRequest[]
   const client = await getSupabaseClient();
   const { data, error } = await client.from("edit_requests").select("*").eq("contract_id", contractId);
   if (error) throw error;
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   return (data || []).map((r: any) => ({
     id: r.id,
     contractId: r.contract_id,
@@ -1581,6 +1583,7 @@ export async function respondToEditRequest(id: string, status: "approved" | "rej
 
       if (changes.milestones) {
         await client.from("milestones").delete().eq("contract_id", contract.id);
+        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
         const milestoneRecords = changes.milestones.map((m: any) => ({
           id: m.id,
           contract_id: contract.id,
@@ -1635,6 +1638,7 @@ export async function getNotifications(userId: string): Promise<Notification[]> 
   const client = await getSupabaseClient();
   const { data, error } = await client.from("notifications").select("*").eq("user_id", userId).order("created_at", { ascending: false });
   if (error) throw error;
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
   return (data || []).map((n: any) => ({
     id: n.id,
     userId: n.user_id,

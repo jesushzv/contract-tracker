@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { FileText, Download, ExternalLink, Filter, Calendar, User, Search, Eye } from "lucide-react";
-import Link from "next/link";
+import { FileText, ExternalLink, Filter, Search, Eye } from "lucide-react";
 import { getContracts, getMilestones, getAuditLogs } from "@/lib/storageClient";
-import { Contract, Milestone } from "@/lib/types";
+import { Contract } from "@/lib/types";
 
 interface DocumentItem {
   id: string;
@@ -21,7 +20,6 @@ interface DocumentItem {
 
 export default function DocumentsPage() {
   const [contracts, setContracts] = useState<Contract[]>([]);
-  const [allMilestones, setAllMilestones] = useState<Milestone[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -35,7 +33,6 @@ export default function DocumentsPage() {
         const conList = await getContracts();
         const miles = await getMilestones();
         setContracts(conList);
-        setAllMilestones(miles);
 
         const docItems: DocumentItem[] = [];
 

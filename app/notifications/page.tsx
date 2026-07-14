@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, Check, ArrowLeft, Trash2, Calendar } from "lucide-react";
+import { Bell, Check, ArrowLeft, Calendar } from "lucide-react";
 import Link from "next/link";
 import { getNotifications, markNotificationRead, getProfile } from "@/lib/storageClient";
 import { Notification } from "@/lib/types";

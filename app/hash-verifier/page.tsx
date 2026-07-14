@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShieldCheck, Copy, Check, FileText } from "lucide-react";
+import { ShieldCheck, Copy, Check } from "lucide-react";
 
 export default function HashVerifierPage() {
   const [contractText, setContractText] = useState("");

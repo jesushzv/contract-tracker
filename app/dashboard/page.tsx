@@ -41,7 +41,7 @@ import {
   deletePaymentProfile,
   uploadBrandAsset
 } from "@/lib/storageClient";
-import { Contract, Milestone, Profile, AuditLog, ContractVersion } from "@/lib/types";
+import { Contract, Milestone, Profile, AuditLog, ContractVersion, PaymentProfile } from "@/lib/types";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -82,8 +82,8 @@ export default function Dashboard() {
   const [cancelReason, setCancelReason] = useState("");
 
   // Payment Profiles CRUD States
-  const [paymentProfiles, setPaymentProfiles] = useState<any[]>([]);
-  const [editingProfile, setEditingProfile] = useState<any | null>(null);
+  const [paymentProfiles, setPaymentProfiles] = useState<PaymentProfile[]>([]);
+  const [editingProfile, setEditingProfile] = useState<PaymentProfile | null>(null);
   const [showProfileForm, setShowProfileForm] = useState(true);
   const [profileNickname, setProfileNickname] = useState("");
   const [profileBankName, setProfileBankName] = useState("");
@@ -248,8 +248,9 @@ export default function Dashboard() {
       setIsCancellingContract(false);
       setCancelReason("");
       await refreshData();
-    } catch (err: any) {
-      alert("Error al cancelar contrato: " + err.message);
+    } catch (err) {
+      const error = err as Error;
+      alert("Error al cancelar contrato: " + error.message);
     }
   };
 
@@ -258,8 +259,9 @@ export default function Dashboard() {
     try {
       await markContractCompleted(selectedContract.id, "freelancer");
       await refreshData();
-    } catch (err: any) {
-      alert("Error al completar contrato: " + err.message);
+    } catch (err) {
+      const error = err as Error;
+      alert("Error al completar contrato: " + error.message);
     }
   };
 
@@ -280,8 +282,9 @@ export default function Dashboard() {
         } else {
           setSignatureUrl(uploadedUrl);
         }
-      } catch (err: any) {
-        setUploadError("Error al subir archivo: " + err.message);
+      } catch (err) {
+        const error = err as Error;
+        setUploadError("Error al subir archivo: " + error.message);
       }
     };
     reader.readAsDataURL(file);
@@ -313,8 +316,9 @@ export default function Dashboard() {
       setProfileClabe("");
       setProfileInstructions("");
       setShowProfileForm(false);
-    } catch (err: any) {
-      alert("Error al guardar perfil de pago: " + err.message);
+    } catch (err) {
+      const error = err as Error;
+      alert("Error al guardar perfil de pago: " + error.message);
     }
   };
 
@@ -324,8 +328,9 @@ export default function Dashboard() {
       await deletePaymentProfile(id);
       const profilesList = await getPaymentProfiles(profile.id);
       setPaymentProfiles(profilesList);
-    } catch (err: any) {
-      alert("Error al eliminar perfil de pago: " + err.message);
+    } catch (err) {
+      const error = err as Error;
+      alert("Error al eliminar perfil de pago: " + error.message);
     }
   };
 
@@ -341,8 +346,9 @@ export default function Dashboard() {
       }
       const profilesList = await getPaymentProfiles(profile.id);
       setPaymentProfiles(profilesList);
-    } catch (err: any) {
-      alert("Error al establecer perfil por defecto: " + err.message);
+    } catch (err) {
+      const error = err as Error;
+      alert("Error al establecer perfil por defecto: " + error.message);
     }
   };
 
