@@ -5,13 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { shouldUseSupabase } from "@/lib/storageClient";
-import { UserPlus, Key, ArrowLeft, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import { UserPlus, ArrowLeft, ArrowRight, AlertCircle, Loader2, Eye, EyeOff, Check, X } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,8 +42,14 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
+    const hasLength = password.length >= 8;
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+    if (!hasLength || !hasUpper || !hasLower || !hasNumber || !hasSpecial) {
+      setError("La contraseña debe cumplir con todos los requisitos de seguridad.");
       setLoading(false);
       return;
     }
@@ -140,8 +148,28 @@ export default function RegisterPage() {
         )}
 
         {success && (
-          <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3.5 text-xs text-emerald-800 dark:text-emerald-400">
-            <p className="font-bold">{successMessage}</p>
+          <div className="rounded-2xl bg-emerald-500/5 border border-emerald-500/20 p-6 text-center flex flex-col gap-4 items-center">
+            <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 animate-bounce">
+              <Check className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-800 dark:text-white">¡Registro Exitoso!</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                {successMessage}
+              </p>
+            </div>
+            <div className="border-t border-slate-100 dark:border-slate-800/60 w-full pt-4 mt-2">
+              <p className="text-3xs text-slate-400 leading-normal">
+                ¿No recibiste el correo? Revisa tu bandeja de spam o promociones.
+              </p>
+              <button 
+                type="button"
+                onClick={() => alert("Enlace de confirmación reenviado (Simulado)")}
+                className="mt-2 text-2xs font-bold text-indigo-500 hover:text-indigo-650 hover:underline transition-colors focus:outline-none"
+              >
+                Reenviar correo de confirmación
+              </button>
+            </div>
           </div>
         )}
 
@@ -160,32 +188,75 @@ export default function RegisterPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Contraseña (Mínimo 6 caracteres)</label>
+              <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Contraseña (Mínimo 8 caracteres)</label>
               <div className="relative">
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 pl-4 pr-10 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all"
                 />
-                <Key className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 dark:hover:text-slate-300 focus:outline-none transition-colors"
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
+              
+              {/* Password strength checklist */}
+              {password.length > 0 && (
+                <div className="mt-2 rounded-xl bg-slate-50 dark:bg-slate-950/60 p-3 border border-slate-100 dark:border-slate-850 text-3xs flex flex-col gap-1.5 text-left">
+                  <span className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Requisitos de Seguridad:</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <span className={`flex items-center gap-1 font-medium ${password.length >= 8 ? "text-emerald-600 dark:text-emerald-450" : "text-slate-400"}`}>
+                      {password.length >= 8 ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
+                      Mínimo 8 caracteres
+                    </span>
+                    <span className={`flex items-center gap-1 font-medium ${/[A-Z]/.test(password) ? "text-emerald-600 dark:text-emerald-450" : "text-slate-400"}`}>
+                      {/[A-Z]/.test(password) ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
+                      1 Mayúscula
+                    </span>
+                    <span className={`flex items-center gap-1 font-medium ${/[a-z]/.test(password) ? "text-emerald-600 dark:text-emerald-450" : "text-slate-400"}`}>
+                      {/[a-z]/.test(password) ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
+                      1 Minúscula
+                    </span>
+                    <span className={`flex items-center gap-1 font-medium ${/[0-9]/.test(password) ? "text-emerald-600 dark:text-emerald-450" : "text-slate-400"}`}>
+                      {/[0-9]/.test(password) ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
+                      1 Número
+                    </span>
+                    <span className={`flex items-center gap-1 font-medium ${/[^A-Za-z0-9]/.test(password) ? "text-emerald-600 dark:text-emerald-450" : "text-slate-400"}`}>
+                      {/[^A-Za-z0-9]/.test(password) ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
+                      1 Carácter Especial
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Confirmar Contraseña</label>
               <div className="relative">
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   required
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 pl-4 pr-10 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all"
                 />
-                <Key className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 dark:hover:text-slate-300 focus:outline-none transition-colors"
+                  aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 

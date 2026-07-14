@@ -6,6 +6,10 @@ test.describe("Sprint WA: Security & Taxes E2E Integration Suite", () => {
     // Navigate to onboarding in demo mode
     await page.goto("/onboarding?demo=true");
     
+    // Step 1: Fill name and go to step 2
+    await page.fill('input[placeholder="Ej. Héctor Guerrero"]', "Héctor Guerrero");
+    await page.click("button:has-text('Siguiente Step')");
+    
     const rfcInput = page.locator('input[placeholder="Ej. GUEH860710MX3"]');
     await expect(rfcInput).toBeVisible();
     

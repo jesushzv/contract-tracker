@@ -4,9 +4,9 @@ import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog
 
 // Determine if we should use the cloud Supabase database
 export const shouldUseSupabase = (): boolean => {
-  // If running in a Vercel Staging/Preview environment, we bypass the cloud DB
+  // If not in production, we bypass the cloud DB
   // to avoid persistent data storage or requiring a secondary DB.
-  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") {
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production") {
     return false;
   }
   return !!process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== "";
@@ -19,9 +19,9 @@ const serverActions = shouldUseSupabase() ? supabaseActions : localActions;
 // Helper to determine if we are in Demo Sandbox Mode (stored in browser localStorage)
 export const isDemoMode = (): boolean => {
   if (typeof window === "undefined") return false;
-  
-  // Force sandbox/localStorage mode by default in Vercel Staging/Preview deployments
-  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") {
+
+  // Force sandbox/localStorage mode by default in any non-production environment
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production") {
     return true;
   }
   

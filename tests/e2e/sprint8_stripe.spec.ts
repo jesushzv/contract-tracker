@@ -33,11 +33,19 @@ test.describe("Sprint 8: Stripe Monetization & SaaS Onboarding Funnel E2E Suite"
     await expect(page.locator("span:has-text('Plan starter')")).toBeVisible();
 
     // 5. Fill Onboarding details
+    // Step 1: Generales
     await page.locator("input[placeholder='Ej. Héctor Guerrero']").fill("Héctor J. Guerrero");
-    await page.locator("input[placeholder='Ej. GUEH860710MX3']").fill("GUEH860710MX8");
-    await page.locator("select").selectOption({ label: "626 - Régimen Simplificado de Confianza (RESICO)" });
-    await page.locator("input[placeholder='Ej. 06700']").fill("06700");
     await page.locator("input[placeholder='Ej. +525512345678']").fill("+525512345678");
+    await page.locator("input[placeholder='Ej. 06700']").fill("06700");
+    await page.click("button:has-text('Siguiente Step')");
+
+    // Step 2: Fiscales
+    await page.locator("input[placeholder='Ej. GUEH860710MX3']").fill("GUEH860710MX8");
+    await page.locator("input[placeholder='Ej. GUEH860710MX3']").blur();
+    await page.locator("select").selectOption({ label: "626 - Régimen Simplificado de Confianza (RESICO)" });
+    await page.click("button:has-text('Siguiente Step')");
+
+    // Step 3: Cobro & Marca
     await page.locator("input[placeholder='Ej. BBVA México o STP']").fill("BBVA México");
     await page.locator("input[placeholder='18 dígitos para SPEI']").fill("012180001509987654");
 

@@ -23,7 +23,8 @@ import {
   BarChart3,
   Printer,
   X,
-  Loader2
+  Loader2,
+  Zap
 } from "lucide-react";
 import { 
   getContracts, 
@@ -1045,6 +1046,35 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 text-slate-800 dark:text-slate-200">
+      {profile && (!profile.tier || profile.tier === "free") && (
+        <div className="rounded-3xl border border-indigo-500/25 bg-indigo-500/5 dark:bg-indigo-500/10 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-xl backdrop-blur-md relative overflow-hidden">
+          {/* Decorative light glow */}
+          <div className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
+          
+          <div className="flex items-start gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20 flex-shrink-0 mt-0.5">
+              <Zap className="h-6 w-6 fill-indigo-500/10" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                Estás en el Plan Gratuito
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-normal max-w-2xl font-light">
+                Tu plan actual tiene un límite de **3 contratos** y las opciones de personalización de marca (logos y firmas en tus propuestas) están bloqueadas. Actualiza ahora para desbloquear contratos ilimitados y personalización de marca.
+              </p>
+            </div>
+          </div>
+          <div className="flex-shrink-0 flex items-center gap-3">
+            <Link
+              href="/plans"
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 text-xs transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5 uppercase tracking-wider cursor-pointer"
+            >
+              Mejorar Plan
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">

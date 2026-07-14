@@ -13,12 +13,21 @@ test.describe("Sprint QA-1: Freelancer Payment Proof & State Transition Warnings
     await page.click('text=Plan Starter');
     await page.fill('input[placeholder="Ej. Héctor Guerrero"]', "Héctor Guerrero");
     await page.fill('input[placeholder="Ej. +525512345678"]', "+525598765432");
-    await page.fill('input[placeholder="Ej. BBVA México o STP"]', "BBVA México");
-    await page.fill('input[placeholder="18 dígitos para SPEI"]', "123456789012345678");
+    
+    // Go to Step 2
+    await page.click("button:has-text('Siguiente Step')");
+    
     const rfcInput = page.locator('input[placeholder="Ej. GUEH860710MX3"]');
     await rfcInput.fill("GUEH860710MX8");
     await rfcInput.blur();
     await page.selectOption('select', '626 - Régimen Simplificado de Confianza (RESICO)');
+    
+    // Go to Step 3
+    await page.click("button:has-text('Siguiente Step')");
+    
+    await page.fill('input[placeholder="Ej. BBVA México o STP"]', "BBVA México");
+    await page.fill('input[placeholder="18 dígitos para SPEI"]', "123456789012345678");
+    
     await page.click('button:has-text("Guardar Perfil y Empezar")');
     await expect(page).toHaveURL(/\/dashboard/);
 
