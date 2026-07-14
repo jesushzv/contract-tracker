@@ -15,9 +15,9 @@ const DB_PATH = path.join(process.cwd(), "data", "db.json");
 //   Any active state (sent/client_signed/accepted) can also → cancelled
 const CONTRACT_VALID_TRANSITIONS: Record<ContractStatus, ContractStatus[]> = {
   draft: ["sent"],
-  sent: ["client_signed", "cancelled"],
-  client_signed: ["accepted", "sent", "cancelled"],
-  accepted: ["completed", "cancelled"],
+  sent: ["client_signed", "cancelled", "draft"],
+  client_signed: ["accepted", "sent", "cancelled", "draft"],
+  accepted: ["completed", "cancelled", "draft"],
   completed: [],
   cancelled: [],
 };

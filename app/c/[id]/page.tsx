@@ -15,6 +15,7 @@ import {
   ExternalLink,
   Loader2,
   Star,
+  Edit3,
   X,
   Upload,
   AlertTriangle,
@@ -738,10 +739,27 @@ export default function ClientContractView() {
           )}
 
           {contract.status === 'client_signed' && (
-            <div className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2 text-xs font-semibold text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20">
-              <Clock className="h-4 w-4" />
-              Esperando Validación Final
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2.5 text-xs font-semibold text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20">
+                <Clock className="h-4 w-4" />
+                Esperando Validación Final
+              </div>
+              <button
+                onClick={startProposingRevision}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
+              >
+                Solicitar Revisión
+              </button>
             </div>
+          )}
+
+          {contract.status === 'accepted' && (
+            <button
+              onClick={startProposingRevision}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
+            >
+              Solicitar Revisión
+            </button>
           )}
         </div>
       </div>
@@ -864,7 +882,19 @@ export default function ClientContractView() {
               </div>
               
               <div className="rounded-xl border border-slate-100 dark:border-slate-900 p-4">
-                <span className="text-slate-400 font-semibold block uppercase tracking-wider text-3xs">Cliente</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400 font-semibold block uppercase tracking-wider text-3xs">Cliente</span>
+                  {['sent', 'client_signed', 'accepted'].includes(contract.status) && (
+                    <button
+                      onClick={startProposingRevision}
+                      className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                      title="Proponer cambios a datos de cliente"
+                    >
+                      <Edit3 className="h-2.5 w-2.5" />
+                      Editar
+                    </button>
+                  )}
+                </div>
                 <span className="font-bold text-slate-800 dark:text-slate-200 mt-1 block">{contract.clientName}</span>
                 <span className="text-slate-500 dark:text-slate-400 mt-0.5 block">{contract.clientEmail}</span>
                 {contract.clientRfc ? (
@@ -882,13 +912,37 @@ export default function ClientContractView() {
 
           {/* Scope details */}
           <div className="py-6 border-b border-slate-100 dark:border-slate-900 flex flex-col gap-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Declaraciones & Alcance del Proyecto</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Declaraciones & Alcance del Proyecto</h3>
+              {['sent', 'client_signed', 'accepted'].includes(contract.status) && (
+                <button
+                  onClick={startProposingRevision}
+                  className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                  title="Proponer cambios al alcance del proyecto"
+                >
+                  <Edit3 className="h-2.5 w-2.5" />
+                  Editar
+                </button>
+              )}
+            </div>
             <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-350 font-light">{contract.scopeDescription}</p>
           </div>
 
           {/* Clause list */}
           <div className="py-6 border-b border-slate-100 dark:border-slate-900 flex flex-col gap-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cláusulas Legales Generales</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cláusulas Legales Generales</h3>
+              {['sent', 'client_signed', 'accepted'].includes(contract.status) && (
+                <button
+                  onClick={startProposingRevision}
+                  className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                  title="Proponer cambios a cláusulas legales"
+                >
+                  <Edit3 className="h-2.5 w-2.5" />
+                  Editar
+                </button>
+              )}
+            </div>
             <div className="flex flex-col gap-4 text-xs">
               {(() => {
                 const renderedClauses = contract.selectedClauses && contract.selectedClauses.length > 0
@@ -1226,7 +1280,19 @@ export default function ClientContractView() {
 
           {/* Milestones chronology sidebar */}
           <div className="flex flex-col gap-3 text-left">
-            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Calendario de Hitos</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Calendario de Hitos</h4>
+              {['sent', 'client_signed', 'accepted'].includes(contract.status) && (
+                <button
+                  onClick={startProposingRevision}
+                  className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                  title="Proponer cambios a hitos y presupuesto"
+                >
+                  <Edit3 className="h-2.5 w-2.5" />
+                  Editar
+                </button>
+              )}
+            </div>
             <div className="flex flex-col gap-3">
               {milestones.map((m, idx) => {
                 const overdue = isMilestoneOverdue(m);

@@ -13,6 +13,7 @@ import {
   CreditCard, 
   AlertCircle, 
   Eye, 
+  Edit3,
   Settings, 
   ExternalLink, 
   ShieldCheck, 
@@ -1808,7 +1809,19 @@ export default function Dashboard() {
             <div className="glass rounded-3xl p-6 flex flex-col gap-6 text-left animate-in fade-in-50 duration-300">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b border-slate-100 dark:border-slate-800 pb-5">
                 <div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Detalles de Contrato</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Detalles de Contrato</span>
+                    {['draft', 'sent', 'client_signed', 'accepted'].includes(selectedContract.status) && (
+                      <button
+                        onClick={startEditingContract}
+                        className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                        title="Modificar Datos de Cliente"
+                      >
+                        <Edit3 className="h-2.5 w-2.5" />
+                        Editar
+                      </button>
+                    )}
+                  </div>
                   <h2 className="text-2xl font-extrabold mt-0.5 text-slate-900 dark:text-white">
                     {selectedContract.clientName}
                   </h2>
@@ -1956,24 +1969,46 @@ export default function Dashboard() {
                   
                   {/* Completion status info */}
                   {selectedContract.freelancerCompletedAt ? (
-                    <div className="text-xs text-amber-600 dark:text-amber-400 font-semibold border-t border-emerald-500/10 pt-2 flex items-center gap-1.5 animate-pulse-subtle">
-                      <span className="h-2 w-2 rounded-full bg-amber-500"></span>
-                      Entregado por tu parte. Esperando confirmación del cliente.
+                    <div className="flex flex-col gap-3 border-t border-emerald-500/10 pt-3">
+                      <div className="text-xs text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1.5 animate-pulse-subtle">
+                        <span className="h-2 w-2 rounded-full bg-amber-500"></span>
+                        Entregado por tu parte. Esperando confirmación del cliente.
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          onClick={startEditingContract}
+                          className="w-full rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white/40 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-900 text-indigo-650 dark:text-indigo-400 font-bold py-2 text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          Modificar Propuesta
+                        </button>
+                        <button
+                          onClick={() => setIsCancellingContract(true)}
+                          className="w-full rounded-xl border border-red-200 dark:border-red-900 bg-white/20 dark:bg-slate-900/20 text-red-650 dark:text-red-400 hover:bg-red-550/10 font-bold py-2 text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          Cancelar Contrato
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 border-t border-emerald-500/10 pt-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border-t border-emerald-500/10 pt-3">
                       <button
                         onClick={handleMarkCompleted}
                         className="rounded-xl bg-emerald-600 hover:bg-emerald-550 text-white font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/10 cursor-pointer"
                       >
                         <CheckCircle2 className="h-4 w-4" />
-                        Marcar Proyecto como Completado
+                        Marcar Proyecto como Terminado
+                      </button>
+                      <button
+                        onClick={startEditingContract}
+                        className="rounded-xl border border-emerald-300 dark:border-emerald-700 bg-white/20 dark:bg-slate-900/20 hover:bg-white dark:hover:bg-slate-900 text-emerald-800 dark:text-emerald-400 font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        Modificar Propuesta
                       </button>
                       <button
                         onClick={() => setIsCancellingContract(true)}
                         className="rounded-xl border border-red-200 dark:border-red-900 bg-white/20 dark:bg-slate-900/20 text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        Cancelar Contrato (Detener Proyecto)
+                        Cancelar Contrato
                       </button>
                     </div>
                   )}
@@ -2124,7 +2159,19 @@ export default function Dashboard() {
               )}
 
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Alcance de Trabajo</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Alcance de Trabajo</span>
+                  {['draft', 'sent', 'client_signed', 'accepted'].includes(selectedContract.status) && (
+                    <button
+                      onClick={startEditingContract}
+                      className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                      title="Modificar Alcance"
+                    >
+                      <Edit3 className="h-2.5 w-2.5" />
+                      Editar
+                    </button>
+                  )}
+                </div>
                 <div className="bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl p-4 text-sm leading-relaxed border border-slate-100 dark:border-slate-800/50">
                   {selectedContract.scopeDescription}
                 </div>
@@ -2132,7 +2179,19 @@ export default function Dashboard() {
 
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Esquema de Anticipos e Hitos</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Esquema de Anticipos e Hitos</span>
+                    {['draft', 'sent', 'client_signed', 'accepted'].includes(selectedContract.status) && (
+                      <button
+                        onClick={startEditingContract}
+                        className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                        title="Modificar Hitos y Presupuesto"
+                      >
+                        <Edit3 className="h-2.5 w-2.5" />
+                        Editar
+                      </button>
+                    )}
+                  </div>
                   <span className="text-xs font-bold text-indigo-500">
                     Total: {formatMoney(selectedContract.totalAmount, selectedContract.currency)}
                   </span>
@@ -2520,19 +2579,37 @@ export default function Dashboard() {
               </div>
 
               {/* Legal Clauses */}
-              {MOCK_CLAUSES && MOCK_CLAUSES.length > 0 && (
-                <div>
-                  <h3 className="text-3xs font-bold text-slate-400 uppercase tracking-widest mb-3">Cláusulas de Acuerdo</h3>
-                  <div className="flex flex-col gap-4 text-xs font-light text-slate-500 dark:text-slate-400 leading-relaxed">
-                    {MOCK_CLAUSES.map((clause, idx) => (
+              <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-3xs font-bold text-slate-400 uppercase tracking-widest">Cláusulas de Acuerdo</h3>
+                  {['draft', 'sent', 'client_signed', 'accepted'].includes(selectedContract.status) && (
+                    <button
+                      onClick={startEditingContract}
+                      className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
+                      title="Modificar Cláusulas"
+                    >
+                      <Edit3 className="h-2.5 w-2.5" />
+                      Editar
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-4 text-xs font-light text-slate-500 dark:text-slate-400 leading-relaxed">
+                  {(() => {
+                    const renderedClauses = selectedContract.selectedClauses && selectedContract.selectedClauses.length > 0
+                      ? MOCK_CLAUSES.filter(c => selectedContract.selectedClauses?.includes(c.id))
+                      : MOCK_CLAUSES;
+                    if (renderedClauses.length === 0) {
+                      return <p className="text-2xs text-slate-400 italic">No se seleccionaron cláusulas para este acuerdo.</p>;
+                    }
+                    return renderedClauses.map((clause, idx) => (
                       <div key={clause.id || idx}>
                         <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{idx + 1}. {clause.title}</h4>
                         <p>{clause.content}</p>
                       </div>
-                    ))}
-                  </div>
+                    ));
+                  })()}
                 </div>
-              )}
+              </div>
 
               {/* Signatures & Seal Box */}
               <div className="border-t border-slate-200 dark:border-slate-800 pt-6 flex flex-col gap-6">

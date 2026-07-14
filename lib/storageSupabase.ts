@@ -10,9 +10,9 @@ import { headers, cookies } from "next/headers";
 // ── Contract State Machine ──────────────────────────────────────────────────
 const CONTRACT_VALID_TRANSITIONS: Record<ContractStatus, ContractStatus[]> = {
   draft: ["sent"],
-  sent: ["client_signed", "cancelled"],
-  client_signed: ["accepted", "sent", "cancelled"],
-  accepted: ["completed", "cancelled"],
+  sent: ["client_signed", "cancelled", "draft"],
+  client_signed: ["accepted", "sent", "cancelled", "draft"],
+  accepted: ["completed", "cancelled", "draft"],
   completed: [],
   cancelled: [],
 };
