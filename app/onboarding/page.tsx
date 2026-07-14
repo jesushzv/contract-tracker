@@ -141,11 +141,13 @@ export default function OnboardingPage() {
     e.preventDefault();
     setError("");
     
-    // Strict RFC check
-    const rfcCheck = validateRFC(rfc);
-    if (!rfcCheck.isValid) {
-      setError(rfcCheck.error || "RFC inválido");
-      return;
+    // Strict RFC check (only if provided)
+    if (rfc) {
+      const rfcCheck = validateRFC(rfc);
+      if (!rfcCheck.isValid) {
+        setError(rfcCheck.error || "RFC inválido");
+        return;
+      }
     }
 
     setLoading(true);
@@ -394,7 +396,6 @@ export default function OnboardingPage() {
             <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Banco Receptor</label>
             <input
               type="text"
-              required
               placeholder="Ej. BBVA México o STP"
               value={bankName}
               onChange={(e) => setBankName(e.target.value)}
@@ -407,7 +408,6 @@ export default function OnboardingPage() {
             <input
               type="text"
               maxLength={18}
-              required
               placeholder="18 dígitos para SPEI"
               value={clabe}
               onChange={(e) => setClabe(e.target.value)}
