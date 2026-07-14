@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ArrowRight, ShieldCheck, Zap, Activity, Sparkles, Loader2 } from "lucide-react";
-import { getProfile, updateProfile, isDemoMode } from "@/lib/storageClient";
+import { getProfile, updateProfile, isDemoMode, shouldUseSupabase } from "@/lib/storageClient";
+import { supabase } from "@/lib/supabaseClient";
 import { Profile } from "@/lib/types";
 
 export default function PlansPage() {
@@ -13,6 +14,16 @@ export default function PlansPage() {
   const [isDemo, setIsDemo] = useState(false);
 
   const selectTier = async (tier: "free" | "starter" | "pro", currentProfile: Profile | null, currentIsDemo: boolean) => {
+    if (shouldUseSupabase() && !currentIsDemo) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        localStorage.setItem("selected_signup_tier", tier);
+        document.cookie = `selected_signup_tier=${tier}; path=/; max-age=3600`;
+        router.push(`/register?tier=${tier}`);
+        return;
+      }
+    }
+
     if (currentIsDemo) {
       // Direct local storage transition in Demo Mode
       const currentProf = currentProfile || {

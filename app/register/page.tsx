@@ -20,8 +20,13 @@ export default function RegisterPage() {
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTier(searchParams.get("tier"));
+    const urlTier = searchParams.get("tier");
+    if (urlTier) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTier(urlTier);
+      localStorage.setItem("selected_signup_tier", urlTier);
+      document.cookie = `selected_signup_tier=${urlTier}; path=/; max-age=3600`;
+    }
   }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -78,7 +83,7 @@ export default function RegisterPage() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/onboarding${selectedTier ? `?tier=${selectedTier}` : ""}`,
+          emailRedirectTo: `${window.location.origin}/onboarding`,
         }
       });
 

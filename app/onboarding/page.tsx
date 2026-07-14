@@ -70,6 +70,16 @@ export default function OnboardingPage() {
           setEmail(userEmail);
         }
 
+        const getCookie = (name: string): string | null => {
+          if (typeof document === "undefined") return null;
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop()?.split(";").shift() || null;
+          return null;
+        };
+
+        const signupTier = localStorage.getItem("selected_signup_tier") || getCookie("selected_signup_tier");
+
         const searchParams = new URLSearchParams(window.location.search);
         const sessionId = searchParams.get("session_id");
 
@@ -103,6 +113,15 @@ export default function OnboardingPage() {
           if (!activeTier) {
             activeTier = prof.tier;
           }
+        }
+
+        // If they chose a paid tier during signup, but their profile tier is still free (hasn't paid yet),
+        // redirect them to the plans checkout page for that tier
+        if (signupTier && (signupTier === "starter" || signupTier === "pro") && activeTier === "free" && !sessionId) {
+          localStorage.removeItem("selected_signup_tier");
+          document.cookie = "selected_signup_tier=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+          router.push(`/plans?tier=${signupTier}`);
+          return;
         }
 
         if (!activeTier && !sessionId) {

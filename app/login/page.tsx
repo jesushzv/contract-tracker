@@ -17,8 +17,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTier(searchParams.get("tier"));
+    const urlTier = searchParams.get("tier");
+    if (urlTier) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTier(urlTier);
+      localStorage.setItem("selected_signup_tier", urlTier);
+      document.cookie = `selected_signup_tier=${urlTier}; path=/; max-age=3600`;
+    }
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
