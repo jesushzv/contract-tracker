@@ -23,11 +23,12 @@ gantt
     Sprint WB-2 (SPEI & Versioning) :active, 2026-07-19, 2026-07-21
     Sprint SDET (QA Automation & CI/CD) :active, 2026-07-21, 2026-07-23
     Sprint 6 (Emails & Magic Links) :active, 2026-07-23, 2026-07-25
+    Sprint WB-3 (UX & Completeness) :active, 2026-07-25, 2026-07-26
     section Pendiente
-    Sprint 7 (CFDI 4.0 PAC Sandbox) :2026-07-25, 2026-07-27
-    Sprint 8 (Stripe Payments SaaS) :2026-07-27, 2026-07-30
-    Sprint 9 (CSD Vault & Encryption) :2026-07-30, 2026-08-02
-    Sprint 10 (NOM-151 preservation) :2026-08-02, 2026-08-04
+    Sprint 7 (CFDI 4.0 PAC Sandbox) :2026-07-26, 2026-07-28
+    Sprint 8 (Stripe Payments SaaS) :2026-07-28, 2026-07-31
+    Sprint 9 (CSD Vault & Encryption) :2026-07-31, 2026-08-03
+    Sprint 10 (NOM-151 preservation) :2026-08-03, 2026-08-05
 ```
 
 ---
@@ -111,6 +112,13 @@ gantt
 * **React Email & Resend**: Templates setup for client invitations and contract changes.
 * **Client Access Tokens**: Secure, passwordless magic links (`/c/[id]?token=...`) so clients can review and sign without creating an account.
 * **Cron Reminders**: Daily triggers for milestones approaching their due dates.
+
+### 🟢 Sprint WB-3: UX & Document Completeness (Completado)
+* **Contract State Machine Enforcement**: Enforced strict state transitions (`draft → sent → client_signed → accepted → completed/cancelled`) at both UI and server/storage layers.
+* **Branding File Upload**: Replaced company logo and signature text fields with file pickers supporting 2MB limits and previews.
+* **Payment Profiles CRUD UI**: Integrated a full management panel in dashboard settings to configure, edit, delete, and set default bank profiles.
+* **Standing Trust Element**: Added a verified status indicator card in the client contract view.
+* **Standalone Documents Archive**: Created a standalone route `/documents` to filter, search, and view all digital contracts, CEP receipts, and audit logs.
 
 ### 🔴 Sprint 7: Facturación Express (CFDI 4.0 PAC Sandbox) (Pendiente)
 * **Authorized Certification Provider (PAC)**: Integrate with Facturapi or FiscoClic sandbox endpoint to generate mock SAT invoices.
