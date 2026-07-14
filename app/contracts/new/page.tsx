@@ -275,6 +275,7 @@ function NewContractForm() {
       ivaAmount: totalAmount * 0.16,
       subtotalAmount: totalAmount,
       clientOtpVerified: false,
+      paymentProfileId: selectedProfileId || undefined,
       
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

@@ -503,6 +503,7 @@ export async function saveContract(contract: Contract): Promise<Contract> {
       client_otp_verified: contract.clientOtpVerified || false,
       client_otp_attempts: contract.clientOtpAttempts || 0,
       client_access_token: contract.clientAccessToken || null,
+      payment_profile_id: contract.paymentProfileId || null,
       updated_at: new Date().toISOString()
     });
 
@@ -1159,6 +1160,7 @@ function mapContractFromDb(row: any): Contract {
     clientOtpVerified: !!row.client_otp_verified,
     clientOtpAttempts: Number(row.client_otp_attempts || 0),
     clientAccessToken: row.client_access_token || undefined,
+    paymentProfileId: row.payment_profile_id || undefined,
     created_at: row.created_at,
     updated_at: row.updated_at
   };
