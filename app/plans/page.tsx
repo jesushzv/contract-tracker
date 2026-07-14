@@ -12,57 +12,78 @@ export default function PlansPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
 
+  const selectTier = async (tier: "free" | "starter" | "pro", currentProfile: Profile | null, currentIsDemo: boolean) => {
+    if (currentIsDemo) {
+      // Direct local storage transition in Demo Mode
+      const currentProf = currentProfile || {
+        id: "demo-freelancer-uuid",
+        email: "hector@freelancemx.dev",
+        fullName: "Héctor J. Guerrero",
+        bankDetails: { clabe: "", bankName: "", beneficiaryName: "" },
+      };
+      const updated = { ...currentProf, tier };
+      await updateProfile(updated);
+      router.push("/onboarding");
+      return;
+    }
+
+    if (tier === "free") {
+      if (currentProfile) {
+        await updateProfile({ ...currentProfile, tier: "free" });
+      }
+      router.push("/onboarding");
+      return;
+    }
+
+    // Production redirect to Stripe Checkout
+    const res = await fetch("/api/stripe/checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tier }),
+    });
+
+    const data = await res.json();
+    if (data.url) {
+      window.location.assign(data.url);
+    } else {
+      throw new Error(data.error || "Fallo al crear sesión de pago");
+    }
+  };
+
   useEffect(() => {
     async function loadProfile() {
       try {
         const prof = await getProfile();
         setProfile(prof);
-        setIsDemo(isDemoMode());
+        const demo = isDemoMode();
+        setIsDemo(demo);
+
+        // Check if a specific tier was passed in the URL to auto-select/subscribe
+        const searchParams = new URLSearchParams(window.location.search);
+        const urlTier = searchParams.get("tier") as "free" | "starter" | "pro" | null;
+        if (urlTier && (urlTier === "free" || urlTier === "starter" || urlTier === "pro")) {
+          setLoading(urlTier);
+          try {
+            await selectTier(urlTier, prof, demo);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            alert(`Error al procesar suscripción: ${msg}`);
+          } finally {
+            setLoading(null);
+          }
+        }
       } catch (err) {
         console.error("Error loading profile:", err);
       }
     }
     loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSelectTier = async (tier: "free" | "starter" | "pro") => {
     setLoading(tier);
     try {
-      if (isDemo) {
-        // Direct local storage transition in Demo Mode
-        const currentProfile = profile || {
-          id: "demo-freelancer-uuid",
-          email: "hector@freelancemx.dev",
-          fullName: "Héctor J. Guerrero",
-          bankDetails: { clabe: "", bankName: "", beneficiaryName: "" },
-        };
-        const updated = { ...currentProfile, tier };
-        await updateProfile(updated);
-        router.push("/onboarding");
-        return;
-      }
-
-      if (tier === "free") {
-        if (profile) {
-          await updateProfile({ ...profile, tier: "free" });
-        }
-        router.push("/onboarding");
-        return;
-      }
-
-      // Production redirect to Stripe Checkout
-      const res = await fetch("/api/stripe/checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier }),
-      });
-
-      const data = await res.json();
-      if (data.url) {
-        window.location.assign(data.url);
-      } else {
-        throw new Error(data.error || "Fallo al crear sesión de pago");
-      }
+      await selectTier(tier, profile, isDemo);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       alert(`Error al procesar suscripción: ${msg}`);

@@ -83,7 +83,7 @@ export default function Home() {
 
           <div className="mt-10 flex items-center justify-center gap-x-6 w-full sm:w-auto flex-col sm:flex-row gap-y-4">
             <Link
-              href="/dashboard"
+              href="/register"
               className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200 group"
             >
               Comenzar a Crear
@@ -281,7 +281,7 @@ export default function Home() {
                 </ul>
               </div>
               <Link 
-                href="/dashboard"
+                href="/register?tier=free"
                 className="mt-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-center py-2.5 text-xs font-bold transition-colors cursor-pointer"
               >
                 Comenzar Gratis
@@ -320,7 +320,7 @@ export default function Home() {
                 </ul>
               </div>
               <Link 
-                href="/dashboard"
+                href="/register?tier=starter"
                 className="mt-8 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-center py-2.5 text-xs font-bold shadow-lg shadow-indigo-600/15 transition-colors cursor-pointer"
               >
                 Suscribirse a Starter
@@ -356,7 +356,7 @@ export default function Home() {
                 </ul>
               </div>
               <Link 
-                href="/dashboard"
+                href="/register?tier=pro"
                 className="mt-8 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-center py-2.5 text-xs font-bold shadow-lg shadow-purple-600/15 transition-colors cursor-pointer"
               >
                 Suscribirse a Pro
@@ -412,7 +412,7 @@ export default function Home() {
               </p>
             </div>
             <Link
-              href="/dashboard"
+              href="/register"
               className="inline-flex items-center rounded-xl bg-emerald-500 px-5 py-3 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition-colors shadow-lg shadow-emerald-500/20 whitespace-nowrap"
             >
               Crear mi Primer Contrato

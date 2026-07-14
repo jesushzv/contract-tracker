@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -16,6 +16,13 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [tier, setTier] = useState<string | null>(null);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTier(searchParams.get("tier"));
+  }, []);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +41,8 @@ export default function RegisterPage() {
       return;
     }
 
+    const selectedTier = tier || "free";
+
     // Check if we are running in local/demo mode (without Supabase database)
     if (!shouldUseSupabase()) {
       // Simulate registration success
@@ -45,8 +54,21 @@ export default function RegisterPage() {
       document.cookie = "demo_mode=true; path=/";
       localStorage.setItem("demo_mode", "true");
 
+      const defaultProfile = {
+        id: "demo-freelancer-uuid",
+        email,
+        fullName: "",
+        tier: selectedTier,
+        bankDetails: { clabe: "", bankName: "", beneficiaryName: "" },
+      };
+      localStorage.setItem("sandbox_profile", JSON.stringify(defaultProfile));
+
       setTimeout(() => {
-        router.push("/onboarding");
+        if (selectedTier === "starter" || selectedTier === "pro") {
+          router.push(`/plans?tier=${selectedTier}`);
+        } else {
+          router.push("/onboarding");
+        }
       }, 2000);
       return;
     }
@@ -56,7 +78,7 @@ export default function RegisterPage() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/onboarding`,
+          emailRedirectTo: `${window.location.origin}/onboarding${selectedTier ? `?tier=${selectedTier}` : ""}`,
         }
       });
 
@@ -69,9 +91,13 @@ export default function RegisterPage() {
       if (data.user) {
         setSuccess(true);
         if (data.session) {
-          setSuccessMessage("¡Registro exitoso! Redirigiéndote a la configuración de perfil...");
+          setSuccessMessage("¡Registro exitoso! Redirigiéndote...");
           setTimeout(() => {
-            router.push("/onboarding");
+            if (selectedTier === "starter" || selectedTier === "pro") {
+              router.push(`/plans?tier=${selectedTier}`);
+            } else {
+              router.push("/onboarding");
+            }
           }, 2000);
         } else {
           setSuccessMessage("¡Registro exitoso! Por favor, verifica tu correo electrónico para confirmar tu cuenta antes de iniciar sesión.");
@@ -181,7 +207,7 @@ export default function RegisterPage() {
         <div className="flex flex-col gap-3 text-center border-t border-slate-100 dark:border-slate-850 pt-4">
           <p className="text-2xs text-slate-450">
             ¿Ya tienes una cuenta?{" "}
-            <Link href="/login" className="font-bold text-indigo-500 hover:underline">
+            <Link href={tier ? `/login?tier=${tier}` : "/login"} className="font-bold text-indigo-500 hover:underline">
               Inicia sesión aquí
             </Link>
           </p>
