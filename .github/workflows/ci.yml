@@ -12,11 +12,12 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: supabase/postgres:15
         env:
           POSTGRES_DB: contract_tracker_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
+          POSTGRES_INITDB_ARGS: "-c session_preload_libraries=pgcrypto"
         ports:
           - 5432:5432
         options: >-
