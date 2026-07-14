@@ -16,7 +16,7 @@ import {
   Loader2,
   Star
 } from "lucide-react";
-import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision, uploadReceiptFile, cancelContract, markContractCompleted } from "@/lib/storageClient";
+import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision, uploadReceiptFile, cancelContract, markContractCompleted, isDemoMode } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 import { Contract, Milestone, AuditLog, Profile } from "@/lib/types";
 
@@ -64,6 +64,22 @@ export default function ClientContractView() {
   // Cancellation State
   const [isCancellingContract, setIsCancellingContract] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+
+  // Warning/Confirmation Modal State
+  const [warningModal, setWarningModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: (() => Promise<void>) | null;
+    isError?: boolean;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+    isError: false
+  });
+
 
   useEffect(() => {
     async function loadData() {
@@ -145,42 +161,86 @@ export default function ClientContractView() {
           setAcceptStep('otp');
           setOtpAttempts(0);
         } else {
-          alert("Error al generar el código de verificación OTP.");
+          setWarningModal({
+            isOpen: true,
+            title: "Error al generar OTP",
+            message: "No se pudo generar el código de verificación OTP.",
+            onConfirm: null,
+            isError: true
+          });
         }
+        setLoading(false);
       } else {
+        setLoading(false);
         if (otpAttempts >= 3) {
           throw new Error("Límite de intentos OTP excedido. Genera un nuevo código.");
         }
-        const updated = await acceptContract(contractId, signerName, otpInput);
-        if (updated) {
-          setContract(updated);
-          const mList = await getMilestones(contractId);
-          setMilestones(mList);
-          const logs = await getAuditLogs(contractId);
-          setAuditLogs(logs);
-          setAcceptedSuccess(true);
-          setAcceptStep('name');
-          setOtpInput("");
-          setDebugOtp(null);
-          setShowAcceptModal(false);
-          setOtpAttempts(0);
-          setTimeout(() => setAcceptedSuccess(false), 5050);
+
+        const isOtpCorrect = !isDemoMode() || (otpInput === debugOtp);
+        if (!isOtpCorrect) {
+          const nextAttempts = otpAttempts + 1;
+          setOtpAttempts(nextAttempts);
+          let errMsg = "";
+          if (nextAttempts >= 3) {
+            errMsg = "Has alcanzado el límite de 3 intentos fallidos. Por motivos de seguridad, este intento se ha bloqueado. Por favor, genera un nuevo código OTP.";
+          } else {
+            errMsg = `El código de verificación ingresado es incorrecto. Intentos restantes: ${3 - nextAttempts}`;
+          }
+          setOtpError(errMsg);
+          return;
         }
+
+        const executeAccept = async () => {
+          setLoading(true);
+          try {
+            const updated = await acceptContract(contractId, signerName, otpInput);
+            if (updated) {
+              setContract(updated);
+              const mList = await getMilestones(contractId);
+              setMilestones(mList);
+              const logs = await getAuditLogs(contractId);
+              setAuditLogs(logs);
+              setAcceptedSuccess(true);
+              setAcceptStep('name');
+              setOtpInput("");
+              setDebugOtp(null);
+              setShowAcceptModal(false);
+              setOtpAttempts(0);
+              setTimeout(() => setAcceptedSuccess(false), 5050);
+            }
+          } catch (err) {
+            const error = err as Error;
+            const nextAttempts = otpAttempts + 1;
+            setOtpAttempts(nextAttempts);
+            let errMsg = "";
+            if (nextAttempts >= 3) {
+              errMsg = "Has alcanzado el límite de 3 intentos fallidos. Por motivos de seguridad, este intento se ha bloqueado. Por favor, genera un nuevo código OTP.";
+            } else {
+              errMsg = `${error.message || "Código incorrecto."} Intentos restantes: ${3 - nextAttempts}`;
+            }
+            setOtpError(errMsg);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        setWarningModal({
+          isOpen: true,
+          title: "Firmar Contrato",
+          message: `¿Estás seguro de que deseas firmar digitalmente el contrato como "${signerName}"? Esta acción confirmará tu aceptación de todos los términos y condiciones.`,
+          onConfirm: executeAccept,
+          isError: false
+        });
       }
     } catch (err) {
       const error = err as Error;
-      if (acceptStep === 'otp') {
-        const nextAttempts = otpAttempts + 1;
-        setOtpAttempts(nextAttempts);
-        if (nextAttempts >= 3) {
-          setOtpError("Has alcanzado el límite de 3 intentos fallidos. Por motivos de seguridad, este intento se ha bloqueado. Por favor, genera un nuevo código OTP.");
-        } else {
-          setOtpError(`${error.message || "Código incorrecto."} Intentos restantes: ${3 - nextAttempts}`);
-        }
-      } else {
-        alert("Error al firmar el contrato: " + error.message);
-      }
-    } finally {
+      setWarningModal({
+        isOpen: true,
+        title: "Error de Firma",
+        message: error.message,
+        onConfirm: null,
+        isError: true
+      });
       setLoading(false);
     }
   };
@@ -195,10 +255,22 @@ export default function ClientContractView() {
         setOtpAttempts(0);
         setOtpInput("");
       } else {
-        alert("Error al generar el código de verificación OTP.");
+        setWarningModal({
+          isOpen: true,
+          title: "Error de Generación OTP",
+          message: "No se pudo generar el código de verificación OTP.",
+          onConfirm: null,
+          isError: true
+        });
       }
     } catch (err) {
-      alert("Error al regenerar OTP: " + err);
+      setWarningModal({
+        isOpen: true,
+        title: "Error al regenerar OTP",
+        message: err instanceof Error ? err.message : String(err),
+        onConfirm: null,
+        isError: true
+      });
     } finally {
       setLoading(false);
     }
@@ -206,45 +278,99 @@ export default function ClientContractView() {
 
   const handleCancelContract = async () => {
     if (!contractId || !cancelReason.trim()) return;
-    try {
-      await cancelContract(contractId, "client", cancelReason);
-      setIsCancellingContract(false);
-      setCancelReason("");
-      await refreshData();
-    } catch (err) {
-      alert("Error al cancelar el contrato: " + err);
-    }
+
+    const executeCancel = async () => {
+      try {
+        await cancelContract(contractId, "client", cancelReason);
+        setIsCancellingContract(false);
+        setCancelReason("");
+        await refreshData();
+      } catch (err) {
+        const error = err as Error;
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Cancelar Contrato",
+          message: `No se pudo cancelar el contrato: ${error.message}`,
+          onConfirm: null,
+          isError: true
+        });
+      }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Cancelar Contrato",
+      message: "¿Estás seguro de que deseas cancelar este contrato? Esta acción es irreversible y anulará todos los hitos pendientes.",
+      onConfirm: executeCancel,
+      isError: false
+    });
   };
 
   const handleMarkCompleted = async () => {
     if (!contractId) return;
-    try {
-      await markContractCompleted(contractId, "client");
-      await refreshData();
-    } catch (err) {
-      alert("Error al marcar el contrato como completado: " + err);
-    }
+
+    const executeComplete = async () => {
+      try {
+        await markContractCompleted(contractId, "client");
+        await refreshData();
+      } catch (err) {
+        const error = err as Error;
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Completar Contrato",
+          message: `No se pudo marcar el contrato como completado: ${error.message}`,
+          onConfirm: null,
+          isError: true
+        });
+      }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Completar Contrato",
+      message: "¿Estás seguro de que deseas marcar este contrato como completado? Esto finalizará la relación comercial bajo este acuerdo.",
+      onConfirm: executeComplete,
+      isError: false
+    });
   };
 
   const handleProposeRevision = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contractId || !revisionReason) return;
-    setLoading(true);
-    try {
-      const updated = await proposeContractRevision(contractId, revisionReason);
-      if (updated) {
-        setContract(updated);
-        await refreshData();
-        setShowRevisionModal(false);
-        setRevisionReason("");
-        setRevisionSuccess(true);
-        setTimeout(() => setRevisionSuccess(false), 5050);
+
+    const executeProposeRevision = async () => {
+      setLoading(true);
+      try {
+        const updated = await proposeContractRevision(contractId, revisionReason);
+        if (updated) {
+          setContract(updated);
+          await refreshData();
+          setShowRevisionModal(false);
+          setRevisionReason("");
+          setRevisionSuccess(true);
+          setTimeout(() => setRevisionSuccess(false), 5050);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Solicitar Revisión",
+          message: `No se pudo solicitar la revisión: ${msg}`,
+          onConfirm: null,
+          isError: true
+        });
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      alert("Error al solicitar revisión: " + err);
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Solicitar Revisión de Contrato",
+      message: "¿Estás seguro de que deseas solicitar una revisión? El contrato volverá a un estado donde se requerirán cambios por parte del freelancer.",
+      onConfirm: executeProposeRevision,
+      isError: false
+    });
   };
 
 
@@ -1353,6 +1479,67 @@ export default function ClientContractView() {
           </div>
         </div>
       )}
+
+      {/* Warning/Confirmation Modal */}
+      {warningModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
+          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+            <h3 className={`text-xl font-bold flex items-center gap-2 ${warningModal.isError ? 'text-red-500' : 'text-amber-500'}`}>
+              <AlertCircle className="h-6 w-6" />
+              {warningModal.title}
+            </h3>
+            <p className="text-sm text-slate-650 dark:text-slate-350 mt-3 leading-relaxed whitespace-pre-wrap">
+              {warningModal.message}
+            </p>
+            <div className="flex gap-3 justify-end mt-6">
+              {warningModal.isError ? (
+                <button
+                  type="button"
+                  onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
+                  className="rounded-xl bg-red-650 hover:bg-red-555 text-white px-5 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+                >
+                  Entendido
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
+                    className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-755 dark:text-slate-400 dark:hover:text-slate-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (warningModal.onConfirm) {
+                        try {
+                          const confirmFn = warningModal.onConfirm;
+                          setWarningModal(prev => ({ ...prev, isOpen: false }));
+                          await confirmFn();
+                        } catch (err) {
+                          const msg = err instanceof Error ? err.message : String(err);
+                          setWarningModal({
+                            isOpen: true,
+                            title: "Error de Transición",
+                            message: `No se pudo completar la acción: ${msg}`,
+                            onConfirm: null,
+                            isError: true
+                          });
+                        }
+                      }
+                    }}
+                    className="rounded-xl bg-amber-600 hover:bg-amber-555 text-white px-5 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+                  >
+                    Confirmar
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

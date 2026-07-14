@@ -473,11 +473,16 @@ export async function updateMilestoneStatus(
     const milestone = allList[idx];
     const oldStatus = milestone.status;
 
-    if (status === "confirmed" && oldStatus !== "marked_paid") {
-      throw new Error("El hito debe haber sido reportado como transferido por el cliente antes de ser confirmado.");
-    }
-    if (status === "marked_paid" && oldStatus !== "requested") {
-      throw new Error("Un hito solo puede ser marcado como transferido si ha sido solicitado previamente.");
+    const statusOrder = ['pending', 'requested', 'marked_paid', 'confirmed'];
+    const isRevert = statusOrder.indexOf(status) < statusOrder.indexOf(oldStatus);
+
+    if (!isRevert) {
+      if (status === "confirmed" && oldStatus !== "marked_paid") {
+        throw new Error("El hito debe haber sido reportado como transferido por el cliente antes de ser confirmado.");
+      }
+      if (status === "marked_paid" && oldStatus !== "requested") {
+        throw new Error("Un hito solo puede ser marcado como transferido si ha sido solicitado previamente.");
+      }
     }
 
     milestone.status = status;

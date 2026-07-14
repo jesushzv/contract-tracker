@@ -74,6 +74,7 @@ test.describe("Sprint WB-3: UX & Document Completeness E2E Suite", () => {
     const completeBtn = page.locator("button:has-text('Marcar Proyecto como Terminado')");
     if (await completeBtn.isVisible()) {
       await completeBtn.click();
+      await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
       // Status badge or wait message should appear
       await expect(page.locator("text=Entregado por tu parte. Esperando confirmación")).toBeVisible();
     }
@@ -86,6 +87,7 @@ test.describe("Sprint WB-3: UX & Document Completeness E2E Suite", () => {
     // Fill reason
     await page.locator("textarea[placeholder*='Incumplimiento']").fill("Cancelado por mutuo acuerdo.");
     await page.locator("button:has-text('Confirmar Cancelación')").click();
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
     
     // Contract status must change to cancelled
     await expect(page.locator("span:has-text('cancelled'), span:has-text('Cancelado')").first()).toBeVisible();

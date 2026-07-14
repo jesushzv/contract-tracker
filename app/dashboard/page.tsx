@@ -39,7 +39,9 @@ import {
   getPaymentProfiles,
   savePaymentProfile,
   deletePaymentProfile,
-  uploadBrandAsset
+  uploadBrandAsset,
+  markMilestoneAsTransferred,
+  uploadReceiptFile
 } from "@/lib/storageClient";
 import { Contract, Milestone, Profile, AuditLog, ContractVersion, PaymentProfile } from "@/lib/types";
 import { MOCK_CLAUSES } from "@/lib/mockData";
@@ -92,6 +94,36 @@ export default function Dashboard() {
 
   // Upload/Error banner states
   const [uploadError, setUploadError] = useState("");
+
+  // Freelancer Payment Proof States
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMilestone, setPaymentMilestone] = useState<Milestone | null>(null);
+  const [trackingReference, setTrackingReference] = useState("");
+  const [transferredAmount, setTransferredAmount] = useState<number>(0);
+  const [receiptUrl, setReceiptUrl] = useState("");
+  const [receiptFileType, setReceiptFileType] = useState<'file' | 'url'>('file');
+  const [receiptFileBase64, setReceiptFileBase64] = useState("");
+  const [receiptFileName, setReceiptFileName] = useState("");
+  const [receiptFileMimeType, setReceiptFileMimeType] = useState("");
+  const [overrideExchangeRate, setOverrideExchangeRate] = useState("20.15");
+  const [modalError, setModalError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Warning/Confirmation Modal State
+  const [warningModal, setWarningModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: (() => Promise<void>) | null;
+    isError?: boolean;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+    isError: false
+  });
+
 
   useEffect(() => {
     async function loadInitialData() {
@@ -185,9 +217,128 @@ export default function Dashboard() {
   };
 
   const handleUpdateMilestone = async (milestoneId: string, newStatus: 'pending' | 'requested' | 'marked_paid' | 'confirmed') => {
-    await updateMilestoneStatus(milestoneId, newStatus);
-    await refreshData();
+    const milestone = allMilestones.find(m => m.id === milestoneId);
+    const currentStatus = milestone ? milestone.status : 'pending';
+    const statusOrder = ['pending', 'requested', 'marked_paid', 'confirmed'];
+    const isRevert = statusOrder.indexOf(newStatus) < statusOrder.indexOf(currentStatus);
+
+    const executeUpdate = async () => {
+      try {
+        await updateMilestoneStatus(milestoneId, newStatus);
+        await refreshData();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setWarningModal({
+          isOpen: true,
+          title: "Error de Transición",
+          message: `No se pudo actualizar el hito: ${msg}`,
+          onConfirm: null,
+          isError: true
+        });
+      }
+    };
+
+    if (isRevert) {
+      setWarningModal({
+        isOpen: true,
+        title: "Revertir Estado de Hito",
+        message: `¿Estás seguro de que deseas revertir el estado del hito "${milestone?.label || ''}" de "${currentStatus}" a "${newStatus}"? Esto podría alterar el flujo del contrato.`,
+        onConfirm: executeUpdate,
+        isError: false
+      });
+    } else {
+      await executeUpdate();
+    }
   };
+
+  const handleOpenPaymentModal = (milestone: Milestone) => {
+    setPaymentMilestone(milestone);
+    setTrackingReference("");
+    setTransferredAmount(milestone.amount);
+    setReceiptUrl("");
+    setReceiptFileType("file");
+    setReceiptFileBase64("");
+    setReceiptFileName("");
+    setReceiptFileMimeType("");
+    setModalError("");
+    setOverrideExchangeRate("20.15");
+    setShowPaymentModal(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setReceiptFileBase64("");
+      setReceiptFileName("");
+      setReceiptFileMimeType("");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setModalError("El archivo excede el límite de tamaño de 5MB.");
+      return;
+    }
+
+    const allowedMimeTypes = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+    if (!allowedMimeTypes.includes(file.type)) {
+      setModalError("Solo se permiten archivos PDF o imágenes (PNG, JPG).");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const base64Data = result.split(",")[1];
+      setReceiptFileBase64(base64Data);
+      setReceiptFileName(file.name);
+      setReceiptFileMimeType(file.type);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleMarkAsTransferred = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentMilestone || !trackingReference || !selectedContract) return;
+
+    setLoading(true);
+    setModalError("");
+    try {
+      let resolvedReceiptUrl = undefined;
+      if (receiptFileType === 'file') {
+        if (!receiptFileBase64) {
+          throw new Error("Por favor, seleccione un archivo de comprobante de pago.");
+        }
+        resolvedReceiptUrl = await uploadReceiptFile(
+          receiptFileName,
+          receiptFileMimeType,
+          receiptFileBase64
+        );
+      } else {
+        resolvedReceiptUrl = receiptUrl || undefined;
+      }
+
+      const fxRate = parseFloat(overrideExchangeRate) || 20.15;
+      const mxnSum = selectedContract.currency === "USD" ? (transferredAmount * fxRate) : undefined;
+
+      await markMilestoneAsTransferred(
+        paymentMilestone.id,
+        trackingReference,
+        transferredAmount,
+        resolvedReceiptUrl,
+        selectedContract.currency === "USD" ? fxRate : undefined,
+        mxnSum
+      );
+      await refreshData();
+      setShowPaymentModal(false);
+      setPaymentMilestone(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al guardar referencia de transferencia.";
+      setModalError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleUpdateContractStatus = async (newStatus: Contract['status']) => {
     if (!selectedContract) return;
@@ -202,15 +353,34 @@ export default function Dashboard() {
 
   const handleVetAndCounterSign = async () => {
     if (!selectedContract) return;
-    try {
-      const updated = await vetAndAcceptContract(selectedContract.id, profile?.fullName || "Héctor J. Guerrero");
-      if (updated) {
-        await refreshData();
+
+    const executeVet = async () => {
+      try {
+        const updated = await vetAndAcceptContract(selectedContract.id, profile?.fullName || "Héctor J. Guerrero");
+        if (updated) {
+          await refreshData();
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Contra-firmar",
+          message: `No se pudo contra-firmar y sellar el contrato: ${msg}`,
+          onConfirm: null,
+          isError: true
+        });
       }
-    } catch (err) {
-      alert("Error al validar y contra-firmar el contrato: " + err);
-    }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Contra-firmar y Sellar Contrato",
+      message: "¿Estás seguro de que deseas contra-firmar y sellar este contrato? Esto formalizará legalmente el acuerdo bajo los términos actuales y no podrá editarse.",
+      onConfirm: executeVet,
+      isError: false
+    });
   };
+
 
   const handleEditTotalAmountChange = (newTotal: number) => {
     setEditTotalAmount(newTotal);
@@ -243,27 +413,62 @@ export default function Dashboard() {
 
   const handleCancelContract = async () => {
     if (!selectedContract || !cancelReason.trim()) return;
-    try {
-      await cancelContract(selectedContract.id, "freelancer", cancelReason);
-      setIsCancellingContract(false);
-      setCancelReason("");
-      await refreshData();
-    } catch (err) {
-      const error = err as Error;
-      alert("Error al cancelar contrato: " + error.message);
-    }
+
+    const executeCancel = async () => {
+      try {
+        await cancelContract(selectedContract.id, "freelancer", cancelReason);
+        setIsCancellingContract(false);
+        setCancelReason("");
+        await refreshData();
+      } catch (err) {
+        const error = err as Error;
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Cancelar Contrato",
+          message: `No se pudo cancelar el contrato: ${error.message}`,
+          onConfirm: null,
+          isError: true
+        });
+      }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Cancelar Contrato",
+      message: "¿Estás seguro de que deseas cancelar este contrato? Esta acción es irreversible y anulará todos los hitos pendientes.",
+      onConfirm: executeCancel,
+      isError: false
+    });
   };
 
   const handleMarkCompleted = async () => {
     if (!selectedContract) return;
-    try {
-      await markContractCompleted(selectedContract.id, "freelancer");
-      await refreshData();
-    } catch (err) {
-      const error = err as Error;
-      alert("Error al completar contrato: " + error.message);
-    }
+
+    const executeComplete = async () => {
+      try {
+        await markContractCompleted(selectedContract.id, "freelancer");
+        await refreshData();
+      } catch (err) {
+        const error = err as Error;
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Completar Contrato",
+          message: `No se pudo marcar el contrato como completado: ${error.message}`,
+          onConfirm: null,
+          isError: true
+        });
+      }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Completar Contrato",
+      message: "¿Estás seguro de que deseas marcar este contrato como completado? Esto finalizará la relación comercial bajo este acuerdo.",
+      onConfirm: executeComplete,
+      isError: false
+    });
   };
+
 
   const handleBrandFileUpload = async (file: File | undefined, type: "logo" | "signature") => {
     if (!file) return;
@@ -356,39 +561,57 @@ export default function Dashboard() {
     e.preventDefault();
     if (!selectedContract) return;
 
-    try {
-      const updatedContract: Contract = {
-        ...selectedContract,
-        scopeDescription: editScopeDescription,
-        totalAmount: editTotalAmount,
-        status: 'sent',
-        acceptedAt: undefined,
-        acceptedByName: undefined,
-        acceptedIp: undefined,
-        freelancerAcceptedAt: undefined,
-        freelancerAcceptedByName: undefined,
-        freelancerAcceptedIp: undefined,
-        contractHash: undefined
-      };
+    const executeSaveModification = async () => {
+      try {
+        const updatedContract: Contract = {
+          ...selectedContract,
+          scopeDescription: editScopeDescription,
+          totalAmount: editTotalAmount,
+          status: 'sent',
+          acceptedAt: undefined,
+          acceptedByName: undefined,
+          acceptedIp: undefined,
+          freelancerAcceptedAt: undefined,
+          freelancerAcceptedByName: undefined,
+          freelancerAcceptedIp: undefined,
+          contractHash: undefined
+        };
 
-      await saveContract(updatedContract);
-      await saveMilestones(editMilestones);
+        await saveContract(updatedContract);
+        await saveMilestones(editMilestones);
 
-      await addAuditLog({
-        contractId: selectedContract.id,
-        action: 'modified',
-        actor: 'freelancer',
-        details: `El freelancer modificó el alcance y presupuesto del contrato (Nuevo monto: ${editTotalAmount} ${selectedContract.currency}). El acuerdo regresó a estado Enviado.`,
-        ip: '127.0.0.1'
-      });
+        await addAuditLog({
+          contractId: selectedContract.id,
+          action: 'modified',
+          actor: 'freelancer',
+          details: `El freelancer modificó el alcance y presupuesto del contrato (Nuevo monto: ${editTotalAmount} ${selectedContract.currency}). El acuerdo regresó a estado Enviado.`,
+          ip: '127.0.0.1'
+        });
 
-      setIsEditingContract(false);
-      await refreshData();
-      alert("Propuesta modificada con éxito. El estado se ha restablecido a 'Enviado' para la aceptación y firma del cliente.");
-    } catch (err) {
-      alert("Error al guardar modificaciones: " + err);
-    }
+        setIsEditingContract(false);
+        await refreshData();
+        alert("Propuesta modificada con éxito. El estado se ha restablecido a 'Enviado' para la aceptación y firma del cliente.");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setWarningModal({
+          isOpen: true,
+          title: "Error al Modificar Propuesta",
+          message: `No se pudieron guardar las modificaciones: ${msg}`,
+          onConfirm: null,
+          isError: true
+        });
+      }
+    };
+
+    setWarningModal({
+      isOpen: true,
+      title: "Guardar Modificaciones",
+      message: "¿Estás seguro de que deseas guardar estas modificaciones? El contrato se restablecerá a estado 'Enviado' y requerirá la firma del cliente nuevamente.",
+      onConfirm: executeSaveModification,
+      isError: false
+    });
   };
+
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1940,7 +2163,7 @@ export default function Dashboard() {
                                       <RotateCcw className="h-3.5 w-3.5" />
                                     </button>
                                     <button
-                                      onClick={() => handleUpdateMilestone(milestone.id, 'marked_paid')}
+                                      onClick={() => handleOpenPaymentModal(milestone)}
                                       className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
                                     >
                                       Marcar como Pagado
@@ -2459,6 +2682,230 @@ export default function Dashboard() {
               >
                 Confirmar Cancelación
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Freelancer Payment Modal */}
+      {showPaymentModal && paymentMilestone && selectedContract && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
+          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+            <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-500">
+              <CreditCard className="h-6 w-6" />
+              Notificar Transferencia SPEI
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+              Por favor ingresa la **Clave de Rastreo** de tu transferencia bancaria (se obtiene de tu recibo SPEI, CEP o banca móvil). Esto ayudará al freelancer a asociar tu pago de forma instantánea.
+            </p>
+
+            <form onSubmit={handleMarkAsTransferred} className="mt-6 flex flex-col gap-4">
+              <div>
+                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Clave de Rastreo SPEI / Referencia</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. 182746182903485761 o folio"
+                  value={trackingReference}
+                  onChange={(e) => setTrackingReference(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Monto Transferido ({selectedContract.currency})</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                  <input
+                    type="number"
+                    required
+                    value={transferredAmount}
+                    onChange={(e) => setTransferredAmount(Number(e.target.value))}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent pl-7 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-bold"
+                  />
+                </div>
+              </div>
+              {selectedContract.currency === "USD" && (
+                <>
+                  <div>
+                    <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tipo de Cambio (Banxico sugerido: 20.15)</label>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      required
+                      value={overrideExchangeRate}
+                      onChange={(e) => setOverrideExchangeRate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                    />
+                  </div>
+
+                  <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-3.5 text-xs flex flex-col gap-1.5">
+                    <div className="flex justify-between text-slate-400 font-medium">
+                      <span>Monto en USD:</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">${transferredAmount.toFixed(2)} USD</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400 font-medium">
+                      <span>Tipo de Cambio:</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-300">${(parseFloat(overrideExchangeRate) || 20.15).toFixed(4)} MXN</span>
+                    </div>
+                    <div className="flex justify-between text-indigo-500 font-bold border-t border-slate-200 dark:border-slate-800/80 pt-2">
+                      <span>Total a Transferir:</span>
+                      <span>${(transferredAmount * (parseFloat(overrideExchangeRate) || 20.15)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Método de Comprobante
+                </label>
+                <div className="flex gap-4 mb-3">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="receiptFileType"
+                      checked={receiptFileType === 'file'}
+                      onChange={() => setReceiptFileType('file')}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    Subir Archivo (PDF, PNG, JPG)
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="receiptFileType"
+                      checked={receiptFileType === 'url'}
+                      onChange={() => setReceiptFileType('url')}
+                      className="text-indigo-600 focus:ring-indigo-500"
+                    />
+                    Enlace URL
+                  </label>
+                </div>
+
+                {receiptFileType === 'file' ? (
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="file"
+                      id="receipt-file-input"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={handleFileChange}
+                      className="block w-full text-xs text-slate-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-xl file:border-0
+                        file:text-xs file:font-semibold
+                        file:bg-indigo-50 file:text-indigo-700
+                        hover:file:bg-indigo-100
+                        dark:file:bg-indigo-950/30 dark:file:text-indigo-400"
+                    />
+                    <p className="text-3xs text-slate-400">
+                      Formatos permitidos: PDF, PNG, JPG. Máx. 5MB.
+                    </p>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Ej. https://dropbox.com/s/recibo.pdf o captura.png"
+                    value={receiptUrl}
+                    onChange={(e) => setReceiptUrl(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                  />
+                )}
+              </div>
+
+              {modalError && (
+                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-3 text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{modalError}</span>
+                </div>
+              )}
+
+              <div className="flex gap-3 justify-end mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setPaymentMilestone(null);
+                  }}
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || !trackingReference}
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Clock className="h-4 w-4 animate-spin" />
+                      <span>Procesando...</span>
+                    </>
+                  ) : (
+                    <span>Registrar Pago</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Warning/Confirmation Modal */}
+      {warningModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
+          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+            <h3 className={`text-xl font-bold flex items-center gap-2 ${warningModal.isError ? 'text-red-500' : 'text-amber-500'}`}>
+              <AlertCircle className="h-6 w-6" />
+              {warningModal.title}
+            </h3>
+            <p className="text-sm text-slate-650 dark:text-slate-350 mt-3 leading-relaxed whitespace-pre-wrap">
+              {warningModal.message}
+            </p>
+            <div className="flex gap-3 justify-end mt-6">
+              {warningModal.isError ? (
+                <button
+                  type="button"
+                  onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
+                  className="rounded-xl bg-red-650 hover:bg-red-555 text-white px-5 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+                >
+                  Entendido
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
+                    className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-750 dark:text-slate-400 dark:hover:text-slate-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (warningModal.onConfirm) {
+                        try {
+                          const confirmFn = warningModal.onConfirm;
+                          setWarningModal(prev => ({ ...prev, isOpen: false }));
+                          await confirmFn();
+                        } catch (err) {
+                          const msg = err instanceof Error ? err.message : String(err);
+                          setWarningModal({
+                            isOpen: true,
+                            title: "Error de Transición",
+                            message: `No se pudo completar la acción: ${msg}`,
+                            onConfirm: null,
+                            isError: true
+                          });
+                        }
+                      }
+                    }}
+                    className="rounded-xl bg-amber-600 hover:bg-amber-550 text-white px-5 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+                  >
+                    Confirmar
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

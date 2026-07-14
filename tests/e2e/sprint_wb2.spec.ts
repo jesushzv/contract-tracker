@@ -89,6 +89,7 @@ test.describe("Sprint WB2: SPEI CEP Reconciler, USD FX, Version History & WhatsA
     
     await page.fill('input[placeholder="Ej. 123456"]', otpCode);
     await page.click('button:has-text("Verificar y Firmar")');
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
     
     // Wait for the modal to close and show acceptance success
     await expect(page.locator("body")).toContainText("Contrato firmado exitosamente!");
@@ -97,6 +98,7 @@ test.describe("Sprint WB2: SPEI CEP Reconciler, USD FX, Version History & WhatsA
     await page.goto("/dashboard?demo=true");
     await page.locator('text=Sofía Garza').first().click();
     await page.click('button:has-text("Validar y Contra-firmar")');
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
     
     // Go back to the client page to notify payment
     await page.goto(href);

@@ -617,16 +617,21 @@ export async function updateMilestoneStatus(
 
   const oldStatus = current.data?.status as MilestoneStatus || "pending";
 
-  if (status === "requested" && oldStatus !== "pending") {
-    throw new Error("Un hito solo puede ser solicitado si está en estado 'Pendiente'.");
-  }
+  const statusOrder = ['pending', 'requested', 'marked_paid', 'confirmed'];
+  const isRevert = statusOrder.indexOf(status) < statusOrder.indexOf(oldStatus);
 
-  if (status === "confirmed" && oldStatus !== "marked_paid") {
-    throw new Error("El hito debe haber sido reportado como transferido por el cliente antes de ser confirmado.");
-  }
+  if (!isRevert) {
+    if (status === "requested" && oldStatus !== "pending") {
+      throw new Error("Un hito solo puede ser solicitado si está en estado 'Pendiente'.");
+    }
 
-  if (status === "marked_paid" && oldStatus !== "requested") {
-    throw new Error("Un hito solo puede ser marcado como transferido si ha sido solicitado previamente.");
+    if (status === "confirmed" && oldStatus !== "marked_paid") {
+      throw new Error("El hito debe haber sido reportado como transferido por el cliente antes de ser confirmado.");
+    }
+
+    if (status === "marked_paid" && oldStatus !== "requested") {
+      throw new Error("Un hito solo puede ser marcado como transferido si ha sido solicitado previamente.");
+    }
   }
 
   if (status === "marked_paid") {
