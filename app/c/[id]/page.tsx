@@ -14,7 +14,12 @@ import {
   CreditCard,
   ExternalLink,
   Loader2,
-  Star
+  Star,
+  X,
+  Upload,
+  AlertTriangle,
+  User,
+  Check
 } from "lucide-react";
 import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision, uploadReceiptFile, cancelContract, markContractCompleted, isDemoMode, saveContract, saveMilestones } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
@@ -1275,8 +1280,19 @@ export default function ClientContractView() {
 
       {/* SPEI Payment Reference Input Modal Dialog */}
       {showPaymentModal && paymentMilestone && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
-          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
+          <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+            <button
+              type="button"
+              onClick={() => {
+                setShowPaymentModal(false);
+                setPaymentMilestone(null);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
             <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-500">
               <CreditCard className="h-6 w-6" />
               Notificar Transferencia SPEI
@@ -1287,19 +1303,19 @@ export default function ClientContractView() {
 
             <form onSubmit={handleMarkAsTransferred} className="mt-6 flex flex-col gap-4">
               <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Clave de Rastreo SPEI / Referencia</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Clave de Rastreo SPEI / Referencia</label>
                 <input
                   type="text"
                   required
                   placeholder="Ej. 182746182903485761 o folio"
                   value={trackingReference}
                   onChange={(e) => setTrackingReference(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                  className="w-full rounded-xl border border-slate-350 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white font-mono transition-all duration-300"
                 />
               </div>
 
               <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Monto Transferido ({contract.currency})</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Monto Transferido ({contract?.currency})</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
                   <input
@@ -1307,47 +1323,49 @@ export default function ClientContractView() {
                     required
                     value={transferredAmount}
                     onChange={(e) => setTransferredAmount(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent pl-7 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-bold"
+                    className="w-full rounded-xl border border-slate-350 dark:border-slate-700 bg-transparent pl-7 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white font-bold transition-all duration-300"
                   />
                 </div>
               </div>
-              {contract.currency === "USD" && (
+              {contract?.currency === "USD" && (
                 <>
                   <div>
-                    <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tipo de Cambio (Banxico sugerido: 20.15)</label>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Tipo de Cambio (Banxico sugerido: 20.15)</label>
                     <input
                       type="number"
                       step="0.0001"
                       required
                       value={overrideExchangeRate}
                       onChange={(e) => setOverrideExchangeRate(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                      className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white font-mono transition-all duration-300"
                     />
                   </div>
 
-                  <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-3.5 text-xs flex flex-col gap-1.5">
-                    <div className="flex justify-between text-slate-400 font-medium">
+                  <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-pink-500/5 dark:from-indigo-950/20 dark:via-purple-950/10 dark:to-pink-950/10 border border-indigo-500/15 rounded-xl p-4 text-xs flex flex-col gap-2 shadow-inner">
+                    <div className="flex justify-between text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                       <span>Monto en USD:</span>
                       <span className="font-bold text-slate-700 dark:text-slate-300">${transferredAmount.toFixed(2)} USD</span>
                     </div>
-                    <div className="flex justify-between text-slate-400 font-medium">
+                    <div className="flex justify-between text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                       <span>Tipo de Cambio:</span>
                       <span className="font-bold text-slate-700 dark:text-slate-300">${(parseFloat(overrideExchangeRate) || 20.15).toFixed(4)} MXN</span>
                     </div>
-                    <div className="flex justify-between text-indigo-500 font-bold border-t border-slate-200 dark:border-slate-800/80 pt-2">
-                      <span>Total a Transferir:</span>
-                      <span>${(transferredAmount * (parseFloat(overrideExchangeRate) || 20.15)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                    <div className="flex justify-between items-center text-indigo-600 dark:text-indigo-400 font-bold border-t border-slate-200 dark:border-slate-800/80 pt-2.5 mt-1">
+                      <span className="text-[11px] uppercase tracking-wider">Total a Transferir:</span>
+                      <span className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-650 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+                        ${(transferredAmount * (parseFloat(overrideExchangeRate) || 20.15)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+                      </span>
                     </div>
                   </div>
                 </>
               )}
 
               <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
                   Método de Comprobante
                 </label>
                 <div className="flex gap-4 mb-3">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-655 dark:text-slate-350 cursor-pointer">
                     <input
                       type="radio"
                       name="receiptFileType"
@@ -1357,7 +1375,7 @@ export default function ClientContractView() {
                     />
                     Subir Archivo (PDF, PNG, JPG)
                   </label>
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-655 dark:text-slate-350 cursor-pointer">
                     <input
                       type="radio"
                       name="receiptFileType"
@@ -1371,22 +1389,27 @@ export default function ClientContractView() {
 
                 {receiptFileType === 'file' ? (
                   <div className="flex flex-col gap-2">
-                    <input
-                      type="file"
-                      id="receipt-file-input"
-                      accept=".pdf,.png,.jpg,.jpeg"
-                      onChange={handleFileChange}
-                      className="block w-full text-xs text-slate-500
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-xl file:border-0
-                        file:text-xs file:font-semibold
-                        file:bg-indigo-50 file:text-indigo-700
-                        hover:file:bg-indigo-100
-                        dark:file:bg-indigo-950/30 dark:file:text-indigo-400"
-                    />
-                    <p className="text-3xs text-slate-400">
-                      Formatos permitidos: PDF, PNG, JPG. Máx. 5MB.
-                    </p>
+                    <label 
+                      htmlFor="receipt-file-input"
+                      className="group relative flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-750 hover:border-indigo-500 dark:hover:border-indigo-500/80 rounded-2xl cursor-pointer bg-slate-50/50 dark:bg-slate-900/20 hover:bg-indigo-50/10 dark:hover:bg-indigo-950/10 transition-all duration-300"
+                    >
+                      <input
+                        type="file"
+                        id="receipt-file-input"
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      <div className="p-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:bg-indigo-100/50 dark:group-hover:bg-indigo-950/50 group-hover:text-indigo-500 transition-colors duration-300">
+                        <Upload className="h-6 w-6 group-hover:animate-bounce" />
+                      </div>
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-350 mt-3 group-hover:text-indigo-500 transition-colors">
+                        {receiptFileName ? receiptFileName : "Selecciona o arrastra tu comprobante"}
+                      </span>
+                      <p className="text-[10px] text-slate-450 dark:text-slate-500 mt-1">
+                        PDF, PNG, JPG hasta 5MB
+                      </p>
+                    </label>
                   </div>
                 ) : (
                   <input
@@ -1394,13 +1417,13 @@ export default function ClientContractView() {
                     placeholder="Ej. https://dropbox.com/s/recibo.pdf o captura.png"
                     value={receiptUrl}
                     onChange={(e) => setReceiptUrl(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white transition-all duration-300"
                   />
                 )}
               </div>
 
               {modalError && (
-                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-3 text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
+                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-3 text-xs text-red-655 dark:text-red-400 flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                   <span>{modalError}</span>
                 </div>
@@ -1413,18 +1436,18 @@ export default function ClientContractView() {
                     setShowPaymentModal(false);
                     setPaymentMilestone(null);
                   }}
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={loading || !trackingReference}
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/10"
                 >
                   {loading ? (
                     <>
-                      <Clock className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       Registrando...
                     </>
                   ) : (
@@ -1442,54 +1465,90 @@ export default function ClientContractView() {
 
       {/* Acceptance Modal Dialog */}
       {showAcceptModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
-          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
+          <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+            <button
+              type="button"
+              onClick={() => {
+                setShowAcceptModal(false);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
             <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-500">
               <ShieldCheck className="h-6 w-6" />
               Aceptar Contrato de Servicios
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-              Al escribir tu nombre completo a continuación, confirmas tu consentimiento y aceptación de todos los términos detallados en esta propuesta, incluyendo el alcance, la tarifa de {formatMoney(contract.totalAmount, contract.currency)}, el esquema de anticipos y las cláusulas de ley adjuntas.
-            </p>
-            <p className="text-4xs text-slate-400 mt-2 leading-normal">
-              Guardaremos tu nombre completo, marca de tiempo y tu dirección IP pública para el registro de auditoría digital de conformidad con el Art. 89 del Código de Comercio de México.
+              Al escribir tu nombre completo a continuación, confirmas tu consentimiento y aceptación de todos los términos detallados en esta propuesta, incluyendo el alcance, la tarifa de {formatMoney(contract?.totalAmount || 0, contract?.currency || 'MXN')}, el esquema de anticipos y las cláusulas de ley adjuntas.
             </p>
 
-            <form onSubmit={handleAcceptContract} className="mt-6 flex flex-col gap-4">
+            {/* Steps indicator */}
+            <div className="flex items-center justify-between w-full mt-4 mb-5 border-b border-slate-100 dark:border-slate-900 pb-3">
+              <div className="flex items-center gap-2">
+                <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${acceptStep === 'name' ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : 'bg-emerald-500 text-white'}`}>
+                  {acceptStep === 'otp' ? <Check className="h-3.5 w-3.5" /> : "1"}
+                </span>
+                <span className={`text-xs font-semibold ${acceptStep === 'name' ? 'text-indigo-650 dark:text-indigo-400 font-bold' : 'text-slate-450 dark:text-slate-500'}`}>
+                  Identidad
+                </span>
+              </div>
+              <div className="h-[1px] flex-1 mx-3 bg-slate-200 dark:bg-slate-800" />
+              <div className="flex items-center gap-2">
+                <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${acceptStep === 'otp' ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : 'bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-655'}`}>
+                  2
+                </span>
+                <span className={`text-xs font-semibold ${acceptStep === 'otp' ? 'text-indigo-650 dark:text-indigo-400 font-bold' : 'text-slate-450 dark:text-slate-650'}`}>
+                  Código OTP
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleAcceptContract} className="mt-4 flex flex-col gap-4">
               {acceptStep === 'name' ? (
                 <div>
-                  <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Nombre completo del Firmante</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Escribe tu nombre y apellido"
-                    value={signerName}
-                    onChange={(e) => setSignerName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
-                  />
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Nombre completo del Firmante</label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="Escribe tu nombre y apellido"
+                      value={signerName}
+                      onChange={(e) => setSignerName(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-transparent pl-10 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
                   {debugOtp && (
-                    <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 p-3 rounded-xl text-3xs text-indigo-700 dark:text-indigo-400 font-semibold leading-relaxed">
-                      💡 <strong>Demo Debug Info:</strong> El código de firma enviado al cliente es: <span className="font-extrabold underline text-sm tracking-widest">{debugOtp}</span>
+                    <div className="bg-gradient-to-r from-slate-900 to-indigo-950 dark:from-slate-950 dark:to-indigo-950 border border-indigo-500/30 rounded-2xl p-4 text-xs text-indigo-300 dark:text-indigo-400 font-mono leading-relaxed shadow-lg flex items-start gap-3">
+                      <span className="text-base select-none mt-0.5">📟</span>
+                      <div className="flex-1">
+                        <strong className="text-indigo-455 font-bold block mb-1">SYSTEM_DEBUG_OTP</strong>
+                        <span>El código de firma OTP es: </span>
+                        <span className="font-black text-white bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 tracking-wider select-all">{debugOtp}</span>
+                      </div>
                     </div>
                   )}
                   <div>
-                    <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Código de Firma Electrónica (OTP de 6 dígitos)</label>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Código de Firma Electrónica (OTP de 6 dígitos)</label>
                     <input
                       type="text"
                       maxLength={6}
                       required
                       disabled={otpAttempts >= 3}
-                      placeholder="Ej. 123456"
+                      placeholder="••••••"
                       value={otpInput}
                       onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm font-bold text-center tracking-widest focus:border-indigo-500 focus:outline-none dark:text-white disabled:opacity-50"
+                      className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 px-4 py-3 text-2xl font-black text-center tracking-[0.5em] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none dark:text-white disabled:opacity-50 font-mono transition-all duration-300"
                     />
                   </div>
                   {otpError && (
-                    <span className="text-3xs text-red-500 font-semibold">{otpError}</span>
+                    <span className="text-xs text-red-500 dark:text-red-400 font-semibold">{otpError}</span>
                   )}
                   {otpAttempts >= 3 && (
                     <button
@@ -1503,6 +1562,10 @@ export default function ClientContractView() {
                 </div>
               )}
 
+              <p className="text-[11px] text-slate-450 dark:text-slate-500 leading-normal">
+                Guardaremos tu nombre completo, marca de tiempo y tu dirección IP pública para el registro de auditoría digital de conformidad con el Art. 89 del Código de Comercio de México.
+              </p>
+
               <div className="flex gap-3 justify-end mt-2">
                 <button
                   type="button"
@@ -1513,18 +1576,18 @@ export default function ClientContractView() {
                       setShowAcceptModal(false);
                     }
                   }}
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
                 >
                   {acceptStep === 'otp' ? "Atrás" : "Cancelar"}
                 </button>
                 <button
                   type="submit"
                   disabled={loading || (acceptStep === 'name' ? !signerName : (otpInput.length < 6 || otpAttempts >= 3))}
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/10"
                 >
                   {loading ? (
                     <>
-                      <Clock className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       Procesando...
                     </>
                   ) : acceptStep === 'name' ? (
@@ -1545,22 +1608,21 @@ export default function ClientContractView() {
         </div>
       )}
 
-      {/* Revision Modal Dialog */}
       {showRevisionModal && contract && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto print:hidden">
-          <div className="bg-slate-50 dark:bg-slate-950 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl border border-red-500/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md overflow-y-auto print:hidden">
+          <div className="relative bg-white dark:bg-slate-950 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl border border-rose-500/20 animate-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900 sticky top-0 z-10 rounded-t-3xl">
-              <h3 className="font-bold text-red-500 flex items-center gap-2">
-                <AlertCircle className="h-5 w-5" />
+              <h3 className="font-extrabold text-rose-600 dark:text-rose-400 flex items-center gap-2 text-lg">
+                <AlertTriangle className="h-5 w-5 animate-pulse text-rose-500" />
                 Proponer Cambios y Solicitar Revisión
               </h3>
               <button
                 type="button"
                 onClick={() => setShowRevisionModal(false)}
-                className="rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer"
+                className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors z-20"
               >
-                Cancelar
+                <X className="h-5 w-5" />
               </button>
             </div>
 
@@ -1569,55 +1631,55 @@ export default function ClientContractView() {
               
               {/* Section 1: Client Details */}
               <div className="flex flex-col gap-4">
-                <h4 className="text-2xs font-extrabold text-red-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">1. Tus Datos de Facturación (Cliente)</h4>
+                <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">1. Tus Datos de Facturación (Cliente)</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex flex-col gap-1">
-                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Nombre / Razón Social</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nombre / Razón Social</label>
                     <input
                       type="text"
                       required
                       value={editClientName}
                       onChange={(e) => setEditClientName(e.target.value)}
-                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:text-white"
+                      className="rounded-xl border border-slate-350 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Correo Electrónico</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Correo Electrónico</label>
                     <input
                       type="email"
                       required
                       value={editClientEmail}
                       onChange={(e) => setEditClientEmail(e.target.value)}
-                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:text-white"
+                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Teléfono de Contacto</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Teléfono de Contacto</label>
                     <input
                       type="text"
                       value={editClientPhone}
                       onChange={(e) => setEditClientPhone(e.target.value)}
-                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:text-white"
+                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
                       placeholder="Ej. +525512345678"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Tu RFC</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Tu RFC</label>
                     <input
                       type="text"
                       value={editClientRfc}
                       onChange={(e) => setEditClientRfc(e.target.value.toUpperCase())}
-                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:text-white font-mono"
+                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white font-mono transition-all duration-300"
                       placeholder="Ej. GUEH860710MX3"
                       maxLength={13}
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Régimen Fiscal</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Régimen Fiscal</label>
                     <select
                       value={editClientRegimen}
                       onChange={(e) => setEditClientRegimen(e.target.value)}
-                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:text-white bg-slate-900"
+                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white bg-slate-900 transition-all duration-300"
                     >
                       <option value="">-- Selecciona Régimen --</option>
                       <option value="601 - General de Ley Personas Morales">601 - General de Ley Personas Morales</option>
@@ -1630,12 +1692,12 @@ export default function ClientContractView() {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Código Postal</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Código Postal</label>
                     <input
                       type="text"
                       value={editClientPostal}
                       onChange={(e) => setEditClientPostal(e.target.value)}
-                      className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:text-white"
+                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
                       placeholder="Ej. 06000"
                       maxLength={5}
                     />
@@ -1645,24 +1707,24 @@ export default function ClientContractView() {
 
               {/* Section 2: Scope, Budget, and Taxes */}
               <div className="flex flex-col gap-4">
-                <h4 className="text-2xs font-extrabold text-red-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">2. Configuración del Proyecto y Retenciones</h4>
+                <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">2. Configuración del Proyecto y Retenciones</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Scope Input */}
                   <div className="md:col-span-2 flex flex-col gap-1.5">
-                    <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Concepto y Alcance de Trabajo</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Concepto y Alcance de Trabajo</label>
                     <textarea
                       rows={4}
                       required
                       value={editScopeDescription}
                       onChange={(e) => setEditScopeDescription(e.target.value)}
-                      className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-xs focus:border-red-500 focus:outline-none dark:text-white"
+                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-4 py-2.5 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
                     />
                   </div>
 
                   {/* Budget & Currency */}
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Presupuesto Total</label>
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Presupuesto Total</label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
                         <input
@@ -1671,16 +1733,16 @@ export default function ClientContractView() {
                           required
                           value={editTotalAmount || ""}
                           onChange={(e) => handleEditTotalAmountChange(Number(e.target.value))}
-                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent pl-6 pr-3 py-1.5 text-xs font-bold focus:border-red-500 focus:outline-none dark:text-white"
+                          className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent pl-6 pr-3 py-2 text-xs font-bold focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
                         />
                       </div>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase">Moneda</label>
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Moneda</label>
                       <select
                         value={editCurrency}
                         onChange={(e) => setEditCurrency(e.target.value as 'MXN' | 'USD')}
-                        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:text-white bg-slate-900 font-bold"
+                        className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white bg-slate-900 font-bold transition-all duration-300"
                       >
                         <option value="MXN">Pesos Mexicanos (MXN)</option>
                         <option value="USD">Dólares Americanos (USD)</option>
@@ -1692,9 +1754,9 @@ export default function ClientContractView() {
                 {/* Tax Checkboxes */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start mt-2">
                   <div className="flex flex-col gap-3 bg-slate-100/50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <span className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block">Retención de Impuestos (México)</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 block">Retención de Impuestos (México)</span>
                     <div className="flex flex-col gap-2">
-                      <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-350 cursor-pointer select-none">
+                      <label className="flex items-center gap-2 text-xs text-slate-750 dark:text-slate-350 cursor-pointer select-none">
                         <input
                           type="checkbox"
                           checked={editRetencionIsr}
@@ -1703,7 +1765,7 @@ export default function ClientContractView() {
                         />
                         Retención ISR (10% Freelancer)
                       </label>
-                      <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-350 cursor-pointer select-none">
+                      <label className="flex items-center gap-2 text-xs text-slate-750 dark:text-slate-350 cursor-pointer select-none">
                         <input
                           type="checkbox"
                           checked={editRetencionIva}
@@ -1716,31 +1778,31 @@ export default function ClientContractView() {
                   </div>
 
                   {/* Tax Breakdown */}
-                  <div className="md:col-span-2 bg-red-500/5 p-4 rounded-xl border border-red-500/10 flex flex-col gap-2 text-xs">
-                    <span className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block">Desglose Fiscal Estimado</span>
-                    <div className="flex justify-between border-b border-slate-200/50 dark:border-slate-800 pb-1 text-slate-650 dark:text-slate-450">
+                  <div className="md:col-span-2 bg-rose-500/5 p-4 rounded-xl border border-rose-500/10 flex flex-col gap-2 text-xs">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-550 dark:text-slate-400 mb-1 block">Desglose Fiscal Estimado</span>
+                    <div className="flex justify-between border-b border-slate-200/50 dark:border-slate-800/80 pb-1 text-slate-650 dark:text-slate-400">
                       <span>Subtotal (Monto del Proyecto):</span>
                       <span className="font-semibold">{formatMoney(editTotalAmount, editCurrency)}</span>
                     </div>
-                    <div className="flex justify-between border-b border-slate-200/50 dark:border-slate-800 pb-1 text-slate-650 dark:text-slate-450">
+                    <div className="flex justify-between border-b border-slate-200/50 dark:border-slate-800/80 pb-1 text-slate-650 dark:text-slate-400">
                       <span>IVA Trasladado (16%):</span>
                       <span className="font-semibold">{formatMoney(editTotalAmount * 0.16, editCurrency)}</span>
                     </div>
                     {editRetencionIsr && (
-                      <div className="flex justify-between text-red-500 border-b border-slate-200/50 dark:border-slate-800 pb-1">
+                      <div className="flex justify-between text-rose-600 border-b border-slate-200/50 dark:border-slate-800/80 pb-1">
                         <span>Retención ISR (10%):</span>
                         <span className="font-semibold">-{formatMoney(editTotalAmount * 0.10, editCurrency)}</span>
                       </div>
                     )}
                     {editRetencionIva && (
-                      <div className="flex justify-between text-red-500 border-b border-slate-200/50 dark:border-slate-800 pb-1">
+                      <div className="flex justify-between text-rose-600 border-b border-slate-200/50 dark:border-slate-800/80 pb-1">
                         <span>Retención IVA (10.667%):</span>
                         <span className="font-semibold">-{formatMoney(editTotalAmount * 0.16 * (2 / 3), editCurrency)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-slate-800 dark:text-white font-bold pt-1">
                       <span>Neto Estimado a Recibir:</span>
-                      <span className="text-red-500">
+                      <span className="text-rose-600 dark:text-rose-400">
                         {formatMoney(
                           editTotalAmount +
                           (editTotalAmount * 0.16) -
@@ -1756,12 +1818,12 @@ export default function ClientContractView() {
 
               {/* Section 3: Milestones Schedule */}
               <div className="flex flex-col gap-4">
-                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-1.5">
-                  <h4 className="text-2xs font-extrabold text-red-500 uppercase tracking-wider">3. Esquema de Cobro y Entregables</h4>
+                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider">3. Esquema de Cobro y Entregables</h4>
                   <button
                     type="button"
                     onClick={handleEditAddMilestone}
-                    className="flex items-center gap-1 rounded bg-red-550/10 hover:bg-red-550/20 text-red-500 border border-red-500/20 px-2 py-1 text-4xs font-bold uppercase transition-colors cursor-pointer"
+                    className="flex items-center gap-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-3 py-1 text-xs font-bold uppercase transition-colors cursor-pointer"
                   >
                     + Agregar Hito
                   </button>
@@ -1771,7 +1833,7 @@ export default function ClientContractView() {
                   {editMilestones.map((m, idx) => (
                     <div key={m.id || idx} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-slate-100/30 dark:bg-slate-900/10 border border-slate-200/60 dark:border-slate-900/60 rounded-xl p-3">
                       <div className="sm:col-span-6">
-                        <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Concepto del Entregable</label>
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">Concepto del Entregable</label>
                         <input
                           type="text"
                           required
@@ -1780,12 +1842,12 @@ export default function ClientContractView() {
                             const val = e.target.value;
                             setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, label: val } : item));
                           }}
-                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:text-white"
+                          className="w-full rounded-xl border border-slate-350 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
                           placeholder="Ej. Anticipo o Entrega final"
                         />
                       </div>
                       <div className="sm:col-span-3">
-                        <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Fecha Vencimiento</label>
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">Fecha Vencimiento</label>
                         <input
                           type="date"
                           required
@@ -1794,20 +1856,20 @@ export default function ClientContractView() {
                             const val = e.target.value;
                             setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, dueDate: val } : item));
                           }}
-                          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs focus:border-red-500 focus:outline-none dark:text-white"
+                          className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
                         />
                       </div>
                       <div className="sm:col-span-2">
-                        <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-0.5">Importe ({editCurrency})</label>
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">Importe ({editCurrency})</label>
                         <div className="relative">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-3xs font-bold text-slate-400">$</span>
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
                           <input
                             type="number"
                             required
                             min={1}
                             value={m.amount || ""}
                             onChange={(e) => handleEditMilestoneAmount(idx, Number(e.target.value))}
-                            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent pl-5 pr-2 py-1.5 text-xs font-bold focus:border-red-500 focus:outline-none dark:text-white"
+                            className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent pl-5 pr-2 py-2 text-xs font-bold focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
                           />
                         </div>
                       </div>
@@ -1816,7 +1878,7 @@ export default function ClientContractView() {
                           type="button"
                           onClick={() => handleEditRemoveMilestone(idx)}
                           disabled={editMilestones.length <= 1}
-                          className="text-red-500 hover:text-red-600 disabled:opacity-30 p-1.5 rounded bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 cursor-pointer"
+                          className="text-rose-500 hover:text-rose-600 disabled:opacity-30 p-2 rounded-xl bg-rose-500/5 hover:bg-rose-500/10 border border-rose-500/10 transition-colors cursor-pointer text-xs font-semibold"
                         >
                           Eliminar
                         </button>
@@ -1831,13 +1893,13 @@ export default function ClientContractView() {
                   const difference = editTotalAmount - currentSum;
                   if (Math.abs(difference) <= 0.01) {
                     return (
-                      <p className="text-3xs text-emerald-500 font-semibold bg-emerald-500/5 border border-emerald-500/10 rounded-xl px-4 py-2 mt-1">
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/5 border border-emerald-500/10 rounded-xl px-4 py-2 mt-1">
                         ¡Balance Correcto! La suma de los hitos coincide con el presupuesto total: {formatMoney(currentSum, editCurrency)}.
                       </p>
                     );
                   } else {
                     return (
-                      <p className="text-3xs text-amber-500 font-semibold bg-amber-500/5 border border-amber-500/10 rounded-xl px-4 py-2 mt-1">
+                      <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold bg-amber-500/5 border border-amber-500/10 rounded-xl px-4 py-2 mt-1">
                         Suma Incorrecta: La suma de los hitos es {formatMoney(currentSum, editCurrency)}. {difference > 0 ? "Faltan" : "Exceden"} {formatMoney(Math.abs(difference), editCurrency)} para coincidir con el total de {formatMoney(editTotalAmount, editCurrency)}.
                       </p>
                     );
@@ -1847,7 +1909,7 @@ export default function ClientContractView() {
 
               {/* Section 4: Clauses Checklist */}
               <div className="flex flex-col gap-4">
-                <h4 className="text-2xs font-extrabold text-red-500 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1.5">4. Cláusulas del Acuerdo</h4>
+                <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">4. Cláusulas del Acuerdo</h4>
                 <div className="grid grid-cols-1 gap-2 max-h-[250px] overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 bg-slate-100/20 dark:bg-slate-900/10">
                   {MOCK_CLAUSES.map((clause) => {
                     const isChecked = editSelectedClauses.includes(clause.id);
@@ -1861,17 +1923,17 @@ export default function ClientContractView() {
                               : [...prev, clause.id]
                           );
                         }}
-                        className={`flex gap-3 items-start p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 cursor-pointer select-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50 ${isChecked ? 'bg-red-500/5 border-red-500/30! ring-1 ring-red-500/20' : ''}`}
+                        className={`flex gap-3 items-start p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 cursor-pointer select-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50 ${isChecked ? 'bg-rose-500/5 border-rose-500/30! ring-1 ring-rose-500/20' : ''}`}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => {}} // handled by parent div onClick
-                          className="rounded border-slate-350 dark:border-slate-700 text-red-500 focus:ring-red-500 mt-0.5 pointer-events-none"
+                          className="rounded border-slate-355 dark:border-slate-700 text-rose-500 focus:ring-rose-500 mt-0.5 pointer-events-none"
                         />
                         <div className="text-xs">
-                          <h5 className="font-bold text-slate-850 dark:text-slate-200">{clause.title} <span className="text-4xs text-slate-400 bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.25 font-normal uppercase ml-1.5">{clause.category}</span></h5>
-                          <p className="text-3xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{clause.content}</p>
+                          <h5 className="font-bold text-slate-850 dark:text-slate-200">{clause.title} <span className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded px-2 py-0.5 font-semibold uppercase ml-2">{clause.category}</span></h5>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{clause.content}</p>
                         </div>
                       </div>
                     );
@@ -1881,16 +1943,22 @@ export default function ClientContractView() {
 
               {/* Section 5: Revision Reason */}
               <div className="flex flex-col gap-1.5 border-t border-slate-200 dark:border-slate-800 pt-6">
-                <h4 className="text-2xs font-extrabold text-red-500 uppercase tracking-wider pb-1.5">5. Comentarios de la Revisión (Requerido)</h4>
-                <label className="text-4xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Explica los motivos de estos cambios al freelancer</label>
-                <textarea
-                  required
-                  rows={3}
-                  placeholder="Ej. Favor de corregir el monto de los hitos y modificar el alcance del proyecto de acuerdo a lo platicado..."
-                  value={revisionReason}
-                  onChange={(e) => setRevisionReason(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-xs focus:border-red-500 focus:outline-none dark:text-white"
-                />
+                <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider pb-2">5. Comentarios de la Revisión (Requerido)</h4>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Explica los motivos de estos cambios al freelancer</label>
+                <div className="relative">
+                  <textarea
+                    required
+                    rows={3}
+                    maxLength={1000}
+                    placeholder="Ej. Favor de corregir el monto de los hitos y modificar el alcance del proyecto de acuerdo a lo platicado..."
+                    value={revisionReason}
+                    onChange={(e) => setRevisionReason(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/10 px-4 py-3 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300 resize-none"
+                  />
+                  <span className="absolute bottom-3 right-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 select-none">
+                    {revisionReason.length}/1000
+                  </span>
+                </div>
               </div>
 
               {/* Visual Diff Panel */}
@@ -1956,41 +2024,67 @@ export default function ClientContractView() {
         </div>
       )}
       {isCancellingContract && contract && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm print:hidden">
-          <div className="bg-slate-50 dark:bg-slate-950 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-red-500/20 flex flex-col gap-4 text-left">
-            <div>
-              <h3 className="font-bold text-slate-800 dark:text-slate-200 text-lg flex items-center gap-2">
-                Cancelar Contrato
-              </h3>
-              <p className="text-2xs text-slate-400 mt-1">
-                Ingresa el motivo de cancelación del contrato. Se notificará al freelancer y quedará registrado en la bitácora de auditoría.
-              </p>
-            </div>
-            <textarea
-              rows={4}
-              required
-              placeholder="Ej. Mutuo acuerdo, cambio de proveedor, etc..."
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-3 py-2 text-xs focus:border-red-500 focus:outline-none dark:text-white transition-all resize-none"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  setIsCancellingContract(false);
-                  setCancelReason("");
-                }}
-                className="rounded-lg bg-slate-100 dark:bg-slate-800 px-4 py-2 text-2xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-              >
-                Cerrar
-              </button>
-              <button
-                onClick={handleCancelContract}
-                disabled={!cancelReason.trim()}
-                className="rounded-lg bg-red-650 hover:bg-red-550 text-white font-bold px-4 py-2 text-2xs transition-colors disabled:opacity-50"
-              >
-                Confirmar Cancelación
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
+          <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-rose-500/20">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCancellingContract(false);
+                setCancelReason("");
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-xl font-bold flex items-center gap-2 text-rose-600 dark:text-rose-455">
+              <AlertTriangle className="h-6 w-6 text-rose-500 animate-pulse" />
+              Cancelar Contrato
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+              Ingresa el motivo de cancelación del contrato. Se notificará al freelancer y quedará registrado en la bitácora de auditoría.
+            </p>
+
+            <div className="mt-4 flex flex-col gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Motivo de Cancelación</label>
+                <div className="relative">
+                  <textarea
+                    rows={4}
+                    required
+                    maxLength={500}
+                    placeholder="Ej. Mutuo acuerdo, cambio de proveedor, etc..."
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/10 px-4 py-3 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300 resize-none"
+                  />
+                  <span className="absolute bottom-3 right-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 select-none">
+                    {cancelReason.length}/500
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCancellingContract(false);
+                    setCancelReason("");
+                  }}
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                >
+                  Cerrar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelContract}
+                  disabled={!cancelReason.trim()}
+                  className="rounded-xl bg-rose-650 hover:bg-rose-600 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-rose-600/10"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  Confirmar Cancelación
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1998,13 +2092,21 @@ export default function ClientContractView() {
 
       {/* Warning/Confirmation Modal */}
       {warningModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
-          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
+          <div className={`relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border ${warningModal.isError ? 'border-red-500/20' : 'border-amber-500/20'}`}>
+            <button
+              type="button"
+              onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
             <h3 className={`text-xl font-bold flex items-center gap-2 ${warningModal.isError ? 'text-red-500' : 'text-amber-500'}`}>
-              <AlertCircle className="h-6 w-6" />
+              <AlertTriangle className={`h-6 w-6 ${warningModal.isError ? 'text-red-500 animate-pulse' : 'text-amber-500 animate-pulse'}`} />
               {warningModal.title}
             </h3>
-            <p className="text-sm text-slate-650 dark:text-slate-350 mt-3 leading-relaxed whitespace-pre-wrap">
+            <p className="text-xs text-slate-650 dark:text-slate-400 mt-3 leading-relaxed whitespace-pre-wrap">
               {warningModal.message}
             </p>
             <div className="flex gap-3 justify-end mt-6">
@@ -2012,7 +2114,7 @@ export default function ClientContractView() {
                 <button
                   type="button"
                   onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
-                  className="rounded-xl bg-red-650 hover:bg-red-555 text-white px-5 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+                  className="rounded-xl bg-red-650 hover:bg-red-600 text-white px-5 py-2.5 text-xs font-bold transition-colors cursor-pointer shadow-lg shadow-red-600/10"
                 >
                   Entendido
                 </button>
@@ -2021,7 +2123,7 @@ export default function ClientContractView() {
                   <button
                     type="button"
                     onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
-                    className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-755 dark:text-slate-400 dark:hover:text-slate-200"
+                    className="rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
                   >
                     Cancelar
                   </button>
@@ -2045,7 +2147,7 @@ export default function ClientContractView() {
                         }
                       }
                     }}
-                    className="rounded-xl bg-amber-600 hover:bg-amber-555 text-white px-5 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+                    className="rounded-xl bg-amber-600 hover:bg-amber-500 text-white px-5 py-2.5 text-xs font-bold transition-colors cursor-pointer shadow-lg shadow-amber-600/10"
                   >
                     Confirmar
                   </button>

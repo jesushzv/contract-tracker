@@ -19,7 +19,8 @@ import {
   Briefcase, 
   RotateCcw,
   BarChart3,
-  Printer
+  Printer,
+  X
 } from "lucide-react";
 import { 
   getContracts, 
@@ -2978,17 +2979,28 @@ export default function Dashboard() {
       )}
       {/* Cancellation Modal */}
       {isCancellingContract && selectedContract && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm print:hidden">
-          <div className="bg-slate-50 dark:bg-slate-950 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-red-500/20">
-            <h3 className="text-sm font-bold text-red-650 dark:text-red-400 flex items-center gap-2 mb-4">
-              <AlertCircle className="h-5 w-5" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden animate-fade-in">
+          <div className="relative bg-slate-50 dark:bg-slate-950 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-red-500/20 animate-in zoom-in-95 duration-200">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCancellingContract(false);
+                setCancelReason("");
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors z-20"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-base font-bold text-red-650 dark:text-red-400 flex items-center gap-2 mb-4">
+              <AlertCircle className="h-5 w-5 text-red-500" />
               Cancelar Contrato
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-normal">
               Esta acción dará por terminado el proyecto y cancelará todas las solicitudes de hitos financieros pendientes. Por favor especifica el motivo:
             </p>
             <textarea
-              className="w-full rounded-2xl border border-slate-300 dark:border-slate-800 bg-transparent p-3 text-xs focus:border-red-500 focus:outline-none dark:text-white mb-4 resize-none h-24"
+              className="w-full rounded-2xl border border-slate-300 dark:border-slate-800 bg-transparent p-3.5 text-xs focus:border-red-500 focus:ring-2 focus:ring-red-500/10 focus:outline-none dark:text-white mb-4 resize-none h-24 transition-all duration-300"
               placeholder="Ej. Incumplimiento de entregables, cambio de prioridades..."
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
@@ -3000,7 +3012,7 @@ export default function Dashboard() {
                   setIsCancellingContract(false);
                   setCancelReason("");
                 }}
-                className="rounded-xl bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
+                className="rounded-xl px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
               >
                 Cerrar
               </button>
@@ -3008,7 +3020,7 @@ export default function Dashboard() {
                 type="button"
                 onClick={handleCancelContract}
                 disabled={!cancelReason.trim()}
-                className="rounded-xl bg-red-600 hover:bg-red-550 text-white font-bold px-4 py-2 text-xs transition-colors shadow-md shadow-red-500/10 disabled:opacity-50 cursor-pointer"
+                className="rounded-xl bg-red-650 hover:bg-red-600 text-white font-bold px-5 py-2.5 text-xs transition-colors shadow-md shadow-red-500/10 disabled:opacity-50 cursor-pointer"
               >
                 Confirmar Cancelación
               </button>
@@ -3019,64 +3031,76 @@ export default function Dashboard() {
 
       {/* Freelancer Payment Modal */}
       {showPaymentModal && paymentMilestone && selectedContract && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
-          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
-            <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-500">
-              <CreditCard className="h-6 w-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
+          <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+            <button
+              type="button"
+              onClick={() => {
+                setShowPaymentModal(false);
+                setPaymentMilestone(null);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors z-20"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-base font-bold flex items-center gap-2 text-indigo-500">
+              <CreditCard className="h-5 w-5" />
               Notificar Transferencia SPEI
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-              Por favor ingresa la **Clave de Rastreo** de tu transferencia bancaria (se obtiene de tu recibo SPEI, CEP o banca móvil). Esto ayudará al freelancer a asociar tu pago de forma instantánea.
+              Ingresa la **Clave de Rastreo** de tu transferencia bancaria (se obtiene de tu recibo SPEI, CEP o banca móvil). Esto ayudará al freelancer a asociar tu pago de forma instantánea.
             </p>
 
-            <form onSubmit={handleMarkAsTransferred} className="mt-6 flex flex-col gap-4">
+            <form onSubmit={handleMarkAsTransferred} className="mt-5 flex flex-col gap-4">
               <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Clave de Rastreo SPEI / Referencia</label>
+                <label className="block text-[10px] font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider mb-1.5">Clave de Rastreo SPEI / Referencia</label>
                 <input
                   type="text"
                   required
                   placeholder="Ej. 182746182903485761 o folio"
                   value={trackingReference}
                   onChange={(e) => setTrackingReference(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-750 bg-transparent px-4 py-2.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Monto Transferido ({selectedContract.currency})</label>
+                <label className="block text-[10px] font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider mb-1.5">Monto Transferido ({selectedContract.currency})</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
                   <input
                     type="number"
                     required
                     value={transferredAmount}
                     onChange={(e) => setTransferredAmount(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent pl-7 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-bold"
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-750 bg-transparent pl-7 pr-4 py-2.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white font-bold"
                   />
                 </div>
               </div>
+
               {selectedContract.currency === "USD" && (
                 <>
                   <div>
-                    <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tipo de Cambio (Banxico sugerido: 20.15)</label>
+                    <label className="block text-[10px] font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider mb-1.5">Tipo de Cambio (Sugerido: 20.15)</label>
                     <input
                       type="number"
                       step="0.0001"
                       required
                       value={overrideExchangeRate}
                       onChange={(e) => setOverrideExchangeRate(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-750 bg-transparent px-4 py-2.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
                     />
                   </div>
 
                   <div className="bg-indigo-500/5 border border-indigo-500/10 rounded-xl p-3.5 text-xs flex flex-col gap-1.5">
                     <div className="flex justify-between text-slate-400 font-medium">
                       <span>Monto en USD:</span>
-                      <span className="font-bold text-slate-700 dark:text-slate-300">${transferredAmount.toFixed(2)} USD</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-350">${transferredAmount.toFixed(2)} USD</span>
                     </div>
                     <div className="flex justify-between text-slate-400 font-medium">
                       <span>Tipo de Cambio:</span>
-                      <span className="font-bold text-slate-700 dark:text-slate-300">${(parseFloat(overrideExchangeRate) || 20.15).toFixed(4)} MXN</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-350">${(parseFloat(overrideExchangeRate) || 20.15).toFixed(4)} MXN</span>
                     </div>
                     <div className="flex justify-between text-indigo-500 font-bold border-t border-slate-200 dark:border-slate-800/80 pt-2">
                       <span>Total a Transferir:</span>
@@ -3087,27 +3111,27 @@ export default function Dashboard() {
               )}
 
               <div>
-                <label className="block text-3xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                <label className="block text-[10px] font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider mb-2">
                   Método de Comprobante
                 </label>
                 <div className="flex gap-4 mb-3">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-605 dark:text-slate-300 cursor-pointer">
                     <input
                       type="radio"
                       name="receiptFileType"
                       checked={receiptFileType === 'file'}
                       onChange={() => setReceiptFileType('file')}
-                      className="text-indigo-600 focus:ring-indigo-500"
+                      className="text-indigo-650 focus:ring-indigo-500"
                     />
                     Subir Archivo (PDF, PNG, JPG)
                   </label>
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-605 dark:text-slate-300 cursor-pointer">
                     <input
                       type="radio"
                       name="receiptFileType"
                       checked={receiptFileType === 'url'}
                       onChange={() => setReceiptFileType('url')}
-                      className="text-indigo-600 focus:ring-indigo-500"
+                      className="text-indigo-650 focus:ring-indigo-500"
                     />
                     Enlace URL
                   </label>
@@ -3123,12 +3147,12 @@ export default function Dashboard() {
                       className="block w-full text-xs text-slate-500
                         file:mr-4 file:py-2 file:px-4
                         file:rounded-xl file:border-0
-                        file:text-xs file:font-semibold
-                        file:bg-indigo-50 file:text-indigo-700
-                        hover:file:bg-indigo-100
-                        dark:file:bg-indigo-950/30 dark:file:text-indigo-400"
+                        file:text-xs file:font-bold
+                        file:bg-indigo-50 dark:file:bg-indigo-950/40 file:text-indigo-700 dark:file:text-indigo-400
+                        hover:file:bg-indigo-100 dark:hover:file:bg-indigo-950/60
+                        file:cursor-pointer"
                     />
-                    <p className="text-3xs text-slate-400">
+                    <p className="text-[10px] text-slate-400">
                       Formatos permitidos: PDF, PNG, JPG. Máx. 5MB.
                     </p>
                   </div>
@@ -3138,7 +3162,7 @@ export default function Dashboard() {
                     placeholder="Ej. https://dropbox.com/s/recibo.pdf o captura.png"
                     value={receiptUrl}
                     onChange={(e) => setReceiptUrl(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-755 bg-transparent px-4 py-2.5 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
                   />
                 )}
               </div>
@@ -3150,21 +3174,21 @@ export default function Dashboard() {
                 </div>
               )}
 
-              <div className="flex gap-3 justify-end mt-4">
+              <div className="flex gap-2.5 justify-end mt-4">
                 <button
                   type="button"
                   onClick={() => {
                     setShowPaymentModal(false);
                     setPaymentMilestone(null);
                   }}
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  className="rounded-xl px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={loading || !trackingReference}
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                  className="rounded-xl bg-indigo-650 hover:bg-indigo-600 disabled:opacity-50 text-white font-bold px-5 py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/10 cursor-pointer"
                 >
                   {loading ? (
                     <>
@@ -3183,21 +3207,29 @@ export default function Dashboard() {
 
       {/* Warning/Confirmation Modal */}
       {warningModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm print:hidden">
-          <div className="glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
-            <h3 className={`text-xl font-bold flex items-center gap-2 ${warningModal.isError ? 'text-red-500' : 'text-amber-500'}`}>
-              <AlertCircle className="h-6 w-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
+          <div className="relative bg-slate-50 dark:bg-slate-950 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-indigo-500/20 animate-in zoom-in-95 duration-200 text-left">
+            <button
+              type="button"
+              onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors z-20"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className={`text-base font-bold flex items-center gap-2 ${warningModal.isError ? 'text-red-500' : 'text-amber-500'}`}>
+              <AlertCircle className="h-5 w-5 animate-pulse" />
               {warningModal.title}
             </h3>
-            <p className="text-sm text-slate-650 dark:text-slate-350 mt-3 leading-relaxed whitespace-pre-wrap">
+            <p className="text-xs text-slate-650 dark:text-slate-350 mt-3 leading-relaxed whitespace-pre-wrap">
               {warningModal.message}
             </p>
-            <div className="flex gap-3 justify-end mt-6">
+            <div className="flex gap-2.5 justify-end mt-6">
               {warningModal.isError ? (
                 <button
                   type="button"
                   onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
-                  className="rounded-xl bg-red-650 hover:bg-red-555 text-white px-5 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+                  className="rounded-xl bg-red-650 hover:bg-red-600 text-white font-bold px-5 py-2.5 text-xs transition-colors shadow-md shadow-red-500/10 cursor-pointer"
                 >
                   Entendido
                 </button>
@@ -3206,7 +3238,7 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
-                    className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-750 dark:text-slate-400 dark:hover:text-slate-200"
+                    className="rounded-xl px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
                   >
                     Cancelar
                   </button>
@@ -3230,7 +3262,7 @@ export default function Dashboard() {
                         }
                       }
                     }}
-                    className="rounded-xl bg-amber-600 hover:bg-amber-550 text-white px-5 py-2.5 text-sm font-semibold transition-colors cursor-pointer"
+                    className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 py-2.5 text-xs transition-colors shadow-md shadow-amber-500/10 cursor-pointer"
                   >
                     Confirmar
                   </button>
