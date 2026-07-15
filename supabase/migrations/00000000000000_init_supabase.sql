@@ -15,6 +15,45 @@ DO $$ BEGIN
 EXCEPTION WHEN DUPLICATE_OBJECT THEN NULL;
 END $$;
 
+-- Create auth schema
+CREATE SCHEMA IF NOT EXISTS auth;
+
+-- Create auth.uid() stub
+CREATE OR REPLACE FUNCTION auth.uid()
+RETURNS uuid
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT coalesce(
+    nullif(current_setting('request.jwt.claim.sub', true), ''),
+    nullif(current_setting('jwt.claims.sub', true), '')
+  )::uuid;
+$$;
+
+-- Create auth.role() stub
+CREATE OR REPLACE FUNCTION auth.role()
+RETURNS text
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT coalesce(
+    nullif(current_setting('request.jwt.claim.role', true), ''),
+    nullif(current_setting('jwt.claims.role', true), '')
+  )::text;
+$$;
+
+-- Create auth.email() stub
+CREATE OR REPLACE FUNCTION auth.email()
+RETURNS text
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT coalesce(
+    nullif(current_setting('request.jwt.claim.email', true), ''),
+    nullif(current_setting('jwt.claims.email', true), '')
+  )::text;
+$$;
+
 -- Create storage schema and tables for Supabase
 CREATE SCHEMA IF NOT EXISTS storage;
 
