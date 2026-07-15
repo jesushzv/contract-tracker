@@ -9,6 +9,34 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://postgres:password@localhost:5432/contract_tracker_test
+      PGUSER: postgres
+      PGPASSWORD: password
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: contract_tracker_test
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:5432
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: test_anonymous_key
+      STRIPE_SECRET_KEY: sk_test_dummy
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      STRIPE_PRICE_STARTER: price_dummy_starter
+      STRIPE_PRICE_PRO: price_dummy_pro
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: contract_tracker_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
     - name: Checkout Code
@@ -23,6 +51,13 @@ jobs:
     - name: Install Project Dependencies
       run: npm ci
 
+    - name: Initialize Postgres Root Database
+      run: |
+        PGPASSWORD=password psql -h localhost -U postgres -c "CREATE DATABASE root;" || true
+
+    - name: Run Database Seeding
+      run: node scripts/setup-test-db.js
+
     - name: Run Unit Tests
       run: npm run test
 
@@ -34,3 +69,31 @@ jobs:
 
     - name: Compile and Build Next.js Bundle
       run: npm run build
+
+    - name: Cache Playwright Browsers
+      uses: actions/cache@v4
+      id: playwright-cache
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+    - name: Install Playwright Browsers and Deps
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      run: npx playwright install --with-deps chromium
+
+    - name: Install Playwright System Deps
+      if: steps.playwright-cache.outputs.cache-hit == 'true'
+      run: npx playwright install-deps chromium
+
+    - name: Run E2E Browser Tests
+      run: npx playwright test
+
+    - name: Upload Playwright Artifacts on Failure
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: playwright-report
+        path: |
+          playwright-report/
+          test-results/
+        retention-days: 30
