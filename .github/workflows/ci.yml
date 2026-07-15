@@ -9,6 +9,19 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://postgres:password@localhost:5432/contract_tracker_test
+      PGUSER: postgres
+      PGPASSWORD: password
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: contract_tracker_test
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:5432
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: test_anonymous_key
+      STRIPE_SECRET_KEY: sk_test_dummy
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      STRIPE_PRICE_STARTER: price_dummy_starter
+      STRIPE_PRICE_PRO: price_dummy_pro
 
     services:
       postgres:
@@ -38,10 +51,12 @@ jobs:
     - name: Install Project Dependencies
       run: npm ci
 
+    - name: Initialize Postgres Root Database
+      run: |
+        PGPASSWORD=password psql -h localhost -U postgres -c "CREATE DATABASE root;" || true
+
     - name: Run Database Seeding
       run: node scripts/setup-test-db.js
-      env:
-        DATABASE_URL: postgres://postgres:password@localhost:5432/contract_tracker_test
 
     - name: Run Unit Tests
       run: npm run test

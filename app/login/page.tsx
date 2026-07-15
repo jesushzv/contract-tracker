@@ -1,23 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { shouldUseSupabase } from "@/lib/storageClient";
-import { Lock, Key, ArrowLeft, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import { Lock, ArrowLeft, ArrowRight, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [tier, setTier] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (shouldUseSupabase()) {
+      localStorage.removeItem("demo_mode");
+      document.cookie = "demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    }
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlTier = searchParams.get("tier");
+    if (urlTier) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTier(urlTier);
+      localStorage.setItem("selected_signup_tier", urlTier);
+      document.cookie = `selected_signup_tier=${urlTier}; path=/; max-age=3600`;
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    const selectedTier = tier;
 
     // Check if we are running in local/demo mode (without Supabase database)
     if (!shouldUseSupabase()) {
@@ -26,7 +46,20 @@ export default function LoginPage() {
       document.cookie = "demo_mode=true; path=/";
       localStorage.setItem("demo_mode", "true");
 
-      router.push("/dashboard");
+      if (selectedTier === "starter" || selectedTier === "pro") {
+        // Also update tier in sandbox profile if exists
+        const profData = localStorage.getItem("sandbox_profile");
+        if (profData) {
+          try {
+            const prof = JSON.parse(profData);
+            prof.tier = selectedTier;
+            localStorage.setItem("sandbox_profile", JSON.stringify(prof));
+          } catch {}
+        }
+        router.push(`/plans?tier=${selectedTier}`);
+      } else {
+        router.push("/dashboard");
+      }
       return;
     }
 
@@ -51,10 +84,14 @@ export default function LoginPage() {
           .single();
 
         if (profile && profile.full_name) {
-          router.push("/dashboard");
+          if (selectedTier === "starter" || selectedTier === "pro") {
+            router.push(`/plans?tier=${selectedTier}`);
+          } else {
+            router.push("/dashboard");
+          }
         } else {
           // Redirect to onboarding if profile is incomplete
-          router.push("/onboarding");
+          router.push(selectedTier ? `/onboarding?tier=${selectedTier}` : "/onboarding");
         }
       }
     } catch (err) {
@@ -89,7 +126,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-3xs font-semibold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Correo Electrónico</label>
+            <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Correo Electrónico</label>
             <input
               type="email"
               required
@@ -102,18 +139,25 @@ export default function LoginPage() {
 
           <div className="flex flex-col gap-1.5">
             <div className="flex justify-between items-center">
-              <label className="text-3xs font-semibold text-slate-450 dark:text-slate-400 uppercase tracking-wider">Contraseña</label>
+              <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Contraseña</label>
             </div>
             <div className="relative">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 pl-4 pr-10 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all"
               />
-              <Key className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 dark:hover:text-slate-300 focus:outline-none transition-colors"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </div>
 
@@ -139,7 +183,7 @@ export default function LoginPage() {
         <div className="flex flex-col gap-3 text-center border-t border-slate-100 dark:border-slate-850 pt-4">
           <p className="text-2xs text-slate-450">
             ¿No tienes cuenta?{" "}
-            <Link href="/register" className="font-bold text-indigo-500 hover:underline">
+            <Link href={tier ? `/register?tier=${tier}` : "/register"} className="font-bold text-indigo-500 hover:underline">
               Regístrate aquí
             </Link>
           </p>

@@ -9,6 +9,8 @@ export interface Profile {
   signatureUrl?: string;
   tier?: 'free' | 'starter' | 'pro';
   phone?: string;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
   bankDetails: {
     clabe: string;
     bankName: string;

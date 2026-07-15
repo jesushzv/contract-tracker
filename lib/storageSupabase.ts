@@ -320,6 +320,8 @@ export async function getProfile(): Promise<Profile> {
     signatureUrl: data.signature_url || undefined,
     tier: data.tier || "free",
     phone: data.phone || undefined,
+    stripeCustomerId: data.stripe_customer_id || undefined,
+    stripeSubscriptionId: data.stripe_subscription_id || undefined,
     bankDetails: {
       clabe: data.bank_details.clabe,
       bankName: data.bank_details.bankName,
@@ -328,12 +330,43 @@ export async function getProfile(): Promise<Profile> {
   };
 }
 
-export async function updateProfile(profile: Profile): Promise<Profile> {
-  const userId = await getCurrentUserId();
+export async function getProfileByStripeCustomerId(customerId: string): Promise<Profile | null> {
+  const client = await getSupabaseClient(true);
+  const { data, error } = await client
+    .from("profiles")
+    .select("*")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    email: data.email,
+    fullName: data.full_name,
+    rfc: data.rfc,
+    regimenFiscal: data.regimen_fiscal,
+    codigoPostal: data.codigo_postal,
+    logoUrl: data.logo_url || undefined,
+    signatureUrl: data.signature_url || undefined,
+    tier: data.tier || "free",
+    phone: data.phone || undefined,
+    stripeCustomerId: data.stripe_customer_id || undefined,
+    stripeSubscriptionId: data.stripe_subscription_id || undefined,
+    bankDetails: {
+      clabe: data.bank_details.clabe,
+      bankName: data.bank_details.bankName,
+      beneficiaryName: data.bank_details.beneficiaryName
+    }
+  };
+}
+
+export async function updateProfile(profile: Profile, isAdmin = false): Promise<Profile> {
+  const userId = isAdmin ? null : await getCurrentUserId();
   const targetId = userId && userId !== "demo-freelancer-uuid" ? userId : (profile.id && profile.id !== "demo-freelancer-uuid" ? profile.id : "c596e102-1200-4b2a-8888-888888888888");
 
   // Check if profile exists first
-  const client = await getSupabaseClient();
+  const client = await getSupabaseClient(isAdmin);
   const { data: existing } = await client
     .from("profiles")
     .select("id")
@@ -350,6 +383,8 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
     signature_url: profile.signatureUrl ? sanitizeInput(profile.signatureUrl) : null,
     tier: profile.tier || "free",
     phone: profile.phone ? sanitizeInput(profile.phone) : null,
+    stripe_customer_id: profile.stripeCustomerId ? sanitizeInput(profile.stripeCustomerId) : null,
+    stripe_subscription_id: profile.stripeSubscriptionId ? sanitizeInput(profile.stripeSubscriptionId) : null,
     bank_details: {
       clabe: sanitizeInput(profile.bankDetails.clabe),
       bankName: sanitizeInput(profile.bankDetails.bankName),
@@ -390,6 +425,8 @@ export async function updateProfile(profile: Profile): Promise<Profile> {
     signatureUrl: sanitizedProfile.signature_url || undefined,
     tier: sanitizedProfile.tier as Profile['tier'],
     phone: sanitizedProfile.phone || undefined,
+    stripeCustomerId: sanitizedProfile.stripe_customer_id || undefined,
+    stripeSubscriptionId: sanitizedProfile.stripe_subscription_id || undefined,
     bankDetails: {
       clabe: sanitizedProfile.bank_details.clabe,
       bankName: sanitizedProfile.bank_details.bankName,

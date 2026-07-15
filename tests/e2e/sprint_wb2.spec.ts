@@ -14,16 +14,22 @@ test.describe("Sprint WB2: SPEI CEP Reconciler, USD FX, Version History & WhatsA
     await page.fill('input[placeholder="Ej. Héctor Guerrero"]', "Héctor Guerrero");
     await page.fill('input[placeholder="Ej. +525512345678"]', "+525598765432");
     
+    // Go to Step 2
+    await page.click("button:has-text('Siguiente Step')");
+    
+    // Fill RFC to avoid validation errors
+    const rfcInput = page.locator('input[placeholder="Ej. GUEH860710MX3"]');
+    await rfcInput.fill("GUEH860710MX8");
+    await rfcInput.blur();
+    
+    // Go to Step 3
+    await page.click("button:has-text('Siguiente Step')");
+    
     // Fill CLABE and Bank Name
     await page.fill('input[placeholder="Ej. BBVA México o STP"]', "BBVA México");
     await page.fill('input[placeholder="18 dígitos para SPEI"]', "123456789012345678");
     
     // Submit Onboarding
-    // First fill RFC to avoid validation errors
-    const rfcInput = page.locator('input[placeholder="Ej. GUEH860710MX3"]');
-    await rfcInput.fill("GUEH860710MX8");
-    await rfcInput.blur();
-    
     await page.click('button:has-text("Guardar Perfil y Empezar")');
     
     // Verify navigated to dashboard

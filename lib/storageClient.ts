@@ -4,9 +4,9 @@ import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog
 
 // Determine if we should use the cloud Supabase database
 export const shouldUseSupabase = (): boolean => {
-  // If running in a Vercel Staging/Preview environment, we bypass the cloud DB
+  // If not in production, we bypass the cloud DB
   // to avoid persistent data storage or requiring a secondary DB.
-  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") {
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production") {
     return false;
   }
   return !!process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== "";
@@ -19,9 +19,9 @@ const serverActions = shouldUseSupabase() ? supabaseActions : localActions;
 // Helper to determine if we are in Demo Sandbox Mode (stored in browser localStorage)
 export const isDemoMode = (): boolean => {
   if (typeof window === "undefined") return false;
-  
-  // Force sandbox/localStorage mode by default in Vercel Staging/Preview deployments
-  if (process.env.NEXT_PUBLIC_VERCEL_ENV === "preview") {
+
+  // Force sandbox/localStorage mode by default in any non-production environment
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production") {
     return true;
   }
   
@@ -333,12 +333,25 @@ export async function getProfile(): Promise<Profile> {
   return serverActions.getProfile();
 }
 
-export async function updateProfile(profile: Profile): Promise<Profile> {
+export async function getProfileByStripeCustomerId(customerId: string): Promise<Profile | null> {
+  if (isDemoMode()) {
+    const data = localStorage.getItem(KEYS.PROFILE);
+    if (!data) return null;
+    const profile: Profile = JSON.parse(data);
+    if (profile.stripeCustomerId === customerId) {
+      return profile;
+    }
+    return null;
+  }
+  return serverActions.getProfileByStripeCustomerId(customerId);
+}
+
+export async function updateProfile(profile: Profile, isAdmin = false): Promise<Profile> {
   if (isDemoMode()) {
     localStorage.setItem(KEYS.PROFILE, JSON.stringify(profile));
     return profile;
   }
-  return serverActions.updateProfile(profile);
+  return serverActions.updateProfile(profile, isAdmin);
 }
 
 export async function getContracts(): Promise<Contract[]> {

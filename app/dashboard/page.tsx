@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { 
   FileText, 
   Clock, 
@@ -21,7 +22,9 @@ import {
   RotateCcw,
   BarChart3,
   Printer,
-  X
+  X,
+  Loader2,
+  Zap
 } from "lucide-react";
 import { 
   getContracts, 
@@ -50,6 +53,7 @@ import { MOCK_CLAUSES } from "@/lib/mockData";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function Dashboard() {
+  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
@@ -107,6 +111,7 @@ export default function Dashboard() {
 
   // Upload/Error banner states
   const [uploadError, setUploadError] = useState("");
+  const [isBillingLoading, setIsBillingLoading] = useState(false);
 
   // Freelancer Payment Proof States
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -218,6 +223,30 @@ export default function Dashboard() {
         const logs = await getAuditLogs(updated.id);
         setSelectedContractLogs(logs);
       }
+    }
+  };
+
+  const handleManageBilling = async () => {
+    if (isDemo) {
+      router.push("/plans");
+      return;
+    }
+    setIsBillingLoading(true);
+    try {
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.assign(data.url);
+      } else {
+        throw new Error(data.error || "Fallo al iniciar sesión de portal");
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert("Error al abrir portal de facturación: " + msg);
+    } finally {
+      setIsBillingLoading(false);
     }
   };
 
@@ -1017,6 +1046,35 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 text-slate-800 dark:text-slate-200">
+      {profile && (!profile.tier || profile.tier === "free") && (
+        <div className="rounded-3xl border border-indigo-500/25 bg-indigo-500/5 dark:bg-indigo-500/10 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 shadow-xl backdrop-blur-md relative overflow-hidden">
+          {/* Decorative light glow */}
+          <div className="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
+          
+          <div className="flex items-start gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20 flex-shrink-0 mt-0.5">
+              <Zap className="h-6 w-6 fill-indigo-500/10" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                Estás en el Plan Gratuito
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-normal max-w-2xl font-light">
+                Tu plan actual tiene un límite de **3 contratos** y las opciones de personalización de marca (logos y firmas en tus propuestas) están bloqueadas. Actualiza ahora para desbloquear contratos ilimitados y personalización de marca.
+              </p>
+            </div>
+          </div>
+          <div className="flex-shrink-0 flex items-center gap-3">
+            <Link
+              href="/plans"
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 text-xs transition-all shadow-md shadow-indigo-600/20 flex items-center gap-1.5 uppercase tracking-wider cursor-pointer"
+            >
+              Mejorar Plan
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
@@ -1612,6 +1670,81 @@ export default function Dashboard() {
                   No has registrado perfiles de pago adicionales. El sistema usará la cuenta CLABE registrada arriba por defecto.
                 </div>
               )}
+            </div>
+
+            {/* Section: Plan & Billing */}
+            <div className="md:col-span-3 border-t border-slate-200 dark:border-slate-800 pt-6 mt-4">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-3">
+                Plan de Suscripción y Facturación
+              </h4>
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+                <div className="flex-grow">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                      Plan {profile?.tier || "Gratuito"}
+                    </span>
+                    <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-4xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      Activo
+                    </span>
+                  </div>
+                  
+                  {/* Progress Indicator */}
+                  <div className="max-w-md">
+                    <div className="flex justify-between text-3xs text-slate-400 font-semibold mb-1">
+                      <span>Uso de Contratos</span>
+                      <span>
+                        {profile?.tier === "pro" 
+                          ? `${contracts.filter(c => c.freelancerId === profile?.id).length} creados / ilimitados` 
+                          : `${contracts.filter(c => c.freelancerId === profile?.id).length} / ${profile?.tier === "starter" ? 10 : 3} contratos`
+                        }
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-500 ${
+                          profile?.tier === "pro" 
+                            ? "bg-purple-500 w-full" 
+                            : (contracts.filter(c => c.freelancerId === profile?.id).length / (profile?.tier === "starter" ? 10 : 3)) >= 1 
+                              ? "bg-red-500 w-full"
+                              : "bg-indigo-650"
+                        }`}
+                        style={{
+                          width: profile?.tier === "pro" 
+                            ? "100%" 
+                            : `${Math.min(100, (contracts.filter(c => c.freelancerId === profile?.id).length / (profile?.tier === "starter" ? 10 : 3)) * 100)}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-shrink-0 flex items-center">
+                  {profile?.stripeCustomerId ? (
+                    <button
+                      type="button"
+                      onClick={handleManageBilling}
+                      disabled={isBillingLoading}
+                      className="rounded-xl bg-slate-200 hover:bg-slate-350 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-250 font-bold px-4 py-2.5 text-xs transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isBillingLoading ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Cargando...
+                        </>
+                      ) : (
+                        "Administrar Suscripción"
+                      )}
+                    </button>
+                  ) : (
+                    <Link
+                      href="/plans"
+                      className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2.5 text-xs transition-colors shadow-md shadow-indigo-600/10 cursor-pointer flex items-center gap-1.5"
+                    >
+                      Mejorar Plan
+                    </Link>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="md:col-span-3 flex justify-between items-center pt-2">
