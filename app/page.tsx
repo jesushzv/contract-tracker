@@ -24,7 +24,21 @@ export default function Home() {
   useEffect(() => {
     const checkSession = () => {
       const cookies = document.cookie.split(";");
-      const hasCookie = cookies.some((c) => c.trim().startsWith("sb-"));
+      const hasCookie = cookies.some((c) => {
+        const trimmed = c.trim();
+        if (trimmed.startsWith("sb-") && trimmed.includes("-auth-token=")) {
+          const valueStr = trimmed.substring(trimmed.indexOf("=") + 1);
+          try {
+            const decoded = decodeURIComponent(valueStr);
+            const val = JSON.parse(decoded);
+            if (val === true || val === "true") return true;
+            if (val && typeof val === "object" && val.access_token) return true;
+          } catch {
+            if (valueStr === "true") return true;
+          }
+        }
+        return false;
+      });
       const hasDemoMode = localStorage.getItem("demo_mode") === "true";
       setIsLoggedIn(hasCookie || hasDemoMode);
     };
