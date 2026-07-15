@@ -34,7 +34,8 @@ _Once the plan is approved, start a new chat. This wipes the large PRD texts fro
 2. Initialize the task.md tracker.
 3. Modify the files step-by-step as planned. Preserve existing comments and style conventions. Use targeted line edits (avoid rewriting or reading entire files unless necessary).
 4. Update task.md as you complete each task.
-5. Afer all tasks are finished make a local deployment so I can validate.
+5. Update the files in the /design_docs (also the architecture if applicable) as needed.
+6. Afer all tasks are finished make a local deployment so I can validate.
 ```
 
 ---

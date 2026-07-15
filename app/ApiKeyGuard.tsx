@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle, ShieldAlert, KeyRound } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function ApiKeyGuard({ children }: { children: React.ReactNode }) {
   const [isLeaked, setIsLeaked] = useState(false);
@@ -40,6 +41,34 @@ export default function ApiKeyGuard({ children }: { children: React.ReactNode })
     } catch (e) {
       console.error("Error al validar clave Supabase:", e);
     }
+  }, []);
+
+  useEffect(() => {
+    // Sync Supabase auth session to cookies so server components/actions can read it
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        const cookieValue = JSON.stringify({
+          access_token: session.access_token,
+          user: {
+            id: session.user.id,
+            email: session.user.email
+          }
+        });
+        const isSecure = window.location.protocol === "https:";
+        const secureFlag = isSecure ? "; Secure" : "";
+        document.cookie = `sb-auth-token=${encodeURIComponent(cookieValue)}; path=/; max-age=${session.expires_in || 3600}; SameSite=Lax${secureFlag}`;
+      } else {
+        // Clear the cookie when signed out, unless in demo mode
+        const isDemo = localStorage.getItem("demo_mode") === "true";
+        if (!isDemo) {
+          document.cookie = "sb-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   if (isLeaked) {
