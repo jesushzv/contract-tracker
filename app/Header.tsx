@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { LogOut } from "lucide-react";
 
@@ -10,13 +12,32 @@ interface HeaderProps {
 }
 
 export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
+  const pathname = usePathname();
+  const [isLoggedIn, setIsLoggedIn] = useState(hasAuthCookie);
+  const [isDemo, setIsDemo] = useState(false);
 
-  // Hide the navbar completely if the user is not logged in
-  if (!hasAuthCookie) {
+  useEffect(() => {
+    // Check if user is logged in via cookies or demo mode
+    const checkSession = () => {
+      const cookies = document.cookie.split(";");
+      const hasCookie = cookies.some((c) => c.trim().startsWith("sb-"));
+      const hasDemoParam = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("demo") === "true";
+      const hasDemoLocal = typeof window !== "undefined" && localStorage.getItem("demo_mode") === "true";
+      const hasDemoCookie = cookies.some((c) => c.trim().startsWith("demo_mode="));
+      
+      setIsLoggedIn(hasCookie);
+      setIsDemo(hasDemoParam || hasDemoLocal || hasDemoCookie);
+    };
+    checkSession();
+  }, [pathname]);
+
+  // Hide the header completely if the route starts with /c/ (client portal)
+  if (pathname.startsWith("/c/")) {
     return null;
   }
 
-  const panelUrl = (hasAuthCookie || !useSupabase) ? "/dashboard" : "/login";
+  const showFullHeader = isLoggedIn || isDemo;
+  const panelUrl = showFullHeader ? "/dashboard" : "/login";
 
   const handleLogout = async () => {
     if (useSupabase) {
@@ -25,6 +46,10 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
     // Clear cookies for mock mode as well
     document.cookie = "sb-mock-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     
+    // Remove demo mode from localStorage and cookies
+    localStorage.removeItem("demo_mode");
+    document.cookie = "demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+
     // Also remove the supabase cookies if they exist
     const cookies = document.cookie.split(";");
     for (const cookie of cookies) {
@@ -55,38 +80,66 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
         </Link>
         
         <nav className="hidden md:flex items-center gap-6">
-          <Link href={panelUrl} className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
-            Panel
-          </Link>
-          <Link href={(hasAuthCookie || !useSupabase) ? "/contracts/new" : "/login"} className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
-            Nuevo Contrato
-          </Link>
-          <Link href="/hash-verifier" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
-            Verificador
-          </Link>
-          <Link href={(hasAuthCookie || !useSupabase) ? "/documents" : "/login"} className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
-            Expedientes
-          </Link>
-          <Link href={(hasAuthCookie || !useSupabase) ? "/notifications" : "/login"} className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5">
-            Notificaciones
-          </Link>
+          {showFullHeader ? (
+            <>
+              <Link href={panelUrl} className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+                Panel
+              </Link>
+              <Link href="/contracts/new" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+                Nuevo Contrato
+              </Link>
+              <Link href="/hash-verifier" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+                Verificador
+              </Link>
+              <Link href="/documents" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+                Expedientes
+              </Link>
+              <Link href="/notifications" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5">
+                Notificaciones
+              </Link>
+            </>
+          ) : (
+            <Link href="/hash-verifier" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+              Verificador
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-4">
-          <Link 
-            href={panelUrl} 
-            className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
-          >
-            Mi Panel
-          </Link>
-          <button 
-            onClick={handleLogout}
-            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:bg-slate-800 transition-all duration-200"
-            title="Cerrar Sesión"
-          >
-            <LogOut className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Cerrar Sesión</span>
-          </button>
+          {showFullHeader ? (
+            <>
+              <Link 
+                href={panelUrl} 
+                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
+              >
+                Mi Panel
+              </Link>
+              <button 
+                onClick={handleLogout}
+                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:bg-slate-800 transition-all duration-200"
+                title="Cerrar Sesión"
+              >
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Cerrar Sesión</span>
+              </button>
+            </>
+          ) : (
+            pathname === "/login" ? (
+              <Link 
+                href="/register" 
+                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
+              >
+                Registrarse
+              </Link>
+            ) : (
+              <Link 
+                href="/login" 
+                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
+              >
+                Iniciar Sesión
+              </Link>
+            )
+          )}
         </div>
       </div>
     </header>

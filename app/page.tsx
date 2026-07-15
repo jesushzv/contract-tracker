@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   FileText, 
@@ -18,6 +18,19 @@ import {
 } from "lucide-react";
 
 export default function Home() {
+  // Check if user is logged in
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const checkSession = () => {
+      const cookies = document.cookie.split(";");
+      const hasCookie = cookies.some((c) => c.trim().startsWith("sb-"));
+      const hasDemoMode = localStorage.getItem("demo_mode") === "true";
+      setIsLoggedIn(hasCookie || hasDemoMode);
+    };
+    checkSession();
+  }, []);
+
   // ROI Calculator states
   const [projectRate, setProjectRate] = useState(25000);
   const [projectCount, setProjectCount] = useState(10);
@@ -81,20 +94,42 @@ export default function Home() {
             Crea propuestas con plantillas legales de México (Honorarios, no subordinación laboral LFT), firma de aceptación express por WhatsApp y controla el estado de tus cobros en una sola herramienta.
           </p>
 
-          <div className="mt-10 flex items-center justify-center gap-x-6 w-full sm:w-auto flex-col sm:flex-row gap-y-4">
-            <Link
-              href="/register"
-              className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200 group"
-            >
-              Comenzar a Crear
-              <ArrowRight className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-            <Link
-              href="/dashboard?demo=true"
-              className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white/40 dark:bg-slate-900/40 px-6 py-3.5 text-base font-semibold text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-900/80 transition-all duration-200"
-            >
-              Probar Demo con Datos
-            </Link>
+          <div className="mt-10 flex flex-col items-center justify-center gap-y-4 w-full sm:w-auto">
+            <div className="flex items-center justify-center gap-x-6 w-full sm:w-auto flex-col sm:flex-row gap-y-4">
+              {isLoggedIn ? (
+                <Link
+                  href="/dashboard"
+                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200 group"
+                >
+                  Ir a mi Panel
+                  <ArrowRight className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/register"
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200 group"
+                  >
+                    Comenzar a Crear
+                    <ArrowRight className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                  <Link
+                    href="/dashboard?demo=true"
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white/40 dark:bg-slate-900/40 px-6 py-3.5 text-base font-semibold text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-900/80 transition-all duration-200"
+                  >
+                    Probar Demo con Datos
+                  </Link>
+                </>
+              )}
+            </div>
+            {!isLoggedIn && (
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                ¿Ya tienes una cuenta?{" "}
+                <Link href="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                  Inicia sesión aquí
+                </Link>
+              </p>
+            )}
           </div>
         </div>
 
