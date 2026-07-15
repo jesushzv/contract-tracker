@@ -10,9 +10,18 @@ export function middleware(request: NextRequest) {
   const isDemo = hasDemoParam || hasDemoCookie;
 
   // Find any Supabase auth token cookie
-  const hasAuthCookie = cookies.getAll().some((cookie) => 
-    cookie.name.startsWith("sb-") && cookie.name.endsWith("-auth-token")
-  );
+  const hasAuthCookie = cookies.getAll().some((cookie) => {
+    if (cookie.name.startsWith("sb-") && cookie.name.endsWith("-auth-token")) {
+      try {
+        const val = JSON.parse(cookie.value);
+        if (val === true || val === "true") return true;
+        if (val && typeof val === "object" && val.access_token) return true;
+      } catch {
+        if (cookie.value === "true") return true;
+      }
+    }
+    return false;
+  });
 
   const isProtectedPath = 
     nextUrl.pathname.startsWith("/dashboard") ||

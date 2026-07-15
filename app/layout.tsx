@@ -28,7 +28,18 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const hasAuthCookie = cookieStore.getAll().some((c) => c.name.startsWith("sb-"));
+  const hasAuthCookie = cookieStore.getAll().some((c) => {
+    if (c.name.startsWith("sb-") && c.name.endsWith("-auth-token")) {
+      try {
+        const val = JSON.parse(c.value);
+        if (val === true || val === "true") return true;
+        if (val && typeof val === "object" && val.access_token) return true;
+      } catch {
+        if (c.value === "true") return true;
+      }
+    }
+    return false;
+  });
   const useSupabase = 
     !!process.env.NEXT_PUBLIC_SUPABASE_URL && 
     process.env.NEXT_PUBLIC_SUPABASE_URL !== "" && 

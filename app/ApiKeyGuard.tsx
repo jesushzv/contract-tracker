@@ -11,6 +11,16 @@ export default function ApiKeyGuard({ children }: { children: React.ReactNode })
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!key) return;
 
+    if (key.startsWith("sb_secret_")) {
+      setTimeout(() => {
+        setIsLeaked(true);
+        setErrorMessage(
+          "Se ha detectado una clave 'service_role' (sb_secret_...) en NEXT_PUBLIC_SUPABASE_ANON_KEY. Esta clave tiene privilegios de administrador que evitan las políticas de seguridad de base de datos (RLS) y NUNCA debe exponerse en el navegador web."
+        );
+      }, 0);
+      return;
+    }
+
     try {
       const parts = key.split(".");
       if (parts.length === 3) {
