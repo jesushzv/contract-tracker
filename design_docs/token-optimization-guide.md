@@ -13,7 +13,7 @@ To prevent the massive amount of research data (PRDs, roadmaps, and directory li
 _Use this prompt to generate the implementation plan without running long autonomous loops._
 
 ```markdown
-Use the sprint-development-workflow skill and active ECC rules to plan Sprint.
+Use the sprint-development-workflow skill and active ECC rules to plan.
 
 1. Read the roadmap, technical PRD files and architecture in `design_docs/` to understand the requirements.
 2. Search the codebase for files that need modifications using grep (do not read entire files yet).
