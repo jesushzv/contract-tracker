@@ -224,6 +224,25 @@ async function getCurrentUserId(): Promise<string> {
   return "d8b67104-e3c3-4d37-88ab-8c9df4a2e5d9";
 }
 
+async function getCurrentUserEmail(): Promise<string> {
+  try {
+    const cookieStore = await cookies();
+    const authCookie = cookieStore.getAll().find((cookie) => 
+      cookie.name.startsWith("sb-") && cookie.name.endsWith("-auth-token")
+    );
+
+    if (authCookie) {
+      const parsed = JSON.parse(authCookie.value);
+      if (parsed?.user?.email) {
+        return parsed.user.email;
+      }
+    }
+  } catch (e) {
+    console.error("Error reading Supabase auth cookie for email:", e);
+  }
+  return "";
+}
+
 // SERVER ACTIONS FOR AUDIT LOGS
 export async function getAuditLogs(contractId?: string): Promise<AuditLog[]> {
   const client = await getSupabaseClient();
@@ -290,21 +309,40 @@ export async function getProfile(): Promise<Profile> {
     .maybeSingle();
 
   if (error || !data) {
-    // Return a default profile if none exists yet
+    // If it's a fallback sandbox ID, return the fully seeded default profile
+    if (userId === "d8b67104-e3c3-4d37-88ab-8c9df4a2e5d9" || userId === "demo-freelancer-uuid") {
+      return {
+        id: "demo-freelancer-uuid",
+        email: "hector@freelancemx.dev",
+        fullName: "Héctor J. Guerrero",
+        rfc: "GUEH860710MX8",
+        regimenFiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
+        codigoPostal: "06700",
+        logoUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&h=120&fit=crop&auto=format",
+        signatureUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3a/John_Hancock_signature.svg",
+        tier: "free",
+        bankDetails: {
+          clabe: "012180001509987654",
+          bankName: "BBVA México",
+          beneficiaryName: "Héctor J. Guerrero"
+        }
+      };
+    }
+
+    // Otherwise, for real registered users, return a clean blank profile template with actual ID & email
+    const email = await getCurrentUserEmail();
     return {
-      id: "demo-freelancer-uuid",
-      email: "hector@freelancemx.dev",
-      fullName: "Héctor J. Guerrero",
-      rfc: "GUEH860710MX8",
-      regimenFiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
-      codigoPostal: "06700",
-      logoUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120&h=120&fit=crop&auto=format",
-      signatureUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3a/John_Hancock_signature.svg",
+      id: userId,
+      email: email || "",
+      fullName: "",
+      rfc: "",
+      regimenFiscal: "",
+      codigoPostal: "",
       tier: "free",
       bankDetails: {
-        clabe: "012180001509987654",
-        bankName: "BBVA México",
-        beneficiaryName: "Héctor J. Guerrero"
+        clabe: "",
+        bankName: "",
+        beneficiaryName: ""
       }
     };
   }

@@ -26,8 +26,7 @@ export function middleware(request: NextRequest) {
   const isProtectedPath = 
     nextUrl.pathname.startsWith("/dashboard") ||
     nextUrl.pathname.startsWith("/contracts") ||
-    nextUrl.pathname.startsWith("/admin") ||
-    nextUrl.pathname.startsWith("/onboarding");
+    nextUrl.pathname.startsWith("/admin");
 
   if (isProtectedPath && !hasAuthCookie && !isDemo) {
     // Redirect to login page
@@ -49,6 +48,5 @@ export const config = {
     "/dashboard/:path*",
     "/contracts/:path*",
     "/admin/:path*",
-    "/onboarding/:path*",
   ],
 };

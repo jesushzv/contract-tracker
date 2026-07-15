@@ -16,23 +16,28 @@ export const shouldUseSupabase = (): boolean => {
 // Dispatch server actions based on config
 const serverActions = shouldUseSupabase() ? supabaseActions : localActions;
 
-// Helper to determine if we are in Demo Sandbox Mode (stored in browser localStorage)
 export const isDemoMode = (): boolean => {
   if (typeof window === "undefined") return false;
 
-  // Force sandbox/localStorage mode by default in any non-production environment
-  if (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production") {
-    return true;
-  }
-  
   const hasDemoParam = new URLSearchParams(window.location.search).get("demo") === "true";
-  if (hasDemoParam) {
-    localStorage.setItem("demo_mode", "true");
+  const hasDemoCookie = document.cookie.split("; ").some(row => row.trim().startsWith("demo_mode=true"));
+  const hasDemoLocal = localStorage.getItem("demo_mode") === "true";
+  
+  const isDevEnv = process.env.NEXT_PUBLIC_VERCEL_ENV !== "production";
+  
+  if (isDevEnv || hasDemoParam || hasDemoCookie || hasDemoLocal) {
+    if (hasDemoParam || isDevEnv || hasDemoLocal) {
+      if (!hasDemoCookie) {
+        document.cookie = "demo_mode=true; path=/; max-age=31536000";
+      }
+      if (hasDemoParam || isDevEnv) {
+        localStorage.setItem("demo_mode", "true");
+      }
+    }
     return true;
   }
   
-  const hasDemoCookie = document.cookie.split("; ").some(row => row.trim().startsWith("demo_mode=true"));
-  return localStorage.getItem("demo_mode") === "true" || hasDemoCookie;
+  return false;
 };
 
 // Local storage keys for the browser sandbox
