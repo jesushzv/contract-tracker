@@ -129,7 +129,7 @@ export default function Home() {
                   </Link>
                   <Link
                     href="/dashboard?demo=true"
-                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white/40 px-6 py-3.5 text-base font-semibold text-slate-700 hover:bg-white/80 dark:bg-slate-900/80 transition-all duration-200"
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 py-3.5 text-base font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-all duration-200"
                   >
                     Probar Demo con Datos
                   </Link>

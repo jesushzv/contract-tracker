@@ -121,11 +121,7 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
                 Configuración
               </Link>
             </>
-          ) : (
-            <Link href="/hash-verifier" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
-              Verificador
-            </Link>
-          )}
+          ) : null}
         </nav>
 
         <div className="flex items-center gap-4">
