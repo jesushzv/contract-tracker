@@ -15,6 +15,14 @@ CREATE TABLE IF NOT EXISTS public.payment_profiles (
 -- Enable RLS on payment_profiles
 ALTER TABLE public.payment_profiles ENABLE ROW LEVEL SECURITY;
 
+-- 2. Alter contracts table to add completion and payment details
+ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS freelancer_completed_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS client_completed_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS payment_profile_id UUID REFERENCES public.payment_profiles(id) ON DELETE SET NULL;
+ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS bank_name TEXT;
+ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS clabe TEXT;
+ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS payment_instructions TEXT;
+
 -- RLS Policies for payment_profiles
 CREATE POLICY "Freelancers can manage their payment profiles" ON public.payment_profiles
 FOR ALL TO authenticated
@@ -24,15 +32,6 @@ WITH CHECK (freelancer_id = auth.uid());
 CREATE POLICY "Clients can view payment profiles linked to contracts" ON public.payment_profiles
 FOR SELECT TO anon
 USING (id IN (SELECT payment_profile_id FROM public.contracts));
-
-
--- 2. Alter contracts table to add completion and payment details
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS freelancer_completed_at TIMESTAMP WITH TIME ZONE;
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS client_completed_at TIMESTAMP WITH TIME ZONE;
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS payment_profile_id UUID REFERENCES public.payment_profiles(id) ON DELETE SET NULL;
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS bank_name TEXT;
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS clabe TEXT;
-ALTER TABLE public.contracts ADD COLUMN IF NOT EXISTS payment_instructions TEXT;
 
 
 -- 3. Create edit_requests table
