@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Contract, Milestone } from "@/lib/types";
-import { saveContract, addAuditLog } from "@/lib/storageClient";
+import { saveContract } from "@/lib/storageClient";
 
 interface FreelancerEditModalProps {
   contract: Contract;
