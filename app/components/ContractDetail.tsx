@@ -6,7 +6,7 @@ import { AuditTimeline } from "./AuditTimeline";
 import { TaxBreakdown } from "./TaxBreakdown";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Copy, ExternalLink, MessageCircle } from "lucide-react";
+import { Copy } from "lucide-react";
 
 interface ContractDetailProps {
   contract: Contract | null;

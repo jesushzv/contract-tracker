@@ -6,9 +6,8 @@ import { ContractPipeline } from "../components/ContractPipeline";
 import { ContractListView } from "../components/ContractListView";
 import { MoneyCard } from "../components/MoneyCard";
 import { ContractDetail } from "../components/ContractDetail";
-import { PaymentModal } from "../components/modals/PaymentModal";
-import { RevisionModal } from "../components/modals/RevisionModal";
 import { Button } from "../components/ui/Button";
+import { Contract } from "@/lib/types";
 
 import { useContracts } from "../hooks/useContracts";
 import { useMilestones } from "../hooks/useMilestones";
@@ -26,8 +25,6 @@ export default function Dashboard() {
 
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
-  const [isCancelOpen, setIsCancelOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -39,7 +36,7 @@ export default function Dashboard() {
     load();
   }, [setContracts, setAllMilestones]);
 
-  const handleSelectContract = async (contract: any) => {
+  const handleSelectContract = async (contract: Contract) => {
     setSelectedContract(contract);
     const mData = await getMilestones(contract.id);
     setMilestones(mData);
