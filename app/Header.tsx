@@ -146,7 +146,7 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
               </button>
             </>
           ) : (
-            pathname === "/login" ? (
+            pathname.startsWith("/login") ? (
               <Link 
                 href="/register" 
                 className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
