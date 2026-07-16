@@ -53,7 +53,7 @@ async function main() {
 
   if (databaseUrl) {
     try {
-      const checkQuery = "SELECT count(*) FROM information_schema.columns WHERE table_name = 'payment_profiles' AND column_name = 'payment_profile_id';";
+      const checkQuery = "SELECT count(*) FROM information_schema.columns WHERE table_name = 'contracts' AND column_name = 'payment_profile_id';";
       const { execSync } = require('child_process');
       const res = execSync(`psql "${databaseUrl}" -tAc "${checkQuery}"`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
       if (res === '0') {
