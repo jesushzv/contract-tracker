@@ -51,6 +51,23 @@ function runMigrations() {
 async function main() {
   runMigrations();
 
+  if (databaseUrl) {
+    try {
+      const checkQuery = "SELECT count(*) FROM information_schema.columns WHERE table_name = 'payment_profiles' AND column_name = 'payment_profile_id';";
+      const { execSync } = require('child_process');
+      const res = execSync(`psql "${databaseUrl}" -tAc "${checkQuery}"`, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+      if (res === '0') {
+        console.error('❌ payment_profile_id column not found - ensure migrations have run before seeding.');
+        process.exit(1);
+      } else {
+        console.log("✅ Verified payment_profiles schema exists.");
+      }
+    } catch (e) {
+      console.error('❌ Failed to verify schema existence:', e.message);
+      process.exit(1);
+    }
+  }
+
   if (supabaseUrl && serviceRoleKey && supabaseAnonKey) {
     console.log("🔐 Found Supabase credentials. Initializing RLS validation checks...");
     try {
