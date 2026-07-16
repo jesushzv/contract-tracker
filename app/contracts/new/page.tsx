@@ -232,7 +232,7 @@ function NewContractForm() {
                   clientRfc={wizard.clientRfc} setClientRfc={wizard.setClientRfc}
                   clientRegimen={wizard.clientRegimen} setClientRegimen={wizard.setClientRegimen}
                   clientPostal={wizard.clientPostal} setClientPostal={wizard.setClientPostal}
-                  clientRfcError={wizard.clientRfcError} setClientRfcError={wizard.setClientRfcError}
+                  clientRfcError={wizard.clientRfcError}
                   handleClientRfcBlur={wizard.handleClientRfcBlur}
                   scopeDescription={wizard.scopeDescription} setScopeDescription={wizard.setScopeDescription}
                   onNext={() => wizard.setStep(2)}

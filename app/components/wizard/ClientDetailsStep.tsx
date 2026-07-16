@@ -12,7 +12,6 @@ interface ClientDetailsStepProps {
   setClientRfc: (v: string) => void;
   handleClientRfcBlur: () => void;
   clientRfcError: string;
-  setClientRfcError: (v: string) => void;
   clientRegimen: string;
   setClientRegimen: (v: string) => void;
   clientPostal: string;
@@ -28,7 +27,7 @@ export function ClientDetailsStep({
   clientPhone, setClientPhone,
   clientRfc, setClientRfc,
   handleClientRfcBlur,
-  clientRfcError, setClientRfcError,
+  clientRfcError,
   clientRegimen, setClientRegimen,
   clientPostal, setClientPostal,
   scopeDescription, setScopeDescription,

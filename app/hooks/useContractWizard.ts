@@ -48,33 +48,25 @@ export function useContractWizard(
   const [freelancerPostal, setFreelancerPostal] = useState("");
 
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
-
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (initialProfile) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBeneficiaryName(initialProfile.bankDetails.beneficiaryName || "");
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFreelancerRfc(initialProfile.rfc || "");
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFreelancerRegimen(initialProfile.regimenFiscal || "");
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFreelancerPostal(initialProfile.codigoPostal || "");
       
       const defaultProfile = initialPaymentProfiles.find(p => p.isDefault);
       if (defaultProfile) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedProfileId(defaultProfile.id);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setClabe(defaultProfile.clabe);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setBankName(defaultProfile.bankName);
       } else {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setClabe(initialProfile.bankDetails.clabe);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setBankName(initialProfile.bankDetails.bankName);
       }
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [initialProfile, initialPaymentProfiles]);
 
   const handleClientRfcBlur = useCallback(() => {
