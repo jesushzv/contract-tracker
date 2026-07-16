@@ -50,6 +50,7 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
     pathname.startsWith("/c/") || 
     pathname.startsWith("/dashboard") || 
     pathname.startsWith("/contracts") ||
+    pathname.startsWith("/notifications") ||
     pathname.startsWith("/hash-verifier")
   ) {
     return null;

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Link from "next/link";
 import { Bell } from "lucide-react";
 
 export function NotificationBell() {
@@ -40,9 +41,13 @@ export function NotificationBell() {
             </div>
             
             <div className="p-3 text-center border-t border-slate-100 bg-slate-50">
-              <button className="text-sm font-medium text-slate-500 hover:text-slate-700">
+              <Link 
+                href="/notifications"
+                onClick={() => setIsOpen(false)}
+                className="text-sm font-medium text-slate-500 hover:text-slate-700 block w-full"
+              >
                 Ver todas
-              </button>
+              </Link>
             </div>
           </div>
         </>
