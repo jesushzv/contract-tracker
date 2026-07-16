@@ -92,19 +92,19 @@ export default function Home() {
         
         {/* HERO SECTION */}
         <div className="mx-auto max-w-2xl text-center flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-4 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-8 border border-indigo-500/20 pulse-subtle">
+          <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-4 py-1.5 text-xs font-semibold text-indigo-600 mb-8 border border-indigo-500/20 pulse-subtle">
             <Sparkles className="h-3.5 w-3.5" />
             <span>Simplifica tu freelance en México</span>
           </div>
 
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-6xl leading-tight">
+          <h1 className="font-heading text-4xl font-extrabold tracking-tight text-slate-900 sm:text-6xl leading-tight">
             Contratos Rápidos y{" "}
-            <span className="bg-gradient-to-r from-indigo-600 to-emerald-500 bg-clip-text text-transparent dark:from-indigo-400 dark:to-emerald-400">
+            <span className="bg-gradient-to-r from-indigo-600 to-emerald-500 bg-clip-text text-transparent ">
               Anticipos Seguros
             </span>
           </h1>
           
-          <p className="mt-6 text-base sm:text-lg leading-relaxed text-slate-600 dark:text-slate-350 max-w-xl">
+          <p className="mt-6 text-base sm:text-lg leading-relaxed text-slate-600 max-w-xl">
             Crea propuestas con plantillas legales de México (Honorarios, no subordinación laboral LFT), firma de aceptación express por WhatsApp y controla el estado de tus cobros en una sola herramienta.
           </p>
 
@@ -113,7 +113,7 @@ export default function Home() {
               {isLoggedIn ? (
                 <Link
                   href="/dashboard"
-                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200 group"
+                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 :bg-indigo-400 transition-all duration-200 group"
                 >
                   Ir a mi Panel
                   <ArrowRight className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -122,14 +122,14 @@ export default function Home() {
                 <>
                   <Link
                     href="/register"
-                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200 group"
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 :bg-indigo-400 transition-all duration-200 group"
                   >
                     Comenzar a Crear
                     <ArrowRight className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                   <Link
                     href="/dashboard?demo=true"
-                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white/40 dark:bg-slate-900/40 px-6 py-3.5 text-base font-semibold text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-900/80 transition-all duration-200"
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white/40 /40 px-6 py-3.5 text-base font-semibold text-slate-700 hover:bg-white/80 :bg-slate-900/80 transition-all duration-200"
                   >
                     Probar Demo con Datos
                   </Link>
@@ -137,9 +137,9 @@ export default function Home() {
               )}
             </div>
             {!isLoggedIn && (
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+              <p className="text-sm text-slate-500 mt-2">
                 ¿Ya tienes una cuenta?{" "}
-                <Link href="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                <Link href="/login" className="font-semibold text-indigo-600 hover:underline">
                   Inicia sesión aquí
                 </Link>
               </p>
@@ -152,13 +152,13 @@ export default function Home() {
           <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-8 sm:max-w-none sm:grid-cols-3">
             
             <div className="glass glass-interactive rounded-2xl p-6 flex flex-col text-left">
-              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900 dark:text-white">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900 ">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
                   <FileText className="h-5 w-5" />
                 </div>
                 Cláusulas de Ley (MX)
               </dt>
-              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500 ">
                 <p className="flex-auto">
                   Evita demandas de subordinación laboral. Plantillas optimizadas para el régimen simplificado de confianza (RESICO) y servicios profesionales de honorarios en México.
                 </p>
@@ -166,13 +166,13 @@ export default function Home() {
             </div>
 
             <div className="glass glass-interactive rounded-2xl p-6 flex flex-col text-left">
-              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900 dark:text-white">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900 ">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                   <Smartphone className="h-5 w-5" />
                 </div>
                 Aceptación por WhatsApp
               </dt>
-              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500 ">
                 <p className="flex-auto">
                   Tu cliente abre el link en su móvil, revisa los hitos y acepta con un click. Guardamos nombre, timestamp e IP como registro probatorio y te notificamos al instante.
                 </p>
@@ -180,13 +180,13 @@ export default function Home() {
             </div>
 
             <div className="glass glass-interactive rounded-2xl p-6 flex flex-col text-left">
-              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900 dark:text-white">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900 ">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
                   <Landmark className="h-5 w-5" />
                 </div>
                 Seguimiento de Anticipos
               </dt>
-              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500 ">
                 <p className="flex-auto">
                   Configura montos (ej. 50% anticipo, 50% finiquito). El cliente visualiza tu CLABE de SPEI, ingresa su Clave de Rastreo bancaria y confirmas en tu dashboard.
                 </p>
@@ -205,10 +205,10 @@ export default function Home() {
                 <Calculator className="h-5 w-5" />
                 <span className="text-xs font-bold uppercase tracking-wider">Calculadora de Impacto Financiero</span>
               </div>
-              <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+              <h3 className="font-heading text-2xl font-extrabold text-slate-900 ">
                 ¿Cuánto te cuesta la cobranza informal?
               </h3>
-              <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="text-xs leading-relaxed text-slate-500 ">
                 Chasing client payments over WhatsApp without formal, milestone-backed clickwrap agreements delays cash flow and hurts your monthly liquidity. Measure the cost below:
               </p>
 
@@ -225,7 +225,7 @@ export default function Home() {
                     step={5000}
                     value={projectRate}
                     onChange={(e) => setProjectRate(Number(e.target.value))}
-                    className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
+                    className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 "
                   />
                 </div>
 
@@ -241,7 +241,7 @@ export default function Home() {
                     step={1}
                     value={projectCount}
                     onChange={(e) => setProjectCount(Number(e.target.value))}
-                    className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
+                    className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 "
                   />
                 </div>
 
@@ -257,33 +257,33 @@ export default function Home() {
                     step={1}
                     value={delayDays}
                     onChange={(e) => setDelayDays(Number(e.target.value))}
-                    className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
+                    className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 "
                   />
                 </div>
               </div>
             </div>
 
-            <div className="w-full md:w-80 rounded-2xl bg-indigo-900/10 dark:bg-indigo-500/5 p-6 border border-indigo-500/20 flex flex-col gap-6">
+            <div className="w-full md:w-80 rounded-2xl bg-indigo-900/10 /5 p-6 border border-indigo-500/20 flex flex-col gap-6">
               <div>
                 <span className="text-3xs font-semibold text-slate-400 uppercase tracking-wider block">Ingresos anuales estimados</span>
-                <span className="text-xl font-bold text-slate-800 dark:text-slate-200">{formatMoney(totalYearlyRevenue)}</span>
+                <span className="text-xl font-bold text-slate-800 ">{formatMoney(totalYearlyRevenue)}</span>
               </div>
 
-              <div className="border-t border-slate-200 dark:border-slate-800/80 pt-4">
+              <div className="border-t border-slate-200 /80 pt-4">
                 <span className="text-3xs font-semibold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
                   <Clock className="h-3 w-3 text-amber-500" />
                   Días de demora acumulados
                 </span>
-                <span className="text-2xl font-black text-amber-600 dark:text-amber-400">{yearlyDaysDelayed} días/año</span>
+                <span className="text-2xl font-black text-amber-600 ">{yearlyDaysDelayed} días/año</span>
                 <p className="text-4xs text-slate-400 mt-1">Tiempo que pasas persiguiendo transferencias bancarias.</p>
               </div>
 
-              <div className="border-t border-slate-200 dark:border-slate-800/80 pt-4">
+              <div className="border-t border-slate-200 /80 pt-4">
                 <span className="text-3xs font-semibold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-indigo-500" />
                   Liquidez atorada en cartera
                 </span>
-                <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{formatMoney(liquidityAtRisk)}</span>
+                <span className="text-xl font-black text-indigo-600 ">{formatMoney(liquidityAtRisk)}</span>
                 <p className="text-4xs text-slate-400 mt-1">Capital de trabajo atrapado por la falta de un flujo de cobranza digital.</p>
               </div>
             </div>
@@ -294,23 +294,23 @@ export default function Home() {
         {/* PRICING PLANS */}
         <div className="mx-auto max-w-4xl w-full text-center flex flex-col gap-8">
           <div>
-            <h3 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Planes Justos para Freelancers</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            <h3 className="font-heading text-2xl font-extrabold tracking-tight text-slate-900 ">Planes Justos para Freelancers</h3>
+            <p className="text-sm text-slate-500 mt-1">
               Comienza gratis hoy mismo. Actualiza para desbloquear automatizaciones y cobros recurrentes.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto w-full">
             {/* Free tier */}
-            <div className="glass rounded-3xl p-6 flex flex-col justify-between text-left border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-900/10">
+            <div className="glass rounded-3xl p-6 flex flex-col justify-between text-left border-slate-200 bg-white/10 /10">
               <div>
-                <h4 className="text-lg font-bold text-slate-850 dark:text-white">Plan Semilla</h4>
+                <h4 className="font-heading text-lg font-bold text-slate-850 ">Plan Semilla</h4>
                 <p className="text-2xs text-slate-400 mt-1">Ideal para iniciar en el freelance con orden.</p>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-extrabold text-slate-900 dark:text-white">$0</span>
+                  <span className="text-3xl font-extrabold text-slate-900 ">$0</span>
                   <span className="text-xs text-slate-400 ml-1">Gratis de por vida</span>
                 </div>
-                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 dark:text-slate-450">
+                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 ">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                     Hasta 3 contratos creados
@@ -331,7 +331,7 @@ export default function Home() {
               </div>
               <Link 
                 href="/register?tier=free"
-                className="mt-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-center py-2.5 text-xs font-bold transition-colors cursor-pointer"
+                className="mt-8 rounded-xl bg-slate-100 hover:bg-slate-200 :bg-slate-800 text-center py-2.5 text-xs font-bold transition-colors cursor-pointer"
               >
                 Comenzar Gratis
               </Link>
@@ -343,14 +343,14 @@ export default function Home() {
                 Popular
               </div>
               <div>
-                <h4 className="text-lg font-bold text-indigo-500">Plan Emprendedor</h4>
+                <h4 className="font-heading text-lg font-bold text-indigo-500">Plan Emprendedor</h4>
                 <p className="text-2xs text-slate-400 mt-1">Para profesionales con flujo de clientes constante.</p>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-extrabold text-slate-900 dark:text-white">$99</span>
+                  <span className="text-3xl font-extrabold text-slate-900 ">$99</span>
                   <span className="text-xs text-slate-400 ml-1">MXN / mes</span>
                 </div>
-                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 dark:text-slate-450">
-                  <li className="flex items-center gap-2 text-slate-700 dark:text-slate-250">
+                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 ">
+                  <li className="flex items-center gap-2 text-slate-700 ">
                     <CheckCircle2 className="h-4 w-4 text-indigo-500 flex-shrink-0" />
                     <strong>Hasta 10 contratos activos</strong>
                   </li>
@@ -379,14 +379,14 @@ export default function Home() {
             {/* Pro tier */}
             <div className="glass rounded-3xl p-6 flex flex-col justify-between text-left border-purple-500/35 relative overflow-hidden bg-purple-500/5">
               <div>
-                <h4 className="text-lg font-bold text-purple-500">Plan Profesional</h4>
+                <h4 className="font-heading text-lg font-bold text-purple-500">Plan Profesional</h4>
                 <p className="text-2xs text-slate-400 mt-1">Control absoluto, automatización y conciliación.</p>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-extrabold text-slate-900 dark:text-white">$199</span>
+                  <span className="text-3xl font-extrabold text-slate-900 ">$199</span>
                   <span className="text-xs text-slate-400 ml-1">MXN / mes</span>
                 </div>
-                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 dark:text-slate-450">
-                  <li className="flex items-center gap-2 text-slate-700 dark:text-slate-250">
+                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 ">
+                  <li className="flex items-center gap-2 text-slate-700 ">
                     <CheckCircle2 className="h-4 w-4 text-purple-500 flex-shrink-0" />
                     <strong>Contratos e hitos ilimitados</strong>
                   </li>
@@ -427,17 +427,17 @@ export default function Home() {
               return (
                 <div 
                   key={index}
-                  className="glass rounded-2xl p-4 transition-all duration-300 border-slate-100 dark:border-slate-900 cursor-pointer"
+                  className="glass rounded-2xl p-4 transition-all duration-300 border-slate-100 cursor-pointer"
                   onClick={() => toggleFaq(index)}
                 >
-                  <div className="flex items-center justify-between gap-4 font-bold text-sm text-slate-800 dark:text-white">
+                  <div className="flex items-center justify-between gap-4 font-bold text-sm text-slate-800 ">
                     <span>{faq.q}</span>
                     <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-300 ${
                       isOpen ? "rotate-180 text-indigo-500" : ""
                     }`} />
                   </div>
                   {isOpen && (
-                    <div className="mt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-light border-t border-slate-100 dark:border-slate-900 pt-3 animate-in slide-in-from-top-2">
+                    <div className="mt-3 text-xs leading-relaxed text-slate-500 font-light border-t border-slate-100 pt-3 animate-in slide-in-from-top-2">
                       {faq.a}
                     </div>
                   )}
@@ -455,7 +455,7 @@ export default function Home() {
           
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="max-w-lg">
-              <h3 className="text-xl font-bold">Protege tu trabajo de manera formal</h3>
+              <h3 className="font-heading text-xl font-bold">Protege tu trabajo de manera formal</h3>
               <p className="mt-2 text-xs text-slate-350 leading-relaxed font-light">
                 Comienza a cobrar tus proyectos con el esquema de anticipos y validez legal que necesitas. Deja atrás los cobros informales por WhatsApp.
               </p>
