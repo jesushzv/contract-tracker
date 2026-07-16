@@ -71,7 +71,7 @@ test.describe("Sprint QA-1: Freelancer Payment Proof & State Transition Warnings
     const otpCode = match ? match[0] : "";
 
     await page.fill('input[placeholder="••••••"]', otpCode);
-    await page.click('button:has-text("Verificar y Firmar")');
+    await page.click('button:has-text("Firmar Contrato")');
 
     // Check Accept Confirmation Modal
     await expect(page.locator("h3:has-text('Firmar Contrato')")).toBeVisible();
@@ -94,11 +94,12 @@ test.describe("Sprint QA-1: Freelancer Payment Proof & State Transition Warnings
     await expect(page.locator("span:has-text('accepted'), span:has-text('Sellado')").first()).toBeVisible();
 
     // 6. Milestone request & freelancer payment proof modal
+    await page.locator('button:has-text("Hitos")').click();
     // Click 'Solicitar Cobro'
     await page.click('button:has-text("Solicitar Cobro")');
     
     // Click 'Marcar como Pagado'
-    await page.click('button:has-text("Firmar Contrato")');
+    await page.click('button:has-text("Marcar como Pagado")');
 
     // Check Freelancer Payment Modal
     await expect(page.locator("h3:has-text('Notificar Transferencia SPEI')")).toBeVisible();
@@ -107,7 +108,7 @@ test.describe("Sprint QA-1: Freelancer Payment Proof & State Transition Warnings
     await page.fill('input[placeholder="Ej. 182746182903485761 o folio"]', "SPEI-FL-54321");
     await page.click('text=Enlace URL');
     await page.fill('input[placeholder*="dropbox.com"]', "https://my-cloud-receipt.com/doc.pdf");
-    await page.click('button:has-text("Registrar Pago")');
+    await page.click('button:has-text("Notificar Pago")');
 
     // Status should update to confirmed (due to auto-reconciliation)
     await expect(page.locator("text=Cobro Listo").first()).toBeVisible();

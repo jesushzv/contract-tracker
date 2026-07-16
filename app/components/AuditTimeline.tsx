@@ -1,6 +1,6 @@
 import React from "react";
 import { AuditLog } from "@/lib/types";
-import { CheckCircle2, Clock, Edit3, MessageCircle, FileText, X } from "lucide-react";
+import { CheckCircle2, Clock, Edit3, MessageCircle, FileText, X, Printer } from "lucide-react";
 
 interface AuditTimelineProps {
   logs: AuditLog[];
@@ -21,6 +21,15 @@ export function AuditTimeline({ logs }: AuditTimelineProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={() => window.print()}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-500 hover:text-indigo-600 transition-colors bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg"
+        >
+          <Printer className="w-3.5 h-3.5" />
+          Exportar Audit Log
+        </button>
+      </div>
       {logs.map((log, i) => (
         <div key={log.id || i} className="relative flex gap-3">
           {i !== logs.length - 1 && (

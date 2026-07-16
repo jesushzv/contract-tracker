@@ -129,6 +129,7 @@ test.describe("Sprint WB2: SPEI CEP Reconciler, USD FX, Version History & WhatsA
     // Finally, verify Export Audit Log is visible in dashboard
     await page.goto("/dashboard?demo=true");
     await page.locator('text=Sofía Garza').first().click();
+    await page.locator('button:has-text("Actividad")').click();
     const exportBtn = page.locator('button:has-text("Exportar Audit Log")');
     await expect(exportBtn).toBeVisible();
   });

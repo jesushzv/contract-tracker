@@ -1,14 +1,18 @@
 import React from "react";
 import { Milestone } from "@/lib/types";
 import { Badge } from "./ui/Badge";
-import { CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock, RotateCcw } from "lucide-react";
 
 interface MilestoneTimelineProps {
   milestones: Milestone[];
   currency: string;
+  onUpdateMilestone?: (id: string, status: string) => void;
+  onOpenPaymentModal?: (milestone: Milestone) => void;
 }
 
-export function MilestoneTimeline({ milestones, currency }: MilestoneTimelineProps) {
+export function MilestoneTimeline({ milestones, currency, onUpdateMilestone, onOpenPaymentModal }: MilestoneTimelineProps) {
+  const [revertingMilestoneId, setRevertingMilestoneId] = React.useState<string | null>(null);
+
   const getMilestoneIcon = (status: string) => {
     if (status === 'confirmed') return <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
     if (status === 'marked_paid') return <Clock className="w-5 h-5 text-amber-500" />;
@@ -17,8 +21,8 @@ export function MilestoneTimeline({ milestones, currency }: MilestoneTimelinePro
 
   const getMilestoneStatus = (status: string) => {
     switch (status) {
-      case 'confirmed': return <Badge variant="success">Pagado</Badge>;
-      case 'marked_paid': return <Badge variant="warning">En revisión</Badge>;
+      case 'confirmed': return <Badge variant="success">Cobro Listo</Badge>;
+      case 'marked_paid': return <Badge variant="warning">Reportado</Badge>;
       case 'requested': return <Badge variant="info">Solicitado</Badge>;
       default: return <Badge variant="default">Pendiente</Badge>;
     }
@@ -47,9 +51,73 @@ export function MilestoneTimeline({ milestones, currency }: MilestoneTimelinePro
                 <div className="mt-1">{getMilestoneStatus(m.status)}</div>
               </div>
             </div>
+            
+            <div className="mt-3 flex gap-2">
+              {m.status === 'pending' && onUpdateMilestone && (
+                <button
+                  onClick={() => onUpdateMilestone(m.id, 'requested')}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
+                >
+                  Solicitar Cobro
+                </button>
+              )}
+              {m.status === 'requested' && onOpenPaymentModal && (
+                <button
+                  onClick={() => onOpenPaymentModal(m)}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
+                >
+                  Marcar como Pagado
+                </button>
+              )}
+              {m.status === 'marked_paid' && onUpdateMilestone && (
+                <button
+                  onClick={() => onUpdateMilestone(m.id, 'confirmed')}
+                  className="bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors shadow-md shadow-indigo-500/10"
+                >
+                  Confirmar Recepción
+                </button>
+              )}
+              {m.status === 'confirmed' && onUpdateMilestone && (
+                <button
+                  onClick={() => setRevertingMilestoneId(m.id)}
+                  title="Revertir a Reportado"
+                  className="bg-rose-100 hover:bg-rose-200 text-rose-600 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       ))}
+
+      {revertingMilestoneId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto print:hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Revertir Estado de Hito</h3>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">
+              ¿Estás seguro de que deseas revertir este hito al estado &quot;Reportado&quot;?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button 
+                className="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg"
+                onClick={() => setRevertingMilestoneId(null)}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="px-4 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-500 rounded-lg"
+                onClick={() => {
+                  if (onUpdateMilestone) onUpdateMilestone(revertingMilestoneId, 'marked_paid');
+                  setRevertingMilestoneId(null);
+                }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,8 +6,9 @@ import { AuditTimeline } from "./AuditTimeline";
 import { TaxBreakdown } from "./TaxBreakdown";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Copy, Edit2 } from "lucide-react";
+import { Copy, Edit2, ShieldCheck, AlertTriangle } from "lucide-react";
 import { FreelancerEditModal } from "./modals/FreelancerEditModal";
+import { vetAndAcceptContract, cancelContract } from "@/lib/storageClient";
 
 interface ContractDetailProps {
   contract: Contract | null;
@@ -16,8 +17,9 @@ interface ContractDetailProps {
   isOpen: boolean;
   onClose: () => void;
   onCopyLink: (id: string) => void;
-  onActionClick?: (action: string) => void;
   onRefresh?: () => void;
+  onUpdateMilestone?: (id: string, status: string) => void;
+  onOpenPaymentModal?: (milestone: Milestone) => void;
 }
 
 export function ContractDetail({ 
@@ -27,11 +29,35 @@ export function ContractDetail({
   isOpen, 
   onClose,
   onCopyLink,
-  onActionClick,
-  onRefresh
+  onRefresh,
+  onUpdateMilestone,
+  onOpenPaymentModal
 }: ContractDetailProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'milestones' | 'activity'>('info');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [showCounterSignConfirm, setShowCounterSignConfirm] = useState(false);
+  const [isCounterSigning, setIsCounterSigning] = useState(false);
+
+  // Cancellation state
+  const [isCanceling, setIsCanceling] = useState(false);
+  const [showCancelReason, setShowCancelReason] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
+  const handleCancelContract = async () => {
+    try {
+      setIsCanceling(true);
+      await cancelContract(contract!.id, 'freelancer', cancelReason);
+      setShowCancelConfirm(false);
+      setShowCancelReason(false);
+      if (onRefresh) onRefresh();
+    } catch (err: unknown) {
+      const error = err as Error;
+      alert("Error: " + error.message);
+    } finally {
+      setIsCanceling(false);
+    }
+  };
 
   if (!contract) return null;
 
@@ -105,7 +131,12 @@ export function ContractDetail({
           )}
 
           {activeTab === 'milestones' && (
-            <MilestoneTimeline milestones={milestones} currency={contract.currency} />
+            <MilestoneTimeline 
+              milestones={milestones} 
+              currency={contract.currency}
+              onUpdateMilestone={onUpdateMilestone}
+              onOpenPaymentModal={onOpenPaymentModal}
+            />
           )}
 
           {activeTab === 'activity' && (
@@ -124,8 +155,14 @@ export function ContractDetail({
               Modificar Propuesta
             </Button>
           )}
-          <Button className="flex-1" onClick={() => onActionClick?.('primary')}>
-            Acciones
+          {contract.status === 'client_signed' && (
+            <Button variant="primary" className="flex-1 bg-purple-600 hover:bg-purple-500" onClick={() => setShowCounterSignConfirm(true)}>
+              <ShieldCheck className="w-4 h-4 mr-2" />
+              Validar y Contra-firmar
+            </Button>
+          )}
+          <Button className="flex-1" variant="danger" onClick={() => setShowCancelReason(true)}>
+            Cancelar Contrato
           </Button>
         </div>
       </div>
@@ -136,6 +173,97 @@ export function ContractDetail({
           onClose={() => setIsEditModalOpen(false)}
           onRefresh={onRefresh || (() => {})}
         />
+      )}
+      
+      {showCounterSignConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto print:hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-slate-900 dark:text-white">Contra-firmar y Sellar Contrato</h3>
+            </div>
+            <p className="text-slate-600 dark:text-slate-400 mb-6 text-sm">
+              Al confirmar, validas que el cliente ha firmado y que aceptas iniciar el proyecto. El contrato cambiará a estado &apos;Activo&apos;.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setShowCounterSignConfirm(false)} 
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 disabled:opacity-50"
+                disabled={isCounterSigning}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={async () => {
+                  setIsCounterSigning(true);
+                  try {
+                    await vetAndAcceptContract(contract.id, "Héctor J. Guerrero"); // Freelancer name hardcoded or from profile
+                    setShowCounterSignConfirm(false);
+                    onRefresh?.();
+                  } catch (err) {
+                    console.error("Failed to counter sign:", err);
+                    alert("Error al contra-firmar");
+                  } finally {
+                    setIsCounterSigning(false);
+                  }
+                }} 
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-500 disabled:opacity-50 flex items-center gap-2"
+                disabled={isCounterSigning}
+              >
+                {isCounterSigning ? "Procesando..." : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCancelReason && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto print:hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Motivo de Cancelación</h3>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Ej. Incumplimiento de pagos..."
+              className="w-full h-32 p-3 border border-slate-300 dark:border-slate-700 rounded-lg bg-transparent text-slate-900 dark:text-white"
+            />
+            <div className="flex gap-3 justify-end mt-4">
+              <Button variant="secondary" onClick={() => setShowCancelReason(false)}>Atrás</Button>
+              <Button onClick={() => setShowCancelConfirm(true)}>Confirmar Cancelación</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto print:hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+                <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Cancelar Contrato</h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-6">
+                ¿Estás seguro de que deseas cancelar este contrato? Esta acción es irreversible.
+              </p>
+              <div className="flex gap-3 w-full">
+                <Button variant="secondary" className="flex-1" onClick={() => setShowCancelConfirm(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  variant="danger" 
+                  className="flex-1" 
+                  onClick={handleCancelContract}
+                  isLoading={isCanceling}
+                >
+                  Confirmar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </SlideOver>
   );

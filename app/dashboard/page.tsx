@@ -7,15 +7,16 @@ import { ContractListView } from "../components/ContractListView";
 import { MoneyCard } from "../components/MoneyCard";
 import { ContractDetail } from "../components/ContractDetail";
 import { Button } from "../components/ui/Button";
-import { Contract } from "@/lib/types";
+import { Contract, Milestone } from "@/lib/types";
 
 import { useContracts } from "../hooks/useContracts";
 import { useMilestones } from "../hooks/useMilestones";
 import { useProfile } from "../hooks/useProfile";
 import { useFinancialStats } from "../hooks/useFinancialStats";
 
-import { getContracts, getMilestones, getAuditLogs } from "@/lib/storageClient";
+import { getContracts, getMilestones, getAuditLogs, updateMilestoneStatus, markMilestoneAsTransferred } from "@/lib/storageClient";
 import { LayoutList, LayoutGrid, Plus } from "lucide-react";
+import { ClientPaymentUpload } from "../components/client/ClientPaymentUpload";
 
 export default function Dashboard() {
   const { profile } = useProfile();
@@ -25,6 +26,19 @@ export default function Dashboard() {
 
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // Payment Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMilestone, setPaymentMilestone] = useState<Milestone | null>(null);
+  const [trackingReference, setTrackingReference] = useState("");
+  const [transferredAmount, setTransferredAmount] = useState<number>(0);
+  const [receiptUrl, setReceiptUrl] = useState("");
+  const [receiptFileType, setReceiptFileType] = useState<'file' | 'url'>('file');
+  const [receiptFileBase64, setReceiptFileBase64] = useState("");
+  const [receiptFileName, setReceiptFileName] = useState("");
+  const [overrideExchangeRate, setOverrideExchangeRate] = useState("20.15");
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -54,9 +68,96 @@ export default function Dashboard() {
       const updatedSelected = data.find(c => c.id === selectedContract.id);
       if (updatedSelected) {
         setSelectedContract(updatedSelected);
+        const mList = mData.filter(m => m.contractId === updatedSelected.id);
+        setMilestones(mList);
         const logs = await getAuditLogs(updatedSelected.id);
         setSelectedContractLogs(logs);
       }
+    }
+  };
+
+  const handleUpdateMilestone = async (milestoneId: string, newStatus: string) => {
+    try {
+      await updateMilestoneStatus(milestoneId, newStatus as Milestone['status']);
+      await handleRefresh();
+    } catch (err: unknown) {
+      console.error("Error updating milestone:", err);
+      alert("Error al actualizar hito");
+    }
+  };
+
+  const handleOpenPaymentModal = (milestone: Milestone) => {
+    setPaymentMilestone(milestone);
+    setTrackingReference("");
+    setTransferredAmount(milestone.amount);
+    setReceiptUrl("");
+    setReceiptFileType("file");
+    setReceiptFileBase64("");
+    setReceiptFileName("");
+    setModalError(null);
+    setOverrideExchangeRate("20.15");
+    setShowPaymentModal(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setReceiptFileBase64("");
+      setReceiptFileName("");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setModalError("El archivo excede el límite de tamaño de 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64String = event.target?.result as string;
+      setReceiptFileBase64(base64String);
+      setReceiptFileName(file.name);
+      setModalError(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleMarkAsTransferred = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentMilestone) return;
+
+    if (!trackingReference.trim()) {
+      setModalError("La clave de rastreo es requerida.");
+      return;
+    }
+
+    if (receiptFileType === 'file' && !receiptFileBase64) {
+      setModalError("Debes adjuntar un comprobante en PDF o imagen.");
+      return;
+    }
+
+    if (receiptFileType === 'url' && (!receiptUrl || !receiptUrl.startsWith('http'))) {
+      setModalError("Debes proporcionar un enlace URL válido.");
+      return;
+    }
+
+    setLoading(true);
+    setModalError(null);
+
+    try {
+      const finalReceiptUrl = receiptFileType === 'url' ? receiptUrl : `local-upload-${receiptFileName}`;
+      await markMilestoneAsTransferred(
+        paymentMilestone.id, 
+        trackingReference, 
+        transferredAmount, 
+        finalReceiptUrl
+      );
+      setShowPaymentModal(false);
+      await handleRefresh();
+    } catch (err: unknown) {
+      setModalError((err as Error).message || "Error al registrar el pago.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -118,9 +219,32 @@ export default function Dashboard() {
           alert("Link copiado: " + url);
         }}
         onRefresh={handleRefresh}
+        onUpdateMilestone={handleUpdateMilestone}
+        onOpenPaymentModal={handleOpenPaymentModal}
       />
       
-      {/* Modals for actions could be rendered here triggered by ContractDetail onActionClick */}
+      <ClientPaymentUpload 
+        showPaymentModal={showPaymentModal}
+        setShowPaymentModal={setShowPaymentModal}
+        paymentMilestone={paymentMilestone}
+        setPaymentMilestone={setPaymentMilestone}
+        contract={selectedContract}
+        handleMarkAsTransferred={handleMarkAsTransferred}
+        trackingReference={trackingReference}
+        setTrackingReference={setTrackingReference}
+        transferredAmount={transferredAmount}
+        setTransferredAmount={setTransferredAmount}
+        overrideExchangeRate={overrideExchangeRate}
+        setOverrideExchangeRate={setOverrideExchangeRate}
+        receiptFileType={receiptFileType}
+        setReceiptFileType={setReceiptFileType}
+        receiptUrl={receiptUrl}
+        setReceiptUrl={setReceiptUrl}
+        receiptFileName={receiptFileName}
+        handleFileChange={handleFileChange}
+        modalError={modalError}
+        loading={loading}
+      />
     </AppShell>
   );
 }

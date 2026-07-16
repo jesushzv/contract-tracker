@@ -34,7 +34,7 @@ test.describe("Sprint WB-3: UX & Document Completeness E2E Suite", () => {
     await page.locator("input[placeholder='Ej. Mi Cuenta Principal']").fill("Mi Cuenta de STP");
     await page.locator("input[placeholder='Ej. BBVA, Santander, STP']").fill("STP");
     await page.locator("input[placeholder='18 dígitos']").fill("123456789012345678");
-    await page.locator("button:has-text('Guardar Perfil')").click();
+    await page.locator("button:has-text('Guardar Cuenta')").click();
     
     // Check if the profile is in the list
     await expect(page.locator("span:has-text('Mi Cuenta de STP')")).toBeVisible();
