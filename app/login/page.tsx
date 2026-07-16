@@ -115,31 +115,29 @@ export default function LoginPage() {
             <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Iniciar Sesión</h1>
             <p className="text-xs text-slate-400 mt-0.5">Ingresa a tu cuenta de Freelancer Tracker</p>
           </div>
-        </div>
-
-        {error && (
-          <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3.5 text-xs text-red-650 dark:text-red-400 flex items-start gap-2.5">
-            <AlertCircle className="h-4.5 w-4.5 flex-shrink-0 mt-0.5" />
-            <p className="leading-relaxed font-semibold">{error}</p>
+        </div>        {error && (
+          <div className="rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-3.5 text-sm text-red-600 dark:text-red-400 flex items-start gap-2.5">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <p className="leading-relaxed font-medium">{error}</p>
           </div>
         )}
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Correo Electrónico</label>
+            <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Correo Electrónico</label>
             <input
               type="email"
               required
               placeholder="correo@ejemplo.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all"
+              className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all shadow-sm"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <div className="flex justify-between items-center">
-              <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Contraseña</label>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Contraseña</label>
             </div>
             <div className="relative">
               <input
@@ -148,12 +146,12 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 pl-4 pr-10 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/40 pl-4 pr-10 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all shadow-sm"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 dark:hover:text-slate-300 focus:outline-none transition-colors"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none transition-colors"
                 aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -164,7 +162,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/10 cursor-pointer disabled:opacity-50"
+            className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 text-sm transition-colors flex items-center justify-center gap-2 shadow-md shadow-indigo-500/20 cursor-pointer disabled:opacity-70 mt-2"
           >
             {loading ? (
               <>
@@ -180,18 +178,18 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="flex flex-col gap-3 text-center border-t border-slate-100 dark:border-slate-850 pt-4">
-          <p className="text-2xs text-slate-450">
+        <div className="flex flex-col gap-4 text-center border-t border-slate-200 dark:border-slate-800 pt-5 mt-2">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             ¿No tienes cuenta?{" "}
-            <Link href={tier ? `/register?tier=${tier}` : "/register"} className="font-bold text-indigo-500 hover:underline">
+            <Link href={tier ? `/register?tier=${tier}` : "/register"} className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
               Regístrate aquí
             </Link>
           </p>
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-1 text-2xs font-semibold text-slate-400 hover:text-slate-650 transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
           >
-            <ArrowLeft className="h-3 w-3" /> Volver al Inicio
+            <ArrowLeft className="h-4 w-4" /> Volver al Inicio
           </Link>
         </div>
       </div>

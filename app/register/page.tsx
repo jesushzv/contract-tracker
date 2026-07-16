@@ -141,9 +141,9 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-3.5 text-xs text-red-650 dark:text-red-400 flex items-start gap-2.5">
-            <AlertCircle className="h-4.5 w-4.5 flex-shrink-0 mt-0.5" />
-            <p className="leading-relaxed font-semibold">{error}</p>
+          <div className="rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-3.5 text-sm text-red-600 dark:text-red-400 flex items-start gap-2.5">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <p className="leading-relaxed font-medium">{error}</p>
           </div>
         )}
 
@@ -154,18 +154,18 @@ export default function RegisterPage() {
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-800 dark:text-white">¡Registro Exitoso!</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
                 {successMessage}
               </p>
             </div>
-            <div className="border-t border-slate-100 dark:border-slate-800/60 w-full pt-4 mt-2">
-              <p className="text-3xs text-slate-400 leading-normal">
+            <div className="border-t border-slate-200 dark:border-slate-800/60 w-full pt-4 mt-2">
+              <p className="text-xs text-slate-500 leading-normal">
                 ¿No recibiste el correo? Revisa tu bandeja de spam o promociones.
               </p>
               <button 
                 type="button"
                 onClick={() => alert("Enlace de confirmación reenviado (Simulado)")}
-                className="mt-2 text-2xs font-bold text-indigo-500 hover:text-indigo-650 hover:underline transition-colors focus:outline-none"
+                className="mt-2 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline transition-colors focus:outline-none"
               >
                 Reenviar correo de confirmación
               </button>
@@ -176,19 +176,19 @@ export default function RegisterPage() {
         {!success && (
           <form onSubmit={handleRegister} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Correo Electrónico</label>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Correo Electrónico</label>
               <input
                 type="email"
                 required
                 placeholder="correo@ejemplo.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all"
+                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all shadow-sm"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Contraseña (Mínimo 8 caracteres)</label>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Contraseña (Mínimo 8 caracteres)</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -196,12 +196,12 @@ export default function RegisterPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 pl-4 pr-10 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/40 pl-4 pr-10 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all shadow-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 dark:hover:text-slate-300 focus:outline-none transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none transition-colors"
                   aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -210,26 +210,26 @@ export default function RegisterPage() {
               
               {/* Password strength checklist */}
               {password.length > 0 && (
-                <div className="mt-2 rounded-xl bg-slate-50 dark:bg-slate-950/60 p-3 border border-slate-100 dark:border-slate-850 text-3xs flex flex-col gap-1.5 text-left">
-                  <span className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Requisitos de Seguridad:</span>
+                <div className="mt-2 rounded-xl bg-slate-50 dark:bg-slate-950/60 p-3 border border-slate-200 dark:border-slate-800 text-xs flex flex-col gap-1.5 text-left">
+                  <span className="font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider text-[10px]">Requisitos de Seguridad:</span>
                   <div className="grid grid-cols-2 gap-1.5">
-                    <span className={`flex items-center gap-1 font-medium ${password.length >= 8 ? "text-emerald-600 dark:text-emerald-450" : "text-slate-400"}`}>
+                    <span className={`flex items-center gap-1 font-medium ${password.length >= 8 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"}`}>
                       {password.length >= 8 ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
                       Mínimo 8 caracteres
                     </span>
-                    <span className={`flex items-center gap-1 font-medium ${/[A-Z]/.test(password) ? "text-emerald-600 dark:text-emerald-450" : "text-slate-400"}`}>
+                    <span className={`flex items-center gap-1 font-medium ${/[A-Z]/.test(password) ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"}`}>
                       {/[A-Z]/.test(password) ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
                       1 Mayúscula
                     </span>
-                    <span className={`flex items-center gap-1 font-medium ${/[a-z]/.test(password) ? "text-emerald-600 dark:text-emerald-450" : "text-slate-400"}`}>
+                    <span className={`flex items-center gap-1 font-medium ${/[a-z]/.test(password) ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"}`}>
                       {/[a-z]/.test(password) ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
                       1 Minúscula
                     </span>
-                    <span className={`flex items-center gap-1 font-medium ${/[0-9]/.test(password) ? "text-emerald-600 dark:text-emerald-450" : "text-slate-400"}`}>
+                    <span className={`flex items-center gap-1 font-medium ${/[0-9]/.test(password) ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"}`}>
                       {/[0-9]/.test(password) ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
                       1 Número
                     </span>
-                    <span className={`flex items-center gap-1 font-medium ${/[^A-Za-z0-9]/.test(password) ? "text-emerald-600 dark:text-emerald-450" : "text-slate-400"}`}>
+                    <span className={`flex items-center gap-1 font-medium ${/[^A-Za-z0-9]/.test(password) ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"}`}>
                       {/[^A-Za-z0-9]/.test(password) ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
                       1 Carácter Especial
                     </span>
@@ -239,7 +239,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Confirmar Contraseña</label>
+              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Confirmar Contraseña</label>
               <div className="relative">
                 <input
                   type={showConfirmPassword ? "text" : "password"}
@@ -247,12 +247,12 @@ export default function RegisterPage() {
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 pl-4 pr-10 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/40 pl-4 pr-10 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all shadow-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-655 dark:hover:text-slate-300 focus:outline-none transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none transition-colors"
                   aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -263,7 +263,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/10 cursor-pointer disabled:opacity-50"
+              className="w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 text-sm transition-colors flex items-center justify-center gap-2 shadow-md shadow-indigo-500/20 cursor-pointer disabled:opacity-70 mt-2"
             >
               {loading ? (
                 <>
@@ -280,18 +280,18 @@ export default function RegisterPage() {
           </form>
         )}
 
-        <div className="flex flex-col gap-3 text-center border-t border-slate-100 dark:border-slate-850 pt-4">
-          <p className="text-2xs text-slate-450">
+        <div className="flex flex-col gap-4 text-center border-t border-slate-200 dark:border-slate-800 pt-5 mt-2">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             ¿Ya tienes una cuenta?{" "}
-            <Link href={tier ? `/login?tier=${tier}` : "/login"} className="font-bold text-indigo-500 hover:underline">
+            <Link href={tier ? `/login?tier=${tier}` : "/login"} className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
               Inicia sesión aquí
             </Link>
           </p>
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-1 text-2xs font-semibold text-slate-400 hover:text-slate-650 transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
           >
-            <ArrowLeft className="h-3 w-3" /> Volver al Inicio
+            <ArrowLeft className="h-4 w-4" /> Volver al Inicio
           </Link>
         </div>
       </div>
