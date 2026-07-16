@@ -52,14 +52,14 @@ test.describe("Sprint SEC: Security Hardening E2E Integration Suite", () => {
     
     // Step 1: Client Name
     await page.fill('input[placeholder="Escribe tu nombre y apellido"]', "Sofía Garza");
-    await page.click('button:has-text("Enviar Código de Firma")');
+    await page.click('button:has-text("Continuar")');
     
     // Now OTP input is visible
     await expect(page.locator('input[placeholder="••••••"]')).toBeVisible();
     
     // Try 3 invalid OTPs
     const otpInput = page.locator('input[placeholder="••••••"]');
-    const submitOtpBtn = page.locator('button:has-text("Verificar y Firmar")');
+    const submitOtpBtn = page.locator('button:has-text("Firmar Contrato")');
     
     // Attempt 1
     await otpInput.fill("000000");

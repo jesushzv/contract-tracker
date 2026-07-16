@@ -122,6 +122,6 @@ test.describe("Premium SaaS Auth & Onboarding E2E Flow", () => {
 
     // Should redirect to dashboard
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
-    await expect(page.locator("h1")).toContainText("Panel de Control");
+    await expect(page.locator("h1")).toContainText("Hola");
   });
 });

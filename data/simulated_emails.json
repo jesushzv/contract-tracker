@@ -1,0 +1,9 @@
+[
+  {
+    "id": "email-1784217455653-unma9g2",
+    "to": "sofia@studioflora.mx",
+    "subject": "Recordatorio de Pago: Hito \"Entrega de manual final (50%)\" vence en 3 días",
+    "html": "\n              <div style=\"font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;\">\n                <h2 style=\"color: #e11d48; margin-top: 0;\">Recordatorio de Vencimiento</h2>\n                <p>Hola <strong>Sofía Garza (Studio Flora)</strong>,</p>\n                <p>Te recordamos que el hito <strong>\"Entrega de manual final (50%)\"</strong> vence en 3 días (<strong>2026-07-20</strong>).</p>\n                <div style=\"background-color: #fff1f2; border: 1px solid #fecdd3; padding: 15px; border-radius: 8px; margin: 20px 0;\">\n                  <p style=\"margin: 0 0 8px 0; color: #9f1239;\"><strong>Detalles del Pago:</strong></p>\n                  <p style=\"margin: 0 0 6px 0;\">Monto: 15000 MXN</p>\n                  <p style=\"margin: 0;\">Fecha Límite: 2026-07-20</p>\n                </div>\n                <p style=\"margin-bottom: 25px;\">Por favor realiza tu transferencia bancaria y reporta tu comprobante ingresando al siguiente enlace seguro:</p>\n                <p style=\"text-align: center;\">\n                  <a href=\"http://localhost:3000/c/c-1001-sofia-garza\" style=\"background-color: #e11d48; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;\">Pagar e Ingresar Comprobante</a>\n                </p>\n              </div>\n            ",
+    "timestamp": "2026-07-16T15:57:35.653Z"
+  }
+]

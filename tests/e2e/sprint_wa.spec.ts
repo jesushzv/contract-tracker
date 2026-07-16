@@ -37,6 +37,7 @@ test.describe("Sprint WA: Security & Taxes E2E Integration Suite", () => {
     // Step 1: Fill client info and scope
     await page.fill('input[placeholder="Ej. Sofía Garza, S.A. de C.V."]', "Mi Cliente");
     await page.fill('input[placeholder="sofia@empresa.com"]', "cliente@gmail.com");
+    await page.click('button:has-text("Agregar Datos Fiscales")');
     await page.fill('input[placeholder="Opcional (Ej. GAF1203058X4)"]', "GASF920412HX8");
     await page.fill('textarea[placeholder*="Describe detalladamente los entregables"]', "Diseño web completo para el portal corporativo.");
     

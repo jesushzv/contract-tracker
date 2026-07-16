@@ -12,10 +12,10 @@ test.describe("Sprint E2E: Contract Components Custom Editing Suite", () => {
     await page.goto("/dashboard?demo=true");
 
     // 2. Select the contract "Mariana Rosas (Studio Flora)" which is in status 'sent'
-    await page.locator("span:has-text('Mariana Rosas')").first().click();
+    await page.locator("h3:has-text('Mariana Rosas')").first().click();
 
     // Verify contract detail loads
-    await expect(page.locator("h2")).toContainText("Mariana Rosas");
+    await expect(page.locator("h2:has-text('Mariana Rosas')").first()).toBeVisible();
 
     // 3. Click 'Modificar Propuesta' to open the Freelancer edit modal
     const modifyPropBtn = page.locator("button:has-text('Modificar Propuesta')");
@@ -42,7 +42,7 @@ test.describe("Sprint E2E: Contract Components Custom Editing Suite", () => {
     await warningConfirmBtnFreelancer.click();
 
     // Wait for the modal to close and dashboard details to update
-    await expect(page.locator("h2")).toContainText("Mariana Rosas (Studio Flora E2E)");
+    await expect(page.locator("h2:has-text('Mariana Rosas (Studio Flora E2E)')").first()).toBeVisible();
 
     // 7. Now navigate to the Client portal view for this contract with token parameter
     await page.goto("/c/c2-landing-page?token=token-c2-landing-page&demo=true");

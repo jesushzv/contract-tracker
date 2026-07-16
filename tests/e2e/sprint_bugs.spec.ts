@@ -51,7 +51,7 @@ test.describe("Sprint QA-1: Freelancer Payment Proof & State Transition Warnings
     await page.locator('text=Sofía Garza').first().click();
 
     // Copy client link
-    await page.click('button:has-text("Copiar Link Cliente")');
+    await page.click('button:has-text("Copiar Link")');
     const clientUrl = await page.evaluate(() => navigator.clipboard.readText());
     expect(clientUrl).toContain("/c/");
 
@@ -60,7 +60,7 @@ test.describe("Sprint QA-1: Freelancer Payment Proof & State Transition Warnings
     await expect(page.locator("body")).toContainText("Propuesta de Contrato");
     await page.click('button:has-text("Revisar y Firmar Aceptación")');
     await page.fill('input[placeholder="Escribe tu nombre y apellido"]', "Sofía Garza");
-    await page.click('button:has-text("Enviar Código de Firma")');
+    await page.click('button:has-text("Continuar")');
 
     // Extract OTP Code
     const debugBox = page.locator('div:has-text("SYSTEM_DEBUG_OTP")').last();
@@ -98,7 +98,7 @@ test.describe("Sprint QA-1: Freelancer Payment Proof & State Transition Warnings
     await page.click('button:has-text("Solicitar Cobro")');
     
     // Click 'Marcar como Pagado'
-    await page.click('button:has-text("Marcar como Pagado")');
+    await page.click('button:has-text("Firmar Contrato")');
 
     // Check Freelancer Payment Modal
     await expect(page.locator("h3:has-text('Notificar Transferencia SPEI')")).toBeVisible();

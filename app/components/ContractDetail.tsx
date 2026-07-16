@@ -6,7 +6,8 @@ import { AuditTimeline } from "./AuditTimeline";
 import { TaxBreakdown } from "./TaxBreakdown";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Copy } from "lucide-react";
+import { Copy, Edit2 } from "lucide-react";
+import { FreelancerEditModal } from "./modals/FreelancerEditModal";
 
 interface ContractDetailProps {
   contract: Contract | null;
@@ -16,6 +17,7 @@ interface ContractDetailProps {
   onClose: () => void;
   onCopyLink: (id: string) => void;
   onActionClick?: (action: string) => void;
+  onRefresh?: () => void;
 }
 
 export function ContractDetail({ 
@@ -25,9 +27,11 @@ export function ContractDetail({
   isOpen, 
   onClose,
   onCopyLink,
-  onActionClick
+  onActionClick,
+  onRefresh
 }: ContractDetailProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'milestones' | 'activity'>('info');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   if (!contract) return null;
 
@@ -114,11 +118,25 @@ export function ContractDetail({
             <Copy className="w-4 h-4 mr-2" />
             Copiar Link
           </Button>
+          {(contract.status === 'sent' || contract.status === 'draft') && (
+            <Button variant="secondary" className="flex-1" onClick={() => setIsEditModalOpen(true)}>
+              <Edit2 className="w-4 h-4 mr-2" />
+              Modificar Propuesta
+            </Button>
+          )}
           <Button className="flex-1" onClick={() => onActionClick?.('primary')}>
             Acciones
           </Button>
         </div>
       </div>
+      {isEditModalOpen && (
+        <FreelancerEditModal
+          contract={contract}
+          milestones={milestones}
+          onClose={() => setIsEditModalOpen(false)}
+          onRefresh={onRefresh || (() => {})}
+        />
+      )}
     </SlideOver>
   );
 }

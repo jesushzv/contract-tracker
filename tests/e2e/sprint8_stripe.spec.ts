@@ -61,7 +61,7 @@ test.describe("Sprint 8: Stripe Monetization & SaaS Onboarding Funnel E2E Suite"
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
 
     // 8. Open settings and verify Plan & Billing section shows Starter Plan
-    const settingsBtn = page.locator("button").filter({ has: page.locator("svg.lucide-settings") });
+    const settingsBtn = page.locator('a:has-text("Configuración")').first();
     await expect(settingsBtn).toBeVisible();
     await settingsBtn.click();
 

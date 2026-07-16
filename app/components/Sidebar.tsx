@@ -9,15 +9,15 @@ interface SidebarProps {
 export function Sidebar({ activePath }: SidebarProps) {
   const links = [
     { name: "Pipeline", href: "/dashboard", icon: Briefcase },
-    { name: "Documentos", href: "/documents", icon: FileText },
-    { name: "Insights", href: "/insights", icon: BarChart3 },
-    { name: "Configuración", href: "/settings", icon: Settings },
+    { name: "Documentos", href: "/dashboard/documents", icon: FileText },
+    { name: "Insights", href: "/dashboard/insights", icon: BarChart3 },
+    { name: "Configuración", href: "/dashboard/settings", icon: Settings },
   ];
 
   return (
     <div className="flex flex-col h-full bg-slate-900 text-slate-300 border-r border-slate-800">
       <div className="p-6">
-        <h1 className="text-xl font-bold text-white tracking-tight">ContractTracker</h1>
+        <span className="text-xl font-bold text-white tracking-tight">ContractTracker</span>
       </div>
       
       <nav className="flex-1 px-4 space-y-1">

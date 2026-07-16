@@ -45,6 +45,21 @@ export default function Dashboard() {
     setIsDetailOpen(true);
   };
 
+  const handleRefresh = async () => {
+    const data = await getContracts();
+    setContracts(data);
+    const mData = await getMilestones();
+    setAllMilestones(mData);
+    if (selectedContract) {
+      const updatedSelected = data.find(c => c.id === selectedContract.id);
+      if (updatedSelected) {
+        setSelectedContract(updatedSelected);
+        const logs = await getAuditLogs(updatedSelected.id);
+        setSelectedContractLogs(logs);
+      }
+    }
+  };
+
   return (
     <AppShell activePath="/dashboard">
       <div className="flex flex-col gap-6 max-w-7xl mx-auto">
@@ -97,9 +112,12 @@ export default function Dashboard() {
         isOpen={isDetailOpen} 
         onClose={() => setIsDetailOpen(false)} 
         onCopyLink={(id) => {
-          // Mock copy link
-          alert("Link copiado: " + id);
+          const token = selectedContract?.clientAccessToken || `token-${id}`;
+          const url = `${window.location.origin}/c/${id}?demo=true&token=${token}`;
+          navigator.clipboard.writeText(url);
+          alert("Link copiado: " + url);
         }}
+        onRefresh={handleRefresh}
       />
       
       {/* Modals for actions could be rendered here triggered by ContractDetail onActionClick */}

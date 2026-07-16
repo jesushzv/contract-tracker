@@ -50,13 +50,13 @@ test.describe("Sprint WB2: SPEI CEP Reconciler, USD FX, Version History & WhatsA
     await page.fill('textarea[placeholder*="Describe detalladamente los entregables"]', "Desarrollo de Software");
     
     // Go to Step 2
-    await page.click('button:has-text("Siguiente Paso")');
+    await page.click('button:has-text("Siguiente")');
     
     // Set currency to USD
     await page.selectOption('select', 'USD');
     
     // Go to Step 3
-    await page.click('button:has-text("Siguiente Paso")');
+    await page.click('button:has-text("Siguiente")');
     
     // Submit proposal
     await page.click('button:has-text("Crear y Activar Contrato")');
@@ -68,7 +68,7 @@ test.describe("Sprint WB2: SPEI CEP Reconciler, USD FX, Version History & WhatsA
     await page.locator('text=Sofía Garza').first().click();
 
     // Click Copy Link button
-    await page.click('button:has-text("Copiar Link Cliente")');
+    await page.click('button:has-text("Copiar Link")');
     
     // Grab client URL from clipboard
     const href = await page.evaluate(() => navigator.clipboard.readText());
@@ -83,7 +83,7 @@ test.describe("Sprint WB2: SPEI CEP Reconciler, USD FX, Version History & WhatsA
     // Accept proposal first
     await page.click('button:has-text("Revisar y Firmar Aceptación")');
     await page.fill('input[placeholder="Escribe tu nombre y apellido"]', "Sofía Garza");
-    await page.click('button:has-text("Enviar Código de Firma")');
+    await page.click('button:has-text("Continuar")');
     
     // Fill OTP
     const debugBox = page.locator('div:has-text("SYSTEM_DEBUG_OTP")').last();
@@ -95,7 +95,7 @@ test.describe("Sprint WB2: SPEI CEP Reconciler, USD FX, Version History & WhatsA
     console.log("Extracted OTP Code:", otpCode);
     
     await page.fill('input[placeholder="••••••"]', otpCode);
-    await page.click('button:has-text("Verificar y Firmar")');
+    await page.click('button:has-text("Firmar Contrato")');
     await page.getByRole('button', { name: 'Confirmar', exact: true }).click();
     
     // Wait for the modal to close and show acceptance success

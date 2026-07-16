@@ -30,8 +30,10 @@ test.describe("Sprint 6: E2E Integration Suite for Magic Links, Emails, and What
     await page.waitForSelector("text=Mariana Rosas");
 
     // Find the contract card for c2-landing-page and open context menu or click copy link
-    // Let's check the copy link buttons in the UI
-    const copyButton = page.locator('button:has-text("Copiar Link Cliente")').first();
+    // Open the detail view by clicking a contract
+    await page.locator('h3:has-text("Mariana Rosas")').first().click();
+    
+    const copyButton = page.locator('button:has-text("Copiar Link")').first();
     await expect(copyButton).toBeVisible();
 
     // Verify share WhatsApp elements in alerts or share dialogs

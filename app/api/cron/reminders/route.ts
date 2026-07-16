@@ -74,12 +74,16 @@ export async function GET() {
             `
           });
 
-          await addAuditLogFn({
-            contractId: contract.id,
-            action: "milestone_requested",
-            actor: "system",
-            details: `Recordatorio automático enviado al cliente para el hito "${milestone.label}" (Vence en 3 días).`
-          });
+          try {
+            await addAuditLogFn({
+              contractId: contract.id,
+              action: "milestone_requested",
+              actor: "system",
+              details: `Recordatorio automático enviado al cliente para el hito "${milestone.label}" (Vence en 3 días).`
+            });
+          } catch (e) {
+            console.error("Failed to add audit log for reminder:", e);
+          }
 
           sentReminders.push({
             contractId: contract.id,

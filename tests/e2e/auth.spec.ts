@@ -26,8 +26,8 @@ test.describe("Authentication & Session Redirection E2E Suite", () => {
     
     // Expect default profile name to render in settings or main views
     const heading = page.locator("h1");
-    await expect(heading).toContainText("Panel de Control");
-    await expect(page.locator("body")).toContainText("Guerrero");
+    await expect(heading).toContainText("Hola");
+    await expect(page.locator("body")).toContainText("Héctor G.");
   });
 
   test("should load the correct template in /contracts/new based on URL parameter", async ({ page }) => {
@@ -35,7 +35,7 @@ test.describe("Authentication & Session Redirection E2E Suite", () => {
     await page.goto("/contracts/new?demo=true&template=development");
     
     // Expect the page title to load
-    await expect(page.locator("h1")).toHaveText("Crear Nuevo Contrato");
+    await expect(page.locator("h1").first()).toHaveText("Crear Nuevo Contrato");
     
     // Expect the development template card to be visually selected
     const devCard = page.locator('text="Desarrollo de Software / Devs"').locator("xpath=..");
