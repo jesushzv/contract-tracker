@@ -713,7 +713,7 @@ export default function ClientPortalPage() {
         <div className="flex items-center gap-2">
           <button 
             onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 :bg-slate-800 transition-colors"
           >
             <Printer className="h-3.5 w-3.5" />
             Imprimir / Descargar PDF
@@ -730,7 +730,7 @@ export default function ClientPortalPage() {
               </button>
               <button
                 onClick={startProposingRevision}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
               >
                 Solicitar Revisión
               </button>
@@ -739,13 +739,13 @@ export default function ClientPortalPage() {
 
           {contract.status === 'client_signed' && (
             <div className="flex items-center gap-2">
-              <div className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2.5 text-xs font-semibold text-purple-700 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20">
+              <div className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2.5 text-xs font-semibold text-purple-700">
                 <Clock className="h-4 w-4" />
                 Esperando Validación Final
               </div>
               <button
                 onClick={startProposingRevision}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
               >
                 Solicitar Revisión
               </button>
@@ -755,7 +755,7 @@ export default function ClientPortalPage() {
           {contract.status === 'accepted' && (
             <button
               onClick={startProposingRevision}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-red-205 bg-red-50 px-3.5 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
             >
               Solicitar Revisión
             </button>
@@ -765,12 +765,12 @@ export default function ClientPortalPage() {
 
       {/* Accepted success notification banner */}
       {acceptedSuccess && (
-        <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-800 dark:text-emerald-400 flex items-start justify-between gap-3 print:hidden animate-in zoom-in-95 duration-200">
+        <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-800 flex items-start justify-between gap-3 print:hidden animate-in zoom-in-95 duration-200">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
             <div>
               <span className="font-bold">¡Contrato firmado exitosamente!</span>
-              <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
+              <p className="text-xs mt-1 text-slate-500">
                 Hemos registrado tu firma electrónica. El contrato se encuentra ahora en revisión final por parte del freelancer.
               </p>
             </div>
@@ -788,12 +788,12 @@ export default function ClientPortalPage() {
 
       {/* Revision proposed success banner */}
       {revisionSuccess && (
-        <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-850 dark:text-amber-400 flex items-start justify-between gap-3 print:hidden animate-in zoom-in-95 duration-200">
+        <div className="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-850 flex items-start justify-between gap-3 print:hidden animate-in zoom-in-95 duration-200">
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 animate-pulse" />
             <div>
               <span className="font-bold">Solicitud de revisión enviada</span>
-              <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
+              <p className="text-xs mt-1 text-slate-500">
                 Hemos notificado al freelancer. El contrato ha vuelto a estado de borrador para su edición.
               </p>
             </div>
@@ -811,12 +811,12 @@ export default function ClientPortalPage() {
 
       {/* Payment reported success banner */}
       {paymentSuccess && (
-        <div className="rounded-2xl bg-indigo-500/10 border border-indigo-500/20 p-4 text-sm text-indigo-800 dark:text-indigo-400 flex items-start justify-between gap-3 print:hidden animate-in zoom-in-95 duration-200">
+        <div className="rounded-2xl bg-indigo-500/10 border border-indigo-500/20 p-4 text-sm text-indigo-800 flex items-start justify-between gap-3 print:hidden animate-in zoom-in-95 duration-200">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
             <div>
               <span className="font-bold">¡Pago reportado exitosamente!</span>
-              <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
+              <p className="text-xs mt-1 text-slate-500">
                 Tu transferencia para el hito &ldquo;{lastPaidMilestoneLabel}&rdquo; por {formatMoney(lastPaidMilestoneAmount, contract.currency)} ha sido enviada para verificación.
               </p>
             </div>
@@ -847,7 +847,7 @@ export default function ClientPortalPage() {
           <StandingIndicator freelancerRfc={contract.freelancerRfc} />
 
           {/* SPEI bank details card */}
-          <div className="glass rounded-3xl p-5 border-indigo-500/20 bg-white/70 dark:bg-slate-950/70 flex flex-col gap-4 text-left">
+          <div className="glass rounded-3xl p-5 border-indigo-500/20 bg-white/70 flex flex-col gap-4 text-left">
             <h3 className="text-sm font-bold flex items-center gap-1.5 text-indigo-500">
               <Briefcase className="h-4 w-4" />
               Detalles Financieros del Proyecto
@@ -855,28 +855,28 @@ export default function ClientPortalPage() {
             
             <div className="flex flex-col gap-2">
               <span className="text-2xs font-semibold text-slate-400 uppercase tracking-wider">Total Acordado</span>
-              <span className="text-3xl font-black text-slate-900 dark:text-white">
+              <span className="text-3xl font-black text-slate-900">
                 {formatMoney(contract.totalAmount, contract.currency)}
               </span>
             </div>
 
             {contract.clabe && (
-              <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 flex flex-col gap-3">
+              <div className="border-t border-slate-100 pt-4 flex flex-col gap-3">
                 <span className="text-2xs font-semibold text-slate-400 uppercase tracking-wider">Información para Transferir (SPEI)</span>
                 
-                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3.5 flex flex-col gap-2 border border-slate-100 dark:border-slate-800/30">
+                <div className="bg-slate-50 rounded-xl p-3.5 flex flex-col gap-2 border border-slate-100">
                   <div className="text-xs">
                     <span className="text-slate-400 font-light block">Titular:</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{contract.beneficiaryName}</span>
+                    <span className="font-semibold text-slate-800">{contract.beneficiaryName}</span>
                   </div>
                   <div className="text-xs">
                     <span className="text-slate-400 font-light block">Banco:</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{contract.bankName}</span>
+                    <span className="font-semibold text-slate-800">{contract.bankName}</span>
                   </div>
                   <div className="text-xs flex items-center justify-between gap-2">
                     <div>
                       <span className="text-slate-400 font-light block">CLABE Interbancaria:</span>
-                      <span className="font-mono font-bold text-sm text-slate-900 dark:text-white tracking-wide">{contract.clabe}</span>
+                      <span className="font-mono font-bold text-sm text-slate-900 tracking-wide">{contract.clabe}</span>
                     </div>
                     <button 
                       onClick={handleCopyClabe}
@@ -896,18 +896,18 @@ export default function ClientPortalPage() {
           </div>
 
           {contract.status === 'accepted' && (
-            <div className="glass rounded-3xl p-5 border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/10 flex flex-col gap-4 text-left">
-              <h3 className="text-sm font-bold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+            <div className="glass rounded-3xl p-5 border-emerald-500/20 bg-emerald-500/5 flex flex-col gap-4 text-left">
+              <h3 className="text-sm font-bold flex items-center gap-1.5 text-emerald-600">
                 <CheckCircle2 className="h-4 w-4" />
                 Entrega y Finalización del Proyecto
               </h3>
-              <p className="text-2xs text-slate-500 dark:text-slate-400 leading-normal">
+              <p className="text-2xs text-slate-500 leading-normal">
                 Si el freelancer ha completado la entrega de los servicios/productos acordados, puedes marcar tu confirmación de conformidad a continuación.
               </p>
               
               <div className="flex flex-col gap-2">
                 {contract.clientCompletedAt ? (
-                  <div className="text-xs text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1.5">
+                  <div className="text-xs text-amber-600 font-bold flex items-center gap-1.5">
                     <span className="animate-pulse h-2 w-2 rounded-full bg-amber-500"></span>
                     Has confirmado la entrega. Esperando que el freelancer confirme por su parte para cerrar el contrato.
                   </div>
@@ -922,7 +922,7 @@ export default function ClientPortalPage() {
 
                 <button
                   onClick={() => setIsCancellingContract(true)}
-                  className="w-full rounded-xl border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-650 font-semibold py-2.5 text-xs transition-colors cursor-pointer"
+                  className="w-full rounded-xl border border-red-200 hover:bg-red-50 :bg-red-950/20 text-red-650 font-semibold py-2.5 text-xs transition-colors cursor-pointer"
                 >
                   Cancelar Contrato (Detener Proyecto)
                 </button>
@@ -933,17 +933,17 @@ export default function ClientPortalPage() {
           {/* Active invoice request */}
           {activePayment && contract.status === 'accepted' ? (
             <div className="glass rounded-3xl p-5 border-amber-500/20 bg-amber-500/5 flex flex-col gap-4 text-left animate-pulse-subtle">
-              <h4 className="text-xs font-extrabold uppercase text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+              <h4 className="text-xs font-extrabold uppercase text-amber-600 flex items-center gap-1.5">
                 <Clock className="h-4 w-4" />
                 Pago Solicitado / En Espera
               </h4>
               <div>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{activePayment.label}</p>
+                <p className="text-sm font-bold text-slate-800">{activePayment.label}</p>
                 <p className="text-2xs text-slate-400 mt-0.5">Vence: {new Date(activePayment.dueDate).toLocaleDateString('es-MX')}</p>
               </div>
               <div className="flex items-end justify-between">
                 <span className="text-slate-400 text-xs">Monto a pagar:</span>
-                <span className="text-xl font-extrabold text-slate-900 dark:text-white">
+                <span className="text-xl font-extrabold text-slate-900">
                   {formatMoney(activePayment.amount, contract.currency)}
                 </span>
               </div>
@@ -956,7 +956,7 @@ export default function ClientPortalPage() {
               </button>
             </div>
           ) : activePayment ? (
-            <div className="glass rounded-3xl p-5 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 flex flex-col gap-2 text-left">
+            <div className="glass rounded-3xl p-5 border-slate-200 bg-slate-50/50 flex flex-col gap-2 text-left">
               <h4 className="text-xs font-bold uppercase text-slate-400 flex items-center gap-1.5">
                 <Clock className="h-4 w-4" />
                 Hito Inicial Pendiente
@@ -993,7 +993,7 @@ export default function ClientPortalPage() {
                     data-overdue={overdue}
                   >
                     <div>
-                      <h5 className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5 flex-wrap">
+                      <h5 className="font-bold text-xs text-slate-900 flex items-center gap-1.5 flex-wrap">
                         {m.label}
                         {overdue && (
                           <span className="bg-red-550/15 border border-red-500/20 rounded px-1 py-0.25 text-4xs font-bold text-red-500 uppercase animate-pulse">
@@ -1018,10 +1018,8 @@ export default function ClientPortalPage() {
                     </div>
 
                     <div className="text-right">
-                      <p className="font-bold text-xs text-slate-800 dark:text-slate-200">{formatMoney(m.amount, contract.currency)}</p>
-                      <span className={`text-4xs font-bold uppercase ${
-                        m.status === 'confirmed' ? 'text-indigo-500' : m.status === 'marked_paid' ? 'text-emerald-500' : m.status === 'requested' ? 'text-amber-500' : 'text-slate-400'
-                      }`}>
+                      <p className="font-bold text-xs text-slate-800">{formatMoney(m.amount, contract.currency)}</p>
+                      <span className={`text-4xs font-bold uppercase ${ m.status === 'confirmed' ? 'text-indigo-500' : m.status === 'marked_paid' ? 'text-emerald-500' : m.status === 'requested' ? 'text-amber-500' : 'text-slate-400' }`}>
                         {m.status === 'pending' ? 'pendiente' : m.status === 'requested' ? 'solicitado' : m.status === 'marked_paid' ? 'verificando' : 'confirmado'}
                       </span>
                     </div>
@@ -1082,17 +1080,17 @@ export default function ClientPortalPage() {
 
       {showRevisionModal && contract && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md overflow-y-auto print:hidden">
-          <div className="relative bg-white dark:bg-slate-950 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl border border-rose-500/20 animate-in zoom-in-95 duration-200">
+          <div className="relative bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl border border-rose-500/20 animate-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900 sticky top-0 z-10 rounded-t-3xl">
-              <h3 className="font-extrabold text-rose-600 dark:text-rose-400 flex items-center gap-2 text-lg">
+            <div className="flex items-center justify-between border-b border-slate-200 p-5 bg-white sticky top-0 z-10 rounded-t-3xl">
+              <h3 className="font-extrabold text-rose-600 flex items-center gap-2 text-lg">
                 <AlertTriangle className="h-5 w-5 animate-pulse text-rose-500" />
                 Proponer Cambios y Solicitar Revisión
               </h3>
               <button
                 type="button"
                 onClick={() => setShowRevisionModal(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors z-20"
+                className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 :bg-slate-900 text-slate-400 hover:text-slate-700 :text-slate-300 transition-colors z-20"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1103,55 +1101,55 @@ export default function ClientPortalPage() {
               
               {/* Section 1: Client Details */}
               <div className="flex flex-col gap-4">
-                <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">1. Tus Datos de Facturación (Cliente)</h4>
+                <h4 className="text-xs font-bold text-rose-650 uppercase tracking-wider border-b border-slate-200 pb-2">1. Tus Datos de Facturación (Cliente)</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Nombre / Razón Social</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Nombre / Razón Social</label>
                     <input
                       type="text"
                       required
                       value={editClientName}
                       onChange={(e) => setEditClientName(e.target.value)}
-                      className="rounded-xl border border-slate-350 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                      className="rounded-xl border border-slate-350 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none transition-all duration-300"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Correo Electrónico</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Correo Electrónico</label>
                     <input
                       type="email"
                       required
                       value={editClientEmail}
                       onChange={(e) => setEditClientEmail(e.target.value)}
-                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                      className="rounded-xl border border-slate-355 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none transition-all duration-300"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Teléfono de Contacto</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Teléfono de Contacto</label>
                     <input
                       type="text"
                       value={editClientPhone}
                       onChange={(e) => setEditClientPhone(e.target.value)}
-                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                      className="rounded-xl border border-slate-355 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none transition-all duration-300"
                       placeholder="Ej. +525512345678"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Tu RFC</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Tu RFC</label>
                     <input
                       type="text"
                       value={editClientRfc}
                       onChange={(e) => setEditClientRfc(e.target.value.toUpperCase())}
-                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white font-mono transition-all duration-300"
+                      className="rounded-xl border border-slate-355 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none font-mono transition-all duration-300"
                       placeholder="Ej. GUEH860710MX3"
                       maxLength={13}
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Régimen Fiscal</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Régimen Fiscal</label>
                     <select
                       value={editClientRegimen}
                       onChange={(e) => setEditClientRegimen(e.target.value)}
-                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white bg-slate-900 transition-all duration-300"
+                      className="rounded-xl border border-slate-355 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none bg-slate-900 transition-all duration-300"
                     >
                       <option value="">-- Selecciona Régimen --</option>
                       <option value="601 - General de Ley Personas Morales">601 - General de Ley Personas Morales</option>
@@ -1164,12 +1162,12 @@ export default function ClientPortalPage() {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Código Postal</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Código Postal</label>
                     <input
                       type="text"
                       value={editClientPostal}
                       onChange={(e) => setEditClientPostal(e.target.value)}
-                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                      className="rounded-xl border border-slate-355 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none transition-all duration-300"
                       placeholder="Ej. 06000"
                       maxLength={5}
                     />
@@ -1179,24 +1177,24 @@ export default function ClientPortalPage() {
 
               {/* Section 2: Scope, Budget, and Taxes */}
               <div className="flex flex-col gap-4">
-                <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">2. Configuración del Proyecto y Retenciones</h4>
+                <h4 className="text-xs font-bold text-rose-650 uppercase tracking-wider border-b border-slate-200 pb-2">2. Configuración del Proyecto y Retenciones</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Scope Input */}
                   <div className="md:col-span-2 flex flex-col gap-1.5">
-                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Concepto y Alcance de Trabajo</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Concepto y Alcance de Trabajo</label>
                     <textarea
                       rows={4}
                       required
                       value={editScopeDescription}
                       onChange={(e) => setEditScopeDescription(e.target.value)}
-                      className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-4 py-2.5 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                      className="rounded-xl border border-slate-355 bg-transparent px-4 py-2.5 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none transition-all duration-300"
                     />
                   </div>
 
                   {/* Budget & Currency */}
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Presupuesto Total</label>
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Presupuesto Total</label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
                         <input
@@ -1205,16 +1203,16 @@ export default function ClientPortalPage() {
                           required
                           value={editTotalAmount || ""}
                           onChange={(e) => handleEditTotalAmountChange(Number(e.target.value))}
-                          className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent pl-6 pr-3 py-2 text-xs font-bold focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                          className="w-full rounded-xl border border-slate-355 bg-transparent pl-6 pr-3 py-2 text-xs font-bold focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none transition-all duration-300"
                         />
                       </div>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Moneda</label>
+                      <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Moneda</label>
                       <select
                         value={editCurrency}
                         onChange={(e) => setEditCurrency(e.target.value as 'MXN' | 'USD')}
-                        className="rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white bg-slate-900 font-bold transition-all duration-300"
+                        className="rounded-xl border border-slate-355 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none bg-slate-900 font-bold transition-all duration-300"
                       >
                         <option value="MXN">Pesos Mexicanos (MXN)</option>
                         <option value="USD">Dólares Americanos (USD)</option>
@@ -1225,24 +1223,24 @@ export default function ClientPortalPage() {
 
                 {/* Tax Checkboxes */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start mt-2">
-                  <div className="flex flex-col gap-3 bg-slate-100/50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1 block">Retención de Impuestos (México)</span>
+                  <div className="flex flex-col gap-3 bg-slate-100/50 p-4 rounded-xl border border-slate-200">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1 block">Retención de Impuestos (México)</span>
                     <div className="flex flex-col gap-2">
-                      <label className="flex items-center gap-2 text-xs text-slate-750 dark:text-slate-350 cursor-pointer select-none">
+                      <label className="flex items-center gap-2 text-xs text-slate-750 cursor-pointer select-none">
                         <input
                           type="checkbox"
                           checked={editRetencionIsr}
                           onChange={(e) => setEditRetencionIsr(e.target.checked)}
-                          className="rounded border-slate-300 dark:border-slate-700 text-indigo-650 focus:ring-indigo-500"
+                          className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500"
                         />
                         Retención ISR (10% Freelancer)
                       </label>
-                      <label className="flex items-center gap-2 text-xs text-slate-750 dark:text-slate-350 cursor-pointer select-none">
+                      <label className="flex items-center gap-2 text-xs text-slate-750 cursor-pointer select-none">
                         <input
                           type="checkbox"
                           checked={editRetencionIva}
                           onChange={(e) => setEditRetencionIva(e.target.checked)}
-                          className="rounded border-slate-300 dark:border-slate-700 text-indigo-650 focus:ring-indigo-500"
+                          className="rounded border-slate-300 text-indigo-650 focus:ring-indigo-500"
                         />
                         Retención IVA (10.667% / 2/3 partes)
                       </label>
@@ -1251,30 +1249,30 @@ export default function ClientPortalPage() {
 
                   {/* Tax Breakdown */}
                   <div className="md:col-span-2 bg-rose-500/5 p-4 rounded-xl border border-rose-500/10 flex flex-col gap-2 text-xs">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-550 dark:text-slate-400 mb-1 block">Desglose Fiscal Estimado</span>
-                    <div className="flex justify-between border-b border-slate-200/50 dark:border-slate-800/80 pb-1 text-slate-650 dark:text-slate-400">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-550 mb-1 block">Desglose Fiscal Estimado</span>
+                    <div className="flex justify-between border-b border-slate-200/50 pb-1 text-slate-650">
                       <span>Subtotal (Monto del Proyecto):</span>
                       <span className="font-semibold">{formatMoney(editTotalAmount, editCurrency)}</span>
                     </div>
-                    <div className="flex justify-between border-b border-slate-200/50 dark:border-slate-800/80 pb-1 text-slate-650 dark:text-slate-400">
+                    <div className="flex justify-between border-b border-slate-200/50 pb-1 text-slate-650">
                       <span>IVA Trasladado (16%):</span>
                       <span className="font-semibold">{formatMoney(editTotalAmount * 0.16, editCurrency)}</span>
                     </div>
                     {editRetencionIsr && (
-                      <div className="flex justify-between text-rose-600 border-b border-slate-200/50 dark:border-slate-800/80 pb-1">
+                      <div className="flex justify-between text-rose-600 border-b border-slate-200/50 pb-1">
                         <span>Retención ISR (10%):</span>
                         <span className="font-semibold">-{formatMoney(editTotalAmount * 0.10, editCurrency)}</span>
                       </div>
                     )}
                     {editRetencionIva && (
-                      <div className="flex justify-between text-rose-600 border-b border-slate-200/50 dark:border-slate-800/80 pb-1">
+                      <div className="flex justify-between text-rose-600 border-b border-slate-200/50 pb-1">
                         <span>Retención IVA (10.667%):</span>
                         <span className="font-semibold">-{formatMoney(editTotalAmount * 0.16 * (2 / 3), editCurrency)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-slate-800 dark:text-white font-bold pt-1">
+                    <div className="flex justify-between text-slate-800 font-bold pt-1">
                       <span>Neto Estimado a Recibir:</span>
-                      <span className="text-rose-600 dark:text-rose-400">
+                      <span className="text-rose-600">
                         {formatMoney(
                           editTotalAmount +
                           (editTotalAmount * 0.16) -
@@ -1290,12 +1288,12 @@ export default function ClientPortalPage() {
 
               {/* Section 3: Milestones Schedule */}
               <div className="flex flex-col gap-4">
-                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2">
-                  <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider">3. Esquema de Cobro y Entregables</h4>
+                <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+                  <h4 className="text-xs font-bold text-rose-650 uppercase tracking-wider">3. Esquema de Cobro y Entregables</h4>
                   <button
                     type="button"
                     onClick={handleEditAddMilestone}
-                    className="flex items-center gap-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-3 py-1 text-xs font-bold uppercase transition-colors cursor-pointer"
+                    className="flex items-center gap-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/20 px-3 py-1 text-xs font-bold uppercase transition-colors cursor-pointer"
                   >
                     + Agregar Hito
                   </button>
@@ -1303,9 +1301,9 @@ export default function ClientPortalPage() {
 
                 <div className="flex flex-col gap-3">
                   {editMilestones.map((m, idx) => (
-                    <div key={m.id || idx} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-slate-100/30 dark:bg-slate-900/10 border border-slate-200/60 dark:border-slate-900/60 rounded-xl p-3">
+                    <div key={m.id || idx} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-slate-100/30 border border-slate-200/60 rounded-xl p-3">
                       <div className="sm:col-span-6">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">Concepto del Entregable</label>
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block mb-1.5">Concepto del Entregable</label>
                         <input
                           type="text"
                           required
@@ -1314,12 +1312,12 @@ export default function ClientPortalPage() {
                             const val = e.target.value;
                             setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, label: val } : item));
                           }}
-                          className="w-full rounded-xl border border-slate-350 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                          className="w-full rounded-xl border border-slate-350 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none transition-all duration-300"
                           placeholder="Ej. Anticipo o Entrega final"
                         />
                       </div>
                       <div className="sm:col-span-3">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">Fecha Vencimiento</label>
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block mb-1.5">Fecha Vencimiento</label>
                         <input
                           type="date"
                           required
@@ -1328,11 +1326,11 @@ export default function ClientPortalPage() {
                             const val = e.target.value;
                             setEditMilestones(prev => prev.map((item, i) => i === idx ? { ...item, dueDate: val } : item));
                           }}
-                          className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                          className="w-full rounded-xl border border-slate-355 bg-transparent px-3 py-2 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none transition-all duration-300"
                         />
                       </div>
                       <div className="sm:col-span-2">
-                        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-1.5">Importe ({editCurrency})</label>
+                        <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 block mb-1.5">Importe ({editCurrency})</label>
                         <div className="relative">
                           <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
                           <input
@@ -1341,7 +1339,7 @@ export default function ClientPortalPage() {
                             min={1}
                             value={m.amount || ""}
                             onChange={(e) => handleEditMilestoneAmount(idx, Number(e.target.value))}
-                            className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent pl-5 pr-2 py-2 text-xs font-bold focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                            className="w-full rounded-xl border border-slate-355 bg-transparent pl-5 pr-2 py-2 text-xs font-bold focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none transition-all duration-300"
                           />
                         </div>
                       </div>
@@ -1365,13 +1363,13 @@ export default function ClientPortalPage() {
                   const difference = editTotalAmount - currentSum;
                   if (Math.abs(difference) <= 0.01) {
                     return (
-                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/5 border border-emerald-500/10 rounded-xl px-4 py-2 mt-1">
+                      <p className="text-xs text-emerald-600 font-semibold bg-emerald-500/5 border border-emerald-500/10 rounded-xl px-4 py-2 mt-1">
                         ¡Balance Correcto! La suma de los hitos coincide con el presupuesto total: {formatMoney(currentSum, editCurrency)}.
                       </p>
                     );
                   } else {
                     return (
-                      <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold bg-amber-500/5 border border-amber-500/10 rounded-xl px-4 py-2 mt-1">
+                      <p className="text-xs text-amber-600 font-semibold bg-amber-500/5 border border-amber-500/10 rounded-xl px-4 py-2 mt-1">
                         Suma Incorrecta: La suma de los hitos es {formatMoney(currentSum, editCurrency)}. {difference > 0 ? "Faltan" : "Exceden"} {formatMoney(Math.abs(difference), editCurrency)} para coincidir con el total de {formatMoney(editTotalAmount, editCurrency)}.
                       </p>
                     );
@@ -1381,8 +1379,8 @@ export default function ClientPortalPage() {
 
               {/* Section 4: Clauses Checklist */}
               <div className="flex flex-col gap-4">
-                <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-2">4. Cláusulas del Acuerdo</h4>
-                <div className="grid grid-cols-1 gap-2 max-h-[250px] overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 bg-slate-100/20 dark:bg-slate-900/10">
+                <h4 className="text-xs font-bold text-rose-650 uppercase tracking-wider border-b border-slate-200 pb-2">4. Cláusulas del Acuerdo</h4>
+                <div className="grid grid-cols-1 gap-2 max-h-[250px] overflow-y-auto border border-slate-200 rounded-xl p-3.5 bg-slate-100/20">
                   {MOCK_CLAUSES.map((clause) => {
                     const isChecked = editSelectedClauses.includes(clause.id);
                     return (
@@ -1395,17 +1393,17 @@ export default function ClientPortalPage() {
                               : [...prev, clause.id]
                           );
                         }}
-                        className={`flex gap-3 items-start p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 cursor-pointer select-none transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50 ${isChecked ? 'bg-rose-500/5 border-rose-500/30! ring-1 ring-rose-500/20' : ''}`}
+                        className={`flex gap-3 items-start p-3 rounded-xl border border-slate-200 cursor-pointer select-none transition-colors hover:bg-slate-50 :bg-slate-900/50 ${isChecked ? 'bg-rose-500/5 border-rose-500/30! ring-1 ring-rose-500/20' : ''}`}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => {}} // handled by parent div onClick
-                          className="rounded border-slate-355 dark:border-slate-700 text-rose-500 focus:ring-rose-500 mt-0.5 pointer-events-none"
+                          className="rounded border-slate-355 text-rose-500 focus:ring-rose-500 mt-0.5 pointer-events-none"
                         />
                         <div className="text-xs">
-                          <h5 className="font-bold text-slate-850 dark:text-slate-200">{clause.title} <span className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded px-2 py-0.5 font-semibold uppercase ml-2">{clause.category}</span></h5>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{clause.content}</p>
+                          <h5 className="font-bold text-slate-850">{clause.title} <span className="text-[10px] text-slate-500 bg-slate-100 rounded px-2 py-0.5 font-semibold uppercase ml-2">{clause.category}</span></h5>
+                          <p className="text-xs text-slate-500 mt-1 leading-relaxed">{clause.content}</p>
                         </div>
                       </div>
                     );
@@ -1414,9 +1412,9 @@ export default function ClientPortalPage() {
               </div>
 
               {/* Section 5: Revision Reason */}
-              <div className="flex flex-col gap-1.5 border-t border-slate-200 dark:border-slate-800 pt-6">
-                <h4 className="text-xs font-bold text-rose-650 dark:text-rose-455 uppercase tracking-wider pb-2">5. Comentarios de la Revisión (Requerido)</h4>
-                <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Explica los motivos de estos cambios al freelancer</label>
+              <div className="flex flex-col gap-1.5 border-t border-slate-200 pt-6">
+                <h4 className="text-xs font-bold text-rose-650 uppercase tracking-wider pb-2">5. Comentarios de la Revisión (Requerido)</h4>
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1">Explica los motivos de estos cambios al freelancer</label>
                 <div className="relative">
                   <textarea
                     required
@@ -1425,17 +1423,17 @@ export default function ClientPortalPage() {
                     placeholder="Ej. Favor de corregir el monto de los hitos y modificar el alcance del proyecto de acuerdo a lo platicado..."
                     value={revisionReason}
                     onChange={(e) => setRevisionReason(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/10 px-4 py-3 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300 resize-none"
+                    className="w-full rounded-2xl border border-slate-350 bg-slate-50/50 px-4 py-3 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none transition-all duration-300 resize-none"
                   />
-                  <span className="absolute bottom-3 right-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 select-none">
+                  <span className="absolute bottom-3 right-3 text-[10px] font-semibold text-slate-400 select-none">
                     {revisionReason.length}/1000
                   </span>
                 </div>
               </div>
 
               {/* Visual Diff Panel */}
-              <div className="border-t border-slate-200 dark:border-slate-800 pt-6">
-                <span className="text-xs font-bold text-slate-900 dark:text-white block mb-4 uppercase tracking-wider">Comparativa de Cambios (Diff Visual)</span>
+              <div className="border-t border-slate-200 pt-6">
+                <span className="text-xs font-bold text-slate-900 block mb-4 uppercase tracking-wider">Comparativa de Cambios (Diff Visual)</span>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Left: Original */}
@@ -1446,7 +1444,7 @@ export default function ClientPortalPage() {
                         {formatMoney(contract.totalAmount, contract.currency)}
                       </span>
                     </div>
-                    <div className="text-xs text-slate-650 dark:text-slate-450 flex flex-col gap-2">
+                    <div className="text-xs text-slate-650 flex flex-col gap-2">
                       <div><strong className="text-4xs uppercase tracking-wider text-slate-400">Cliente:</strong> {contract.clientName} ({contract.clientEmail})</div>
                       <div><strong className="text-4xs uppercase tracking-wider text-slate-400">Alcance:</strong></div>
                       <div className="whitespace-pre-wrap line-through leading-relaxed">
@@ -1463,7 +1461,7 @@ export default function ClientPortalPage() {
                         {formatMoney(editTotalAmount, editCurrency)}
                       </span>
                     </div>
-                    <div className="text-xs text-slate-850 dark:text-white flex flex-col gap-2">
+                    <div className="text-xs text-slate-850 flex flex-col gap-2">
                       <div><strong className="text-4xs uppercase tracking-wider text-slate-500">Cliente:</strong> {editClientName} ({editClientEmail})</div>
                       <div><strong className="text-4xs uppercase tracking-wider text-slate-500">Alcance:</strong></div>
                       <div className="whitespace-pre-wrap leading-relaxed">
@@ -1475,11 +1473,11 @@ export default function ClientPortalPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="border-t border-slate-200 dark:border-slate-800 pt-6 flex justify-end gap-3">
+              <div className="border-t border-slate-200 pt-6 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setShowRevisionModal(false)}
-                  className="rounded-xl bg-slate-100 dark:bg-slate-800 px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                  className="rounded-xl bg-slate-100 px-5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-200 :bg-slate-700 transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -1497,29 +1495,29 @@ export default function ClientPortalPage() {
       )}
       {isCancellingContract && contract && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
-          <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-rose-500/20">
+          <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white shadow-2xl border border-rose-500/20">
             <button
               type="button"
               onClick={() => {
                 setIsCancellingContract(false);
                 setCancelReason("");
               }}
-              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 :bg-slate-900 text-slate-400 hover:text-slate-700 :text-slate-300 transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <h3 className="text-xl font-bold flex items-center gap-2 text-rose-600 dark:text-rose-455">
+            <h3 className="text-xl font-bold flex items-center gap-2 text-rose-600">
               <AlertTriangle className="h-6 w-6 text-rose-500 animate-pulse" />
               Cancelar Contrato
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+            <p className="text-xs text-slate-500 mt-2 leading-relaxed">
               Ingresa el motivo de cancelación del contrato. Se notificará al freelancer y quedará registrado en la bitácora de auditoría.
             </p>
 
             <div className="mt-4 flex flex-col gap-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Motivo de Cancelación</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Motivo de Cancelación</label>
                 <div className="relative">
                   <textarea
                     rows={4}
@@ -1528,9 +1526,9 @@ export default function ClientPortalPage() {
                     placeholder="Ej. Mutuo acuerdo, cambio de proveedor, etc..."
                     value={cancelReason}
                     onChange={(e) => setCancelReason(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/10 px-4 py-3 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none dark:text-white transition-all duration-300 resize-none"
+                    className="w-full rounded-2xl border border-slate-350 bg-slate-50/50 px-4 py-3 text-xs focus:border-rose-500 focus:ring-2 focus:ring-rose-500/10 focus:outline-none transition-all duration-300 resize-none"
                   />
-                  <span className="absolute bottom-3 right-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 select-none">
+                  <span className="absolute bottom-3 right-3 text-[10px] font-semibold text-slate-400 select-none">
                     {cancelReason.length}/500
                   </span>
                 </div>
@@ -1543,7 +1541,7 @@ export default function ClientPortalPage() {
                     setIsCancellingContract(false);
                     setCancelReason("");
                   }}
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 :text-slate-200 transition-colors"
                 >
                   Cerrar
                 </button>
@@ -1565,11 +1563,11 @@ export default function ClientPortalPage() {
       {/* Warning/Confirmation Modal */}
       {warningModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
-          <div className={`relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border ${warningModal.isError ? 'border-red-500/20' : 'border-amber-500/20'}`}>
+          <div className={`relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white shadow-2xl border ${warningModal.isError ? 'border-red-500/20' : 'border-amber-500/20'}`}>
             <button
               type="button"
               onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
-              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 :bg-slate-900 text-slate-400 hover:text-slate-700 :text-slate-300 transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -1578,7 +1576,7 @@ export default function ClientPortalPage() {
               <AlertTriangle className={`h-6 w-6 ${warningModal.isError ? 'text-red-500 animate-pulse' : 'text-amber-500 animate-pulse'}`} />
               {warningModal.title}
             </h3>
-            <p className="text-xs text-slate-650 dark:text-slate-400 mt-3 leading-relaxed whitespace-pre-wrap">
+            <p className="text-xs text-slate-650 mt-3 leading-relaxed whitespace-pre-wrap">
               {warningModal.message}
             </p>
             <div className="flex gap-3 justify-end mt-6">
@@ -1595,7 +1593,7 @@ export default function ClientPortalPage() {
                   <button
                     type="button"
                     onClick={() => setWarningModal(prev => ({ ...prev, isOpen: false }))}
-                    className="rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                    className="rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-700 :text-slate-200 transition-colors"
                   >
                     Cancelar
                   </button>

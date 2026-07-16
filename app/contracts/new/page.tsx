@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { getProfile, saveContract, saveMilestones, getContracts, getPaymentProfiles } from "@/lib/storageClient";
 import { Contract, Milestone, Profile, PaymentProfile } from "@/lib/types";
+import { AppShell } from "@/app/components/AppShell";
 
 // Import new components
 import { useContractWizard } from "@/app/hooks/useContractWizard";
@@ -77,17 +78,17 @@ function NewContractForm() {
         <div className="glass rounded-3xl p-8 border border-indigo-500/20 shadow-2xl relative overflow-hidden text-left flex flex-col gap-6 w-full">
           <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-indigo-500/10 blur-3xl animate-pulse" />
           
-          <div className="flex items-center gap-3.5 border-b border-slate-100 dark:border-slate-850 pb-5">
+          <div className="flex items-center gap-3.5 border-b border-slate-100 pb-5">
             <div className="h-10 w-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
               <ShieldAlert className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Límite del Plan Alcanzado</h1>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">Límite del Plan Alcanzado</h1>
               <p className="text-xs text-slate-400 mt-0.5">Límite de contratos para tu plan activo</p>
             </div>
           </div>
 
-          <div className="text-sm leading-relaxed text-slate-500 dark:text-slate-400 flex flex-col gap-3 font-light">
+          <div className="text-sm leading-relaxed text-slate-500 flex flex-col gap-3 font-light">
             <p>
               Has alcanzado el límite máximo de **{currentLimit} contratos** permitidos en tu **Plan {isStarter ? "Starter" : "Gratuito"}**.
             </p>
@@ -96,18 +97,18 @@ function NewContractForm() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 dark:bg-indigo-500/10 p-5 flex justify-between items-center mt-2">
+          <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-5 flex justify-between items-center mt-2">
             <div>
-              <span className="font-bold text-sm text-slate-800 dark:text-slate-200">{nextPlanName}</span>
+              <span className="font-bold text-sm text-slate-800">{nextPlanName}</span>
               <p className="text-3xs text-slate-400 mt-0.5">{nextPlanFeatures}</p>
             </div>
             <span className="text-xs font-black text-emerald-500">{nextPlanCost}</span>
           </div>
 
-          <div className="flex items-center justify-between gap-3 border-t border-slate-100 dark:border-slate-850 pt-5 mt-2">
+          <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-5 mt-2">
             <Link
               href="/dashboard"
-              className="rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-650 dark:text-slate-400 px-5 py-2.5 text-xs font-bold transition-all cursor-pointer"
+              className="rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-650 px-5 py-2.5 text-xs font-bold transition-all cursor-pointer"
             >
               Volver al Panel
             </Link>
@@ -185,12 +186,12 @@ function NewContractForm() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 h-full">
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6">
       {/* Return to Dashboard */}
       <div>
         <Link 
           href="/dashboard"
-          className="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+          className="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-700 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Volver al Panel
@@ -200,25 +201,25 @@ function NewContractForm() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">Crear Nuevo Contrato</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Redacta propuestas formales con hitos de cobro y garantías legales en minutos.
           </p>
         </div>
 
         {/* Custom Step indicator */}
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500">
-          <span className={wizard.step === 1 ? "text-indigo-600 dark:text-indigo-400" : ""}>1. Detalles</span>
+        <div className="flex items-center gap-2 bg-slate-100 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-500">
+          <span className={wizard.step === 1 ? "text-indigo-600 " : ""}>1. Detalles</span>
           <ChevronRight className="h-3 w-3" />
-          <span className={wizard.step === 2 ? "text-indigo-600 dark:text-indigo-400" : ""}>2. Esquema Financiero</span>
+          <span className={wizard.step === 2 ? "text-indigo-600 " : ""}>2. Esquema Financiero</span>
           <ChevronRight className="h-3 w-3" />
-          <span className={wizard.step === 3 ? "text-indigo-600 dark:text-indigo-400" : ""}>3. Cláusulas y SPEI</span>
+          <span className={wizard.step === 3 ? "text-indigo-600 " : ""}>3. Cláusulas y SPEI</span>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 w-full h-full lg:min-h-[600px]">
+      <div className="flex flex-col lg:flex-row gap-6 w-full lg:min-h-[600px]">
         {/* Left pane: Form Steps */}
-        <div className="w-full lg:w-3/5 h-full">
-          <form onSubmit={handleSubmit} className="glass rounded-3xl p-6 md:p-8 flex flex-col gap-6 text-left h-full">
+        <div className="w-full lg:w-3/5">
+          <form onSubmit={handleSubmit} className="glass rounded-3xl p-6 md:p-8 flex flex-col gap-6 text-left">
             {wizard.step === 1 && (
               <div className="flex flex-col gap-6 animate-in fade-in-50 duration-200">
                 <TemplateGallery 
@@ -297,8 +298,10 @@ function NewContractForm() {
 
 export default function NewContractPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center p-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>}>
-      <NewContractForm />
-    </Suspense>
+    <AppShell activePath="/contracts/new">
+      <Suspense fallback={<div className="flex items-center justify-center p-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>}>
+        <NewContractForm />
+      </Suspense>
+    </AppShell>
   );
 }

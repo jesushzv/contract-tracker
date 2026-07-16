@@ -46,7 +46,7 @@ export function ClientDetailsStep({
             placeholder="Ej. Sofía Garza, S.A. de C.V."
             value={clientName}
             onChange={(e) => setClientName(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
+            className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
           />
         </div>
         
@@ -58,7 +58,7 @@ export function ClientDetailsStep({
             placeholder="sofia@empresa.com"
             value={clientEmail}
             onChange={(e) => setClientEmail(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
+            className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
           />
         </div>
 
@@ -69,17 +69,17 @@ export function ClientDetailsStep({
             placeholder="Ej. +525512345678"
             value={clientPhone}
             onChange={(e) => setClientPhone(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
+            className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
           />
         </div>
       </div>
 
       {/* Client MX Fiscal details (RFC, Regimen, CP) */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800/80 p-5 flex flex-col gap-4 bg-slate-50/20 dark:bg-slate-900/10 transition-all">
+      <div className="rounded-2xl border border-slate-200 p-5 flex flex-col gap-4 bg-slate-50/20 transition-all">
         <button 
           type="button" 
           onClick={() => setShowFiscal(!showFiscal)}
-          className="text-xs font-extrabold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1.5 uppercase tracking-wider transition-colors"
+          className="text-xs font-extrabold text-slate-500 hover:text-slate-700 flex items-center gap-1.5 uppercase tracking-wider transition-colors"
         >
           <Building className="h-4 w-4 text-slate-400" />
           Agregar Datos Fiscales del Cliente (Facturación)
@@ -97,9 +97,7 @@ export function ClientDetailsStep({
                 value={clientRfc}
                 onChange={(e) => setClientRfc(e.target.value.toUpperCase())}
                 onBlur={handleClientRfcBlur}
-                className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:ring-1 focus:outline-none transition-all shadow-inner uppercase font-mono ${
-                  clientRfcError ? "border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-500/5" : "border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 focus:border-indigo-500 focus:ring-indigo-500"
-                }`}
+                className={`w-full rounded-xl border px-4 py-2.5 text-sm focus:ring-1 focus:outline-none transition-all shadow-inner uppercase font-mono ${ clientRfcError ? "border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-500/5" : "border-slate-200 bg-white/10 text-slate-800 focus:border-indigo-500 focus:ring-indigo-500" }`}
               />
               {clientRfcError && (
                 <span className="text-3xs text-red-500 font-semibold mt-1 block">{clientRfcError}</span>
@@ -111,7 +109,7 @@ export function ClientDetailsStep({
               <select
                 value={clientRegimen}
                 onChange={(e) => setClientRegimen(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner dark:bg-slate-900"
+                className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
               >
                 <option value="">Opcional (Selecciona Régimen)</option>
                 <option value="601 - General de Ley Personas Morales">601 - General de Ley Personas Morales</option>
@@ -131,7 +129,7 @@ export function ClientDetailsStep({
                 placeholder="Opcional (5 dígitos)"
                 value={clientPostal}
                 onChange={(e) => setClientPostal(e.target.value.replace(/\D/g, ""))}
-                className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
+                className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
               />
             </div>
           </div>
@@ -146,7 +144,7 @@ export function ClientDetailsStep({
           placeholder="Describe detalladamente los entregables del proyecto. Escribe un texto claro y preciso sobre lo que el cliente va a recibir..."
           value={scopeDescription}
           onChange={(e) => setScopeDescription(e.target.value)}
-          className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner leading-relaxed"
+          className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner leading-relaxed"
         />
       </div>
 

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { FileText, ExternalLink, Filter, Search, Eye } from "lucide-react";
 import { getContracts, getMilestones, getAuditLogs } from "@/lib/storageClient";
 import { Contract } from "@/lib/types";
+import { AppShell } from "../../components/AppShell";
 
 interface DocumentItem {
   id: string;
@@ -163,17 +164,18 @@ export default function DocumentsPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 text-slate-800 dark:text-slate-200">
-      <div>
-        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+    <AppShell activePath="/dashboard/documents">
+      <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 text-slate-800">
+        <div>
+        <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
           Expediente de Documentos
         </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        <p className="text-sm text-slate-500 mt-1">
           Historial y repositorio unificado de contratos, recibos SPEI y registros de auditoría de todos tus proyectos.
         </p>
       </div>
 
-      <div className="glass rounded-3xl p-6 border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-950/40 flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="glass rounded-3xl p-6 border border-slate-200 bg-white/60 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex flex-1 w-full relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
@@ -181,12 +183,12 @@ export default function DocumentsPage() {
             placeholder="Buscar por nombre, cliente, folio..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white/40 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:border-indigo-500 focus:outline-none dark:text-white transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-white/40 border border-slate-200 rounded-xl text-sm focus:border-indigo-500 focus:outline-none transition-all"
           />
         </div>
 
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
-          <div className="flex items-center gap-2 bg-white/40 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5">
+          <div className="flex items-center gap-2 bg-white/40 border border-slate-200 rounded-xl px-3 py-1.5">
             <Filter className="h-4 w-4 text-slate-400" />
             <select
               value={selectedProject}
@@ -200,7 +202,7 @@ export default function DocumentsPage() {
             </select>
           </div>
 
-          <div className="flex items-center gap-2 bg-white/40 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5">
+          <div className="flex items-center gap-2 bg-white/40 border border-slate-200 rounded-xl px-3 py-1.5">
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
@@ -215,7 +217,7 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      <div className="glass rounded-3xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-950/20 overflow-hidden shadow-sm">
+      <div className="glass rounded-3xl border border-slate-200 bg-white/40 overflow-hidden shadow-sm">
         {loading ? (
           <div className="text-center py-12 text-slate-450 text-sm">
             Cargando expedientes...
@@ -223,13 +225,13 @@ export default function DocumentsPage() {
         ) : filteredDocs.length === 0 ? (
           <div className="text-center py-16 text-slate-450 text-sm flex flex-col items-center justify-center gap-3">
             <FileText className="h-10 w-10 text-slate-350" />
-            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-300">No se encontraron documentos</h4>
+            <h4 className="font-bold text-sm text-slate-800">No se encontraron documentos</h4>
             <p className="text-xs text-slate-400">Intenta cambiar los filtros o el término de búsqueda.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-100 dark:divide-slate-900">
-              <thead className="bg-slate-50 dark:bg-slate-900/60">
+            <table className="min-w-full divide-y divide-slate-100">
+              <thead className="bg-slate-50">
                 <tr>
                   <th className="px-6 py-4 text-left text-2xs font-extrabold text-slate-400 uppercase tracking-widest">Documento</th>
                   <th className="px-6 py-4 text-left text-2xs font-extrabold text-slate-400 uppercase tracking-widest">Cliente / Contrato</th>
@@ -238,34 +240,34 @@ export default function DocumentsPage() {
                   <th className="px-6 py-4 text-right text-2xs font-extrabold text-slate-400 uppercase tracking-widest">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-900/60">
+              <tbody className="divide-y divide-slate-100">
                 {filteredDocs.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors">
+                  <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center flex-shrink-0">
                           <FileText className="h-4.5 w-4.5" />
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-slate-850 dark:text-white block">{doc.name}</span>
+                          <span className="text-xs font-bold text-slate-850 block">{doc.name}</span>
                           <span className="text-3xs text-slate-400 capitalize">{doc.type === 'audit_log' ? 'Bitácora de Auditoría' : doc.type === 'receipt' ? 'Comprobante de pago' : 'Contrato Legal'}</span>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{doc.clientName}</span>
+                        <span className="text-xs font-semibold text-slate-700">{doc.clientName}</span>
                         <span className="text-3xs text-slate-400 max-w-[200px] truncate">{doc.contractTitle}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 font-mono">
+                    <td className="px-6 py-4 text-xs text-slate-500 font-mono">
                       {new Date(doc.date).toLocaleDateString("es-MX", { year: 'numeric', month: 'short', day: 'numeric' })}
                     </td>
                     <td className="px-6 py-4">
                       {doc.type === 'receipt' ? (
                         <div className="flex flex-col gap-0.5">
                           {doc.referenceNumber && (
-                            <span className="text-3xs text-slate-500 dark:text-slate-400 font-mono">Ref: {doc.referenceNumber}</span>
+                            <span className="text-3xs text-slate-500 font-mono">Ref: {doc.referenceNumber}</span>
                           )}
                           <span className="text-3xs text-slate-400">Subido por: {doc.uploadedBy === 'freelancer' ? 'Freelancer' : 'Cliente'}</span>
                         </div>
@@ -300,5 +302,6 @@ export default function DocumentsPage() {
         )}
       </div>
     </div>
+    </AppShell>
   );
 }

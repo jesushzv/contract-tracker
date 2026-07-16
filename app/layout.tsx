@@ -50,7 +50,7 @@ export default async function RootLayout({
       lang="es"
       className={`${outfit.variable} ${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#fafbfe] text-[#0f172a] dark:bg-[#090d16] dark:text-[#f8fafc] transition-colors duration-300">
+      <body className="min-h-full flex flex-col bg-[#fafbfe] text-[#0f172a] transition-colors duration-300">
         <ApiKeyGuard>
           <Header hasAuthCookie={hasAuthCookie} useSupabase={useSupabase} />
 
@@ -58,12 +58,12 @@ export default async function RootLayout({
             {children}
           </main>
 
-          <footer className="border-t border-[#6366f1]/10 bg-white/50 py-8 dark:bg-[#090d16]/30 dark:border-[#6366f1]/20 print:hidden">
-            <div className="mx-auto max-w-7xl px-4 text-center text-sm text-slate-500 dark:text-slate-400 sm:px-6 lg:px-8">
+          <footer className="border-t border-[#6366f1]/10 bg-white/50 py-8 print:hidden">
+            <div className="mx-auto max-w-7xl px-4 text-center text-sm text-slate-500 sm:px-6 lg:px-8">
               <p className="font-medium">
                 &copy; {new Date().getFullYear()} Anticipo MX. Creado para los freelancers en México.
               </p>
-              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+              <p className="mt-1 text-xs text-slate-400">
                 Aviso legal: Los formatos proveídos son plantillas de carácter ilustrativo y no constituyen asesoría legal.
               </p>
             </div>

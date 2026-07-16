@@ -13,7 +13,7 @@ export const SlideOver: React.FC<SlideOverProps> = ({ isOpen, onClose, title, ch
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-gray-900 bg-opacity-25 transition-opacity" onClick={onClose} />
+      <div className="absolute inset-0 bg-slate-900/50 transition-opacity" onClick={onClose} />
       <div className="fixed inset-y-0 right-0 max-w-full flex">
         <div className="w-screen max-w-md transform transition ease-in-out duration-300">
           <div className="h-full flex flex-col bg-white shadow-xl">

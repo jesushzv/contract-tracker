@@ -9,8 +9,9 @@
   --color-dark-bg: #111827;
   --color-dark-card: #1f2937;
   
-  --font-sans: 'Inter', var(--font-geist-sans), sans-serif;
-  --font-mono: 'Fira Code', var(--font-geist-mono), monospace;
+  --font-sans: var(--font-inter), sans-serif;
+  --font-heading: var(--font-outfit), sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
   
   --font-size-2xs: 0.6875rem; /* 11px */
   --font-size-3xs: 0.625rem;  /* 10px */
@@ -27,15 +28,6 @@
   --glow-color: transparent;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #111827;
-    --foreground: #f9fafb;
-    --card-bg: #1f2937;
-    --card-border: #374151;
-    --glow-color: transparent;
-  }
-}
 
 body {
   background-color: var(--background);
@@ -85,14 +77,6 @@ body {
   background: #9ca3af;
 }
 
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background: #4b5563;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #6b7280;
-  }
-}
 
 /* Pulse animation */
 @keyframes pulse-subtle {

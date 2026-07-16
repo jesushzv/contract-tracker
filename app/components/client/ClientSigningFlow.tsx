@@ -40,13 +40,13 @@ export function ClientSigningFlow({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
-      <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
+      <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white shadow-2xl border border-indigo-500/20">
         <button
           type="button"
           onClick={() => {
             setShowAcceptModal(false);
           }}
-          className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 :bg-slate-900 text-slate-400 hover:text-slate-700 :text-slate-300 transition-colors"
         >
           <X className="h-5 w-5" />
         </button>
@@ -55,26 +55,26 @@ export function ClientSigningFlow({
           <ShieldCheck className="h-6 w-6" />
           Aceptar Contrato de Servicios
         </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+        <p className="text-xs text-slate-500 mt-2 leading-relaxed">
           Al escribir tu nombre completo a continuación, confirmas tu consentimiento y aceptación de todos los términos detallados en esta propuesta, incluyendo el alcance, la tarifa de ${contract?.totalAmount?.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'} {contract?.currency || 'MXN'}, el esquema de anticipos y las cláusulas de ley adjuntas.
         </p>
 
         {/* Steps indicator */}
-        <div className="flex items-center justify-between w-full mt-4 mb-5 border-b border-slate-100 dark:border-slate-900 pb-3">
+        <div className="flex items-center justify-between w-full mt-4 mb-5 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${acceptStep === 'name' ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : 'bg-emerald-500 text-white'}`}>
               {acceptStep === 'otp' ? <Check className="h-3.5 w-3.5" /> : "1"}
             </span>
-            <span className={`text-xs font-semibold ${acceptStep === 'name' ? 'text-indigo-650 dark:text-indigo-400 font-bold' : 'text-slate-450 dark:text-slate-500'}`}>
+            <span className={`text-xs font-semibold ${acceptStep === 'name' ? 'text-indigo-650 font-bold' : 'text-slate-450 '}`}>
               Identidad
             </span>
           </div>
-          <div className="h-[1px] flex-1 mx-3 bg-slate-200 dark:bg-slate-800" />
+          <div className="h-[1px] flex-1 mx-3 bg-slate-200" />
           <div className="flex items-center gap-2">
-            <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${acceptStep === 'otp' ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : 'bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-655'}`}>
+            <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${acceptStep === 'otp' ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : 'bg-slate-100 text-slate-400 '}`}>
               2
             </span>
-            <span className={`text-xs font-semibold ${acceptStep === 'otp' ? 'text-indigo-650 dark:text-indigo-400 font-bold' : 'text-slate-450 dark:text-slate-650'}`}>
+            <span className={`text-xs font-semibold ${acceptStep === 'otp' ? 'text-indigo-650 font-bold' : 'text-slate-450 '}`}>
               Código OTP
             </span>
           </div>
@@ -83,23 +83,23 @@ export function ClientSigningFlow({
         <form onSubmit={handleAcceptContract} className="mt-4 flex flex-col gap-4">
           {acceptStep === 'name' ? (
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Nombre completo del Firmante</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Nombre completo del Firmante</label>
               <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   type="text"
                   required
                   placeholder="Escribe tu nombre y apellido"
                   value={signerName}
                   onChange={(e) => setSignerName(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-transparent pl-10 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white transition-all duration-300"
+                  className="w-full rounded-2xl border border-slate-350 bg-transparent pl-10 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none transition-all duration-300"
                 />
               </div>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
               {debugOtp && (
-                <div className="bg-gradient-to-r from-slate-900 to-indigo-950 dark:from-slate-950 dark:to-indigo-950 border border-indigo-500/30 rounded-2xl p-4 text-xs text-indigo-300 dark:text-indigo-400 font-mono leading-relaxed shadow-lg flex items-start gap-3">
+                <div className="bg-gradient-to-r from-slate-900 to-indigo-950 border border-indigo-500/30 rounded-2xl p-4 text-xs text-indigo-300 font-mono leading-relaxed shadow-lg flex items-start gap-3">
                   <span className="text-base select-none mt-0.5">📟</span>
                   <div className="flex-1">
                     <strong className="text-indigo-455 font-bold block mb-1">SYSTEM_DEBUG_OTP</strong>
@@ -109,7 +109,7 @@ export function ClientSigningFlow({
                 </div>
               )}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Código de Firma Electrónica (OTP de 6 dígitos)</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Código de Firma Electrónica (OTP de 6 dígitos)</label>
                 <input
                   type="text"
                   maxLength={6}
@@ -118,11 +118,11 @@ export function ClientSigningFlow({
                   placeholder="••••••"
                   value={otpInput}
                   onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
-                  className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 px-4 py-3 text-2xl font-black text-center tracking-[0.5em] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none dark:text-white disabled:opacity-50 font-mono transition-all duration-300"
+                  className="w-full rounded-2xl border border-slate-350 bg-slate-50/50 px-4 py-3 text-2xl font-black text-center tracking-[0.5em] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none disabled:opacity-50 font-mono transition-all duration-300"
                 />
               </div>
               {otpError && (
-                <span className="text-xs text-red-500 dark:text-red-400 font-semibold">{otpError}</span>
+                <span className="text-xs text-red-500 font-semibold">{otpError}</span>
               )}
               {otpAttempts >= 3 && (
                 <button
@@ -136,7 +136,7 @@ export function ClientSigningFlow({
             </div>
           )}
 
-          <p className="text-[11px] text-slate-450 dark:text-slate-500 leading-normal">
+          <p className="text-[11px] text-slate-450 leading-normal">
             Guardaremos tu nombre completo, marca de tiempo y tu dirección IP pública para el registro de auditoría digital de conformidad con el Art. 89 del Código de Comercio de México.
           </p>
 
@@ -150,7 +150,7 @@ export function ClientSigningFlow({
                   setShowAcceptModal(false);
                 }
               }}
-              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 :text-slate-200 transition-colors"
             >
               {acceptStep === 'otp' ? "Atrás" : "Cancelar"}
             </button>

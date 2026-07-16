@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Briefcase, FileText, Settings, BarChart3 } from "lucide-react";
+import { Briefcase, FileText, Settings, BarChart3, CheckCircle, PlusCircle } from "lucide-react";
 
 interface SidebarProps {
   activePath?: string;
@@ -8,16 +8,28 @@ interface SidebarProps {
 
 export function Sidebar({ activePath }: SidebarProps) {
   const links = [
+    { name: "Nuevo Contrato", href: "/contracts/new", icon: PlusCircle },
     { name: "Pipeline", href: "/dashboard", icon: Briefcase },
     { name: "Documentos", href: "/dashboard/documents", icon: FileText },
     { name: "Insights", href: "/dashboard/insights", icon: BarChart3 },
+    { name: "Verificador", href: "/hash-verifier", icon: CheckCircle },
     { name: "Configuración", href: "/dashboard/settings", icon: Settings },
   ];
 
   return (
     <div className="flex flex-col h-full bg-slate-900 text-slate-300 border-r border-slate-800">
       <div className="p-6">
-        <span className="text-xl font-bold text-white tracking-tight">ContractTracker</span>
+        <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-500 shadow-md shadow-indigo-500/20">
+            <span className="text-lg font-extrabold text-white">₳</span>
+          </div>
+          <div>
+            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-emerald-400 bg-clip-text text-transparent">
+              Anticipo
+            </span>
+            <span className="text-xs font-semibold text-slate-400 ml-1 block sm:inline">MX</span>
+          </div>
+        </Link>
       </div>
       
       <nav className="flex-1 px-4 space-y-1">

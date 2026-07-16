@@ -45,8 +45,13 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
     checkSession();
   }, [pathname]);
 
-  // Hide the header completely if the route starts with /c/ (client portal)
-  if (pathname.startsWith("/c/")) {
+  // Hide the header completely if the route is part of the logged-in app or client portal
+  if (
+    pathname.startsWith("/c/") || 
+    pathname.startsWith("/dashboard") || 
+    pathname.startsWith("/contracts") ||
+    pathname.startsWith("/hash-verifier")
+  ) {
     return null;
   }
 

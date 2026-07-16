@@ -20,6 +20,7 @@ import {
 } from "@/lib/storageClient";
 import { Profile, Contract, PaymentProfile } from "@/lib/types";
 import { UpgradeAlert } from "@/app/components/UpgradeAlert";
+import { AppShell } from "../../components/AppShell";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -240,34 +241,35 @@ export default function SettingsPage() {
   const usagePercentage = profile?.tier === "pro" ? 100 : Math.min(100, (contractUsage / planLimit) * 100);
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 text-slate-800 dark:text-slate-200">
+    <AppShell activePath="/dashboard/settings">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 text-slate-800">
       <div className="flex items-center gap-4 mb-4">
         <Link
           href="/dashboard"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors shadow-sm"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 transition-colors shadow-sm"
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
             Configuración de Cuenta
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Administra tus datos fiscales, identidad de marca y suscripción.
           </p>
         </div>
       </div>
 
-      <div className="glass rounded-3xl p-6 md:p-8 border-indigo-500/20 bg-white/50 dark:bg-slate-950/50 flex flex-col gap-8 shadow-sm">
+      <div className="glass rounded-3xl p-6 md:p-8 border-indigo-500/20 bg-white/50 flex flex-col gap-8 shadow-sm">
         
         {/* Section 1: Perfil Fiscal y Personal */}
         <section>
           <div className="mb-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-1.5">
               <Settings className="h-5 w-5 text-indigo-500" />
               Perfil Fiscal y Personal
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Esta información se plasmará automáticamente en la carátula de tus contratos.
             </p>
           </div>
@@ -280,7 +282,7 @@ export default function SettingsPage() {
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                className="rounded-xl border border-slate-300 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none"
               />
             </div>
 
@@ -292,7 +294,7 @@ export default function SettingsPage() {
                 placeholder="Ej. GUEH860710MX3"
                 value={rfc}
                 onChange={(e) => setRfc(e.target.value.toUpperCase())}
-                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white uppercase font-mono"
+                className="rounded-xl border border-slate-300 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none uppercase font-mono"
               />
             </div>
 
@@ -301,7 +303,7 @@ export default function SettingsPage() {
               <select
                 value={regimenFiscal}
                 onChange={(e) => setRegimenFiscal(e.target.value)}
-                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white dark:bg-slate-900"
+                className="rounded-xl border border-slate-300 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none"
               >
                 <option value="">Selecciona una opción...</option>
                 <option value="626 - Régimen Simplificado de Confianza (RESICO)">626 - Régimen Simplificado de Confianza (RESICO)</option>
@@ -318,7 +320,7 @@ export default function SettingsPage() {
                 placeholder="Ej. 06700"
                 value={codigoPostal}
                 onChange={(e) => setCodigoPostal(e.target.value)}
-                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                className="rounded-xl border border-slate-300 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none font-mono"
               />
             </div>
 
@@ -329,7 +331,7 @@ export default function SettingsPage() {
                 placeholder="Ej. +525512345678"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                className="rounded-xl border border-slate-300 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none font-mono"
               />
             </div>
 
@@ -350,15 +352,15 @@ export default function SettingsPage() {
           </form>
         </section>
 
-        <hr className="border-slate-200 dark:border-slate-800" />
+        <hr className="border-slate-200" />
 
         {/* Section 2: Identidad de Marca (Branding) */}
         <section>
           <div className="mb-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+            <h3 className="text-lg font-bold text-slate-900">
               Identidad de Marca (Branding)
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Personaliza el logotipo y la firma digital que aparecerán en tus contratos.
             </p>
           </div>
@@ -372,11 +374,11 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Logo de tu Empresa</label>
-                  <input type="file" disabled className="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2 text-xs opacity-50" />
+                  <input type="file" disabled className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-xs opacity-50" />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Firma Digital</label>
-                  <input type="file" disabled className="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-2 text-xs opacity-50" />
+                  <input type="file" disabled className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-xs opacity-50" />
                 </div>
               </div>
             </UpgradeAlert>
@@ -389,7 +391,7 @@ export default function SettingsPage() {
                     type="file"
                     accept=".png,.jpg,.jpeg,.svg"
                     onChange={(e) => handleBrandFileUpload(e.target.files?.[0], "logo")}
-                    className="flex-grow rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="flex-grow rounded-xl border border-slate-300 bg-transparent px-4 py-2 text-xs focus:border-indigo-500 focus:outline-none"
                   />
                   {logoUrl && (
                     <img src={logoUrl} alt="Preview Logo" className="h-10 w-10 object-contain rounded-lg border border-slate-200 bg-white p-0.5" />
@@ -404,7 +406,7 @@ export default function SettingsPage() {
                     type="file"
                     accept=".png,.jpg,.jpeg"
                     onChange={(e) => handleBrandFileUpload(e.target.files?.[0], "signature")}
-                    className="flex-grow rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-4 py-2 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="flex-grow rounded-xl border border-slate-300 bg-transparent px-4 py-2 text-xs focus:border-indigo-500 focus:outline-none"
                   />
                   {signatureUrl && (
                     <img src={signatureUrl} alt="Preview Signature" className="h-10 w-10 object-contain rounded-lg border border-slate-200 bg-white p-0.5" />
@@ -421,14 +423,14 @@ export default function SettingsPage() {
           )}
         </section>
 
-        <hr className="border-slate-200 dark:border-slate-800" />
+        <hr className="border-slate-200" />
 
         {/* Section 3: Cuentas Bancarias */}
         <section>
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h4 className="text-lg font-bold text-slate-900 dark:text-white">Cuentas Bancarias</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <h4 className="text-lg font-bold text-slate-900">Cuentas Bancarias</h4>
+              <p className="text-xs text-slate-500 mt-0.5">
                 Registra múltiples cuentas para prellenar datos rápidamente.
               </p>
             </div>
@@ -442,7 +444,7 @@ export default function SettingsPage() {
                 setProfileInstructions("");
                 setShowProfileForm(!showProfileForm);
               }}
-              className="rounded-xl bg-indigo-50 dark:bg-slate-900 text-indigo-650 dark:text-indigo-400 border border-indigo-200/50 dark:border-slate-800 px-4 py-2 text-xs font-semibold transition-colors cursor-pointer"
+              className="rounded-xl bg-indigo-50 text-indigo-650 border border-indigo-200/50 px-4 py-2 text-xs font-semibold transition-colors cursor-pointer"
             >
               {showProfileForm ? "Cancelar" : "+ Agregar Cuenta"}
             </button>
@@ -455,7 +457,7 @@ export default function SettingsPage() {
           
           <div className="mb-4">
             {showProfileForm && (
-              <form onSubmit={handleSaveProfile} className="bg-slate-50/50 dark:bg-slate-900/30 border border-slate-200/50 dark:border-slate-800 rounded-2xl p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleSaveProfile} className="bg-slate-50/50 border border-slate-200/50 rounded-2xl p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="text-3xs font-semibold text-slate-455 uppercase tracking-wider">Apodo de la Cuenta</label>
                   <input
@@ -464,7 +466,7 @@ export default function SettingsPage() {
                     placeholder="Ej. Mi Cuenta Principal"
                     value={profileNickname}
                     onChange={(e) => setProfileNickname(e.target.value)}
-                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-2 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="rounded-xl border border-slate-300 bg-transparent px-3.5 py-2 text-xs focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -475,7 +477,7 @@ export default function SettingsPage() {
                     placeholder="Ej. BBVA, Santander, STP"
                     value={profileBankName}
                     onChange={(e) => setProfileBankName(e.target.value)}
-                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-2 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="rounded-xl border border-slate-300 bg-transparent px-3.5 py-2 text-xs focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -487,7 +489,7 @@ export default function SettingsPage() {
                     placeholder="18 dígitos"
                     value={profileClabe}
                     onChange={(e) => setProfileClabe(e.target.value)}
-                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-2 text-xs focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                    className="rounded-xl border border-slate-300 bg-transparent px-3.5 py-2 text-xs focus:border-indigo-500 focus:outline-none font-mono"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -497,7 +499,7 @@ export default function SettingsPage() {
                     placeholder="Ej. Transferir neto antes de las 5pm"
                     value={profileInstructions}
                     onChange={(e) => setProfileInstructions(e.target.value)}
-                    className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-3.5 py-2 text-xs focus:border-indigo-500 focus:outline-none dark:text-white"
+                    className="rounded-xl border border-slate-300 bg-transparent px-3.5 py-2 text-xs focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
                 <div className="md:col-span-2 flex justify-end gap-2 pt-2">
@@ -516,26 +518,26 @@ export default function SettingsPage() {
           {paymentProfiles.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {paymentProfiles.map((p) => (
-                <div key={p.id} className={`rounded-2xl border p-5 flex flex-col justify-between gap-3 ${p.isDefault ? "border-indigo-500 bg-indigo-500/5 shadow-sm shadow-indigo-500/10" : "border-slate-200 dark:border-slate-800"}`}>
+                <div key={p.id} className={`rounded-2xl border p-5 flex flex-col justify-between gap-3 ${p.isDefault ? "border-indigo-500 bg-indigo-500/5 shadow-sm shadow-indigo-500/10" : "border-slate-200 "}`}>
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="font-bold text-slate-850 dark:text-slate-200 flex items-center gap-1.5">
+                      <span className="font-bold text-slate-850 flex items-center gap-1.5">
                         {p.nickname}
                         {p.isDefault && <span className="rounded-full bg-indigo-500 text-white text-3xs px-2 py-0.5 font-semibold">Predeterminado</span>}
                       </span>
                       <span className="font-mono text-xs text-slate-400">{p.bankName}</span>
                     </div>
-                    <p className="font-mono text-sm text-slate-600 dark:text-slate-350 break-all select-all mt-1">CLABE: {p.clabe}</p>
+                    <p className="font-mono text-sm text-slate-600 break-all select-all mt-1">CLABE: {p.clabe}</p>
                     {p.paymentInstructions && (
                       <p className="text-xs text-slate-450 italic mt-2">Nota: {p.paymentInstructions}</p>
                     )}
                   </div>
-                  <div className="flex justify-end gap-3 border-t border-slate-100 dark:border-slate-850/50 pt-3 mt-1">
+                  <div className="flex justify-end gap-3 border-t border-slate-100 pt-3 mt-1">
                     {!p.isDefault && (
                       <button
                         type="button"
                         onClick={() => handleSetDefaultProfile(p.id)}
-                        className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                        className="text-xs font-semibold text-indigo-600 hover:underline cursor-pointer"
                       >
                         Hacer Predeterminado
                       </button>
@@ -550,7 +552,7 @@ export default function SettingsPage() {
                         setProfileInstructions(p.paymentInstructions || "");
                         setShowProfileForm(true);
                       }}
-                      className="text-xs font-semibold text-slate-600 dark:text-slate-400 hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-slate-600 hover:underline cursor-pointer"
                     >
                       Editar
                     </button>
@@ -566,32 +568,32 @@ export default function SettingsPage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-8 text-center text-sm text-slate-400 font-light leading-normal">
+            <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400 font-light leading-normal">
               No tienes cuentas bancarias registradas. Añade una para facilitar el llenado de tus contratos.
             </div>
           )}
         </section>
 
-        <hr className="border-slate-200 dark:border-slate-800" />
+        <hr className="border-slate-200" />
 
         {/* Section 4: Plan & Facturación */}
         <section>
           <div className="mb-6">
-            <h4 className="text-lg font-bold text-slate-900 dark:text-white">
+            <h4 className="text-lg font-bold text-slate-900">
               Plan de Suscripción y Facturación
             </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               Revisa tu consumo actual de contratos y mejora tu plan para desbloquear más funciones.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6 shadow-sm">
             <div className="flex-grow">
               <div className="flex items-center gap-3 mb-2">
-                <span className="font-extrabold text-lg text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                <span className="font-extrabold text-lg text-slate-800 uppercase tracking-wide">
                   Plan {profile?.tier || "Gratuito"}
                 </span>
-                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 border border-emerald-500/20">
                   Activo
                 </span>
               </div>
@@ -607,15 +609,9 @@ export default function SettingsPage() {
                     }
                   </span>
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
                   <div 
-                    className={`h-full transition-all duration-500 ${
-                      profile?.tier === "pro" 
-                        ? "bg-purple-500 w-full" 
-                        : (contractUsage / planLimit) >= 1 
-                          ? "bg-red-500 w-full"
-                          : "bg-indigo-650"
-                    }`}
+                    className={`h-full transition-all duration-500 ${ profile?.tier === "pro" ? "bg-purple-500 w-full" : (contractUsage / planLimit) >= 1 ? "bg-red-500 w-full" : "bg-indigo-650" }`}
                     style={{ width: `${usagePercentage}%` }}
                   />
                 </div>
@@ -628,7 +624,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={handleManageBilling}
                   disabled={isBillingLoading}
-                  className="rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-250 font-bold px-5 py-3 text-sm transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-sm"
+                  className="rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-5 py-3 text-sm transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-sm"
                 >
                   {isBillingLoading ? (
                     <>
@@ -653,5 +649,6 @@ export default function SettingsPage() {
 
       </div>
     </div>
+    </AppShell>
   );
 }

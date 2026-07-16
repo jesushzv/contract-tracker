@@ -47,11 +47,7 @@ export function ClausesAndPaymentStep({
               <div 
                 key={clause.id}
                 onClick={() => handleToggleClause(clause.id)}
-                className={`glass p-4 rounded-xl cursor-pointer transition-all border text-left flex gap-3 items-start ${
-                  isChecked
-                    ? "border-indigo-500 bg-indigo-500/5"
-                    : "hover:border-slate-300 dark:hover:border-slate-700"
-                }`}
+                className={`glass p-4 rounded-xl cursor-pointer transition-all border text-left flex gap-3 items-start ${ isChecked ? "border-indigo-500 bg-indigo-500/5" : "hover:border-slate-300 " }`}
               >
                 <input 
                   type="checkbox"
@@ -60,13 +56,13 @@ export function ClausesAndPaymentStep({
                   className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mt-0.5 pointer-events-none"
                 />
                 <div>
-                  <h4 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                  <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
                     {clause.title}
-                    <span className="text-3xs uppercase px-1 py-0.25 rounded bg-slate-100 dark:bg-slate-800 text-slate-400 font-semibold">
+                    <span className="text-3xs uppercase px-1 py-0.25 rounded bg-slate-100 text-slate-400 font-semibold">
                       {clause.category}
                     </span>
                   </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1 font-light">
+                  <p className="text-xs text-slate-500 leading-relaxed mt-1 font-light">
                     {clause.content}
                   </p>
                 </div>
@@ -89,7 +85,7 @@ export function ClausesAndPaymentStep({
         </div>
 
         {paymentProfiles.length > 0 && (
-          <div className="flex flex-col gap-1.5 text-left bg-white/40 dark:bg-slate-900/40 p-4 rounded-xl border border-indigo-500/10">
+          <div className="flex flex-col gap-1.5 text-left bg-white/40 p-4 rounded-xl border border-indigo-500/10">
             <label className="text-2xs font-extrabold text-indigo-500 uppercase tracking-widest">Perfil de Pago SPEI Rápido</label>
             <select
               value={selectedProfileId}
@@ -105,7 +101,7 @@ export function ClausesAndPaymentStep({
                   setBankName(profile.bankDetails.bankName);
                 }
               }}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-4 py-2 text-xs focus:border-indigo-500 focus:outline-none dark:text-white transition-all cursor-pointer"
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs focus:border-indigo-500 focus:outline-none transition-all cursor-pointer"
             >
               <option value="">-- Datos de perfil por defecto --</option>
               {paymentProfiles.map(p => (
@@ -123,7 +119,7 @@ export function ClausesAndPaymentStep({
               required
               value={beneficiaryName}
               onChange={(e) => setBeneficiaryName(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
+              className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
             />
           </div>
           <div>
@@ -134,7 +130,7 @@ export function ClausesAndPaymentStep({
               maxLength={18}
               value={clabe}
               onChange={(e) => setClabe(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
+              className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
             />
           </div>
           <div>
@@ -144,7 +140,7 @@ export function ClausesAndPaymentStep({
               required
               value={bankName}
               onChange={(e) => setBankName(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
+              className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
             />
           </div>
           <div>
@@ -155,7 +151,7 @@ export function ClausesAndPaymentStep({
               maxLength={13}
               value={freelancerRfc}
               onChange={(e) => setFreelancerRfc(e.target.value.toUpperCase())}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
+              className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
             />
           </div>
           <div className="sm:col-span-2">
@@ -165,17 +161,17 @@ export function ClausesAndPaymentStep({
               required
               value={freelancerRegimen}
               onChange={(e) => setFreelancerRegimen(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white/10 dark:bg-slate-950/20 text-slate-800 dark:text-slate-100 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none dark:text-white transition-all shadow-inner"
+              className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
             />
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-6 mt-4">
+      <div className="flex items-center justify-between border-t border-slate-100 pt-6 mt-4">
         <button
           type="button"
           onClick={onBack}
-          className="rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent px-5 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          className="rounded-xl border border-slate-300 bg-transparent px-5 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700"
         >
           Volver
         </button>
