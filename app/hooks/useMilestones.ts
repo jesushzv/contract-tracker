@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Milestone } from '@/lib/types';
-import { getMilestones } from '@/lib/storageClient';
+
 
 export function useMilestones() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Contract, ContractVersion, AuditLog } from '@/lib/types';
-import { getContracts, getContractVersions, getAuditLogs } from '@/lib/storageClient';
+
 
 export function useContracts() {
   const [contracts, setContracts] = useState<Contract[]>([]);
