@@ -113,7 +113,7 @@ export default function Home() {
               {isLoggedIn ? (
                 <Link
                   href="/dashboard"
-                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 :bg-indigo-400 transition-all duration-200 group"
+                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 dark:bg-indigo-400 transition-all duration-200 group"
                 >
                   Ir a mi Panel
                   <ArrowRight className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -122,14 +122,14 @@ export default function Home() {
                 <>
                   <Link
                     href="/register"
-                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 :bg-indigo-400 transition-all duration-200 group"
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 dark:bg-indigo-400 transition-all duration-200 group"
                   >
                     Comenzar a Crear
                     <ArrowRight className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                   <Link
                     href="/dashboard?demo=true"
-                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white/40 /40 px-6 py-3.5 text-base font-semibold text-slate-700 hover:bg-white/80 :bg-slate-900/80 transition-all duration-200"
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white/40 px-6 py-3.5 text-base font-semibold text-slate-700 hover:bg-white/80 dark:bg-slate-900/80 transition-all duration-200"
                   >
                     Probar Demo con Datos
                   </Link>
@@ -152,13 +152,13 @@ export default function Home() {
           <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-8 sm:max-w-none sm:grid-cols-3">
             
             <div className="glass glass-interactive rounded-2xl p-6 flex flex-col text-left">
-              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900 ">
+              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
                   <FileText className="h-5 w-5" />
                 </div>
                 Cláusulas de Ley (MX)
               </dt>
-              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500 ">
+              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500">
                 <p className="flex-auto">
                   Evita demandas de subordinación laboral. Plantillas optimizadas para el régimen simplificado de confianza (RESICO) y servicios profesionales de honorarios en México.
                 </p>
@@ -166,13 +166,13 @@ export default function Home() {
             </div>
 
             <div className="glass glass-interactive rounded-2xl p-6 flex flex-col text-left">
-              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900 ">
+              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                   <Smartphone className="h-5 w-5" />
                 </div>
                 Aceptación por WhatsApp
               </dt>
-              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500 ">
+              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500">
                 <p className="flex-auto">
                   Tu cliente abre el link en su móvil, revisa los hitos y acepta con un click. Guardamos nombre, timestamp e IP como registro probatorio y te notificamos al instante.
                 </p>
@@ -180,13 +180,13 @@ export default function Home() {
             </div>
 
             <div className="glass glass-interactive rounded-2xl p-6 flex flex-col text-left">
-              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900 ">
+              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
                   <Landmark className="h-5 w-5" />
                 </div>
                 Seguimiento de Anticipos
               </dt>
-              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500 ">
+              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500">
                 <p className="flex-auto">
                   Configura montos (ej. 50% anticipo, 50% finiquito). El cliente visualiza tu CLABE de SPEI, ingresa su Clave de Rastreo bancaria y confirmas en tu dashboard.
                 </p>
@@ -205,10 +205,10 @@ export default function Home() {
                 <Calculator className="h-5 w-5" />
                 <span className="text-xs font-bold uppercase tracking-wider">Calculadora de Impacto Financiero</span>
               </div>
-              <h3 className="font-heading text-2xl font-extrabold text-slate-900 ">
+              <h3 className="font-heading text-2xl font-extrabold text-slate-900">
                 ¿Cuánto te cuesta la cobranza informal?
               </h3>
-              <p className="text-xs leading-relaxed text-slate-500 ">
+              <p className="text-xs leading-relaxed text-slate-500">
                 Chasing client payments over WhatsApp without formal, milestone-backed clickwrap agreements delays cash flow and hurts your monthly liquidity. Measure the cost below:
               </p>
 
@@ -266,7 +266,7 @@ export default function Home() {
             <div className="w-full md:w-80 rounded-2xl bg-indigo-900/10 /5 p-6 border border-indigo-500/20 flex flex-col gap-6">
               <div>
                 <span className="text-3xs font-semibold text-slate-400 uppercase tracking-wider block">Ingresos anuales estimados</span>
-                <span className="text-xl font-bold text-slate-800 ">{formatMoney(totalYearlyRevenue)}</span>
+                <span className="text-xl font-bold text-slate-800">{formatMoney(totalYearlyRevenue)}</span>
               </div>
 
               <div className="border-t border-slate-200 /80 pt-4">
@@ -294,7 +294,7 @@ export default function Home() {
         {/* PRICING PLANS */}
         <div className="mx-auto max-w-4xl w-full text-center flex flex-col gap-8">
           <div>
-            <h3 className="font-heading text-2xl font-extrabold tracking-tight text-slate-900 ">Planes Justos para Freelancers</h3>
+            <h3 className="font-heading text-2xl font-extrabold tracking-tight text-slate-900">Planes Justos para Freelancers</h3>
             <p className="text-sm text-slate-500 mt-1">
               Comienza gratis hoy mismo. Actualiza para desbloquear automatizaciones y cobros recurrentes.
             </p>
@@ -302,15 +302,15 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto w-full">
             {/* Free tier */}
-            <div className="glass rounded-3xl p-6 flex flex-col justify-between text-left border-slate-200 bg-white/10 /10">
+            <div className="glass rounded-3xl p-6 flex flex-col justify-between text-left border-slate-200 bg-white/10">
               <div>
-                <h4 className="font-heading text-lg font-bold text-slate-850 ">Plan Semilla</h4>
+                <h4 className="font-heading text-lg font-bold text-slate-900">Plan Semilla</h4>
                 <p className="text-2xs text-slate-400 mt-1">Ideal para iniciar en el freelance con orden.</p>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-extrabold text-slate-900 ">$0</span>
+                  <span className="text-3xl font-extrabold text-slate-900">$0</span>
                   <span className="text-xs text-slate-400 ml-1">Gratis de por vida</span>
                 </div>
-                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 ">
+                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                     Hasta 3 contratos creados
@@ -331,7 +331,7 @@ export default function Home() {
               </div>
               <Link 
                 href="/register?tier=free"
-                className="mt-8 rounded-xl bg-slate-100 hover:bg-slate-200 :bg-slate-800 text-center py-2.5 text-xs font-bold transition-colors cursor-pointer"
+                className="mt-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 dark:bg-slate-800 text-center py-2.5 text-xs font-bold transition-colors cursor-pointer"
               >
                 Comenzar Gratis
               </Link>
@@ -346,11 +346,11 @@ export default function Home() {
                 <h4 className="font-heading text-lg font-bold text-indigo-500">Plan Emprendedor</h4>
                 <p className="text-2xs text-slate-400 mt-1">Para profesionales con flujo de clientes constante.</p>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-extrabold text-slate-900 ">$99</span>
+                  <span className="text-3xl font-extrabold text-slate-900">$99</span>
                   <span className="text-xs text-slate-400 ml-1">MXN / mes</span>
                 </div>
-                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 ">
-                  <li className="flex items-center gap-2 text-slate-700 ">
+                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500">
+                  <li className="flex items-center gap-2 text-slate-700">
                     <CheckCircle2 className="h-4 w-4 text-indigo-500 flex-shrink-0" />
                     <strong>Hasta 10 contratos activos</strong>
                   </li>
@@ -382,11 +382,11 @@ export default function Home() {
                 <h4 className="font-heading text-lg font-bold text-purple-500">Plan Profesional</h4>
                 <p className="text-2xs text-slate-400 mt-1">Control absoluto, automatización y conciliación.</p>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-extrabold text-slate-900 ">$199</span>
+                  <span className="text-3xl font-extrabold text-slate-900">$199</span>
                   <span className="text-xs text-slate-400 ml-1">MXN / mes</span>
                 </div>
-                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 ">
-                  <li className="flex items-center gap-2 text-slate-700 ">
+                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500">
+                  <li className="flex items-center gap-2 text-slate-700">
                     <CheckCircle2 className="h-4 w-4 text-purple-500 flex-shrink-0" />
                     <strong>Contratos e hitos ilimitados</strong>
                   </li>
@@ -430,7 +430,7 @@ export default function Home() {
                   className="glass rounded-2xl p-4 transition-all duration-300 border-slate-100 cursor-pointer"
                   onClick={() => toggleFaq(index)}
                 >
-                  <div className="flex items-center justify-between gap-4 font-bold text-sm text-slate-800 ">
+                  <div className="flex items-center justify-between gap-4 font-bold text-sm text-slate-800">
                     <span>{faq.q}</span>
                     <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-300 ${
                       isOpen ? "rotate-180 text-indigo-500" : ""
