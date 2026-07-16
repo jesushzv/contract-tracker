@@ -39,6 +39,7 @@ Access control for core workspace pages is enforced client-side and at the serve
 ### 1. Protected Paths
 The middleware matches the following routes:
 *   `/dashboard/:path*` (Freelancer Dashboard)
+*   `/dashboard/settings/:path*` (Unified Settings & Billing)
 *   `/contracts/:path*` (Contract wizard and detail views)
 *   `/admin/:path*` (Financial analytics center)
 *   `/onboarding/:path*` (Fiscal setup page)
@@ -68,12 +69,12 @@ The application supports three plans (`free`, `starter`, `pro`) which are checke
 | Feature / Limit | Free Plan | Starter Plan | Pro Plan |
 | :--- | :--- | :--- | :--- |
 | **Contract Creation Cap** | **Max 3 Contracts** | **Max 10 Contracts** | **Unlimited** |
-| **Custom Branding Uploads** | ❌ Locked (Files stripped) | ✅ Unlocked (2MB cap) | ✅ Unlocked (2MB cap) |
+| **Custom Branding Uploads** | ❌ Locked (Gated via UpgradeAlert) | ✅ Unlocked (2MB cap) | ✅ Unlocked (2MB cap) |
 | **Premium Templates** | ❌ Basic Only | ✅ All templates | ✅ All templates |
 
 ### 2. Enforcement Implementations
-*   **Contract Cap**: Enforced in [new/page.tsx](file:///Users/jhzamora/contract-tracker/app/contracts/new/page.tsx#L301-L320). If `profile.tier === 'free'` and total contract count is $\ge 3$, the wizard is blocked, rendering a "Plan Limit Reached" screen.
-*   **Branding Stripping**: Enforced on onboarding and settings updates. If `profile.tier === 'free'`, the `logoUrl` and `signatureUrl` properties are overwritten to `undefined` during submission.
+*   **Contract Cap**: Enforced in [new/page.tsx](file:///Users/jhzamora/contract-tracker/app/contracts/new/page.tsx). If `profile.tier === 'free'` and total contract count is $\ge 3$, the wizard is blocked, rendering a "Plan Limit Reached" screen.
+*   **Branding Gating**: Enforced dynamically on the `/dashboard/settings` route using the `<UpgradeAlert />` component, which replaces configuration forms with premium upgrade prompts for users on the free tier. This ensures data logic remains protected.
 
 ---
 

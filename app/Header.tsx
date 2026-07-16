@@ -111,6 +111,9 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
               <Link href="/notifications" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5">
                 Notificaciones
               </Link>
+              <Link href="/dashboard/settings" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5">
+                Configuración
+              </Link>
             </>
           ) : (
             <Link href="/hash-verifier" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
