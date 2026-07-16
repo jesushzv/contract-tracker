@@ -34,6 +34,7 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     // 4. Click header "Iniciar Sesión" and verify redirects to /login & header CTA changes to "Registrarse"
     await header.locator('text="Iniciar Sesión"').click();
     await expect(page).toHaveURL(/\/login/);
+    await page.waitForLoadState('networkidle');
     await expect(header.locator('text="Registrarse"')).toBeVisible();
     await expect(header.locator('text="Iniciar Sesión"')).not.toBeVisible();
 
