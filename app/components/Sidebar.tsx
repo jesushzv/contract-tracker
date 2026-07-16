@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Briefcase, FileText, Settings, BarChart3, CheckCircle, PlusCircle, Bell } from "lucide-react";
-import { getProfile } from "@/lib/storageClient";
+import { getProfile, isDemoMode } from "@/lib/storageClient";
 import { Profile } from "@/lib/types";
 
 interface SidebarProps {
@@ -12,9 +12,15 @@ interface SidebarProps {
 
 export function Sidebar({ activePath }: SidebarProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [demo, setDemo] = useState(false);
 
   useEffect(() => {
     getProfile().then(setProfile).catch(console.error);
+    
+    const timer = setTimeout(() => {
+      setDemo(isDemoMode());
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const links = [
@@ -52,6 +58,18 @@ export function Sidebar({ activePath }: SidebarProps) {
             <span className="text-xs font-semibold text-slate-400 ml-1 block sm:inline">MX</span>
           </div>
         </Link>
+        
+        {demo && (
+          <div className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 w-full">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+            </span>
+            <span className="text-[10px] font-mono font-medium tracking-widest text-indigo-300 uppercase">
+              Sandbox Mode
+            </span>
+          </div>
+        )}
       </div>
       
       <nav className="flex-1 px-4 space-y-1">
