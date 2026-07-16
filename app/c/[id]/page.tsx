@@ -3,30 +3,29 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { 
-  ShieldCheck, 
-  Clock, 
-  CheckCircle2, 
-  Copy, 
-  AlertCircle,
+import {
   Briefcase,
-  Printer,
-  CreditCard,
-  ExternalLink,
+  AlertCircle,
   Loader2,
-  Star,
-  Edit3,
-  X,
-  Upload,
   AlertTriangle,
-  User,
-  Check
+  Printer,
+  ShieldCheck,
+  Clock,
+  CheckCircle2,
+  Copy,
+  Edit3,
+  ExternalLink,
+  X
 } from "lucide-react";
 import { getContractById, getMilestones, acceptContract, markMilestoneAsTransferred, getAuditLogs, getProfile, generateClientOtp, proposeContractRevision, uploadReceiptFile, cancelContract, markContractCompleted, isDemoMode, saveContract, saveMilestones } from "@/lib/storageClient";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 import { Contract, Milestone, AuditLog, Profile } from "@/lib/types";
+import { ClientContractView } from "@/app/components/client/ClientContractView";
+import { ClientSigningFlow } from "@/app/components/client/ClientSigningFlow";
+import { ClientPaymentUpload } from "@/app/components/client/ClientPaymentUpload";
+import { StandingIndicator } from "@/app/components/client/StandingIndicator";
 
-export default function ClientContractView() {
+export default function ClientPortalPage() {
   const params = useParams();
   const contractId = params.id as string;
 
@@ -836,326 +835,16 @@ export default function ClientContractView() {
       {/* Main Grid: Document & Financial Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: The actual Contract Paper (printable) */}
-        <div className="lg:col-span-8 bg-white dark:bg-slate-950 shadow-md border border-slate-200/50 dark:border-slate-800 rounded-3xl p-6 md:p-8 text-left print:shadow-none print:border-none print:p-0">
-          
-          {/* Header document representation */}
-          <div className="flex flex-col gap-6 pb-6 border-b border-slate-100 dark:border-slate-900">
-            <div className="flex justify-between items-start gap-4">
-              <div className="flex items-center gap-4">
-                {profile?.logoUrl && (
-                  <img src={profile.logoUrl} alt="Logo" className="h-12 w-12 object-contain rounded-xl border border-slate-100 dark:border-slate-800 bg-white" />
-                )}
-                <div>
-                  <h1 className="text-2xl font-black uppercase text-slate-800 dark:text-white tracking-tight">Propuesta de Contrato</h1>
-                  <p className="text-xs text-slate-400 font-mono mt-1">ID: {contract.id.substring(0, 18)}</p>
-                </div>
-              </div>
-              <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold uppercase ring-1 ring-inset ${
-                contract.status === 'accepted'
-                  ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400'
-                  : contract.status === 'completed'
-                  ? 'bg-blue-50 text-blue-700 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400'
-                  : contract.status === 'client_signed'
-                  ? 'bg-purple-50 text-purple-700 ring-purple-600/20 dark:bg-purple-500/10 dark:text-purple-400'
-                  : contract.status === 'sent'
-                  ? 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400'
-                  : 'bg-slate-50 text-slate-700 ring-slate-600/20 dark:bg-slate-500/10 dark:text-slate-400'
-              }`}>
-                {contract.status === 'draft' ? 'Borrador' : contract.status === 'sent' ? 'Pendiente' : contract.status === 'client_signed' ? 'Firmado (Cliente)' : contract.status === 'accepted' ? 'Sellado' : contract.status === 'completed' ? 'Completado' : 'Cancelado'}
-              </span>
-            </div>
-
-            {/* Parties with RFC / Regimen details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-              <div className="rounded-xl border border-slate-100 dark:border-slate-900 p-4">
-                <span className="text-slate-400 font-semibold block uppercase tracking-wider text-3xs">Prestador de Servicios (Freelancer)</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200 mt-1 block">
-                  {contract.beneficiaryName || "Freelancer Registrado"}
-                </span>
-                {contract.freelancerRfc && (
-                  <div className="text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed font-light">
-                    <p>RFC: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerRfc}</span></p>
-                    <p className="line-clamp-1">Regimen: {contract.freelancerRegimen}</p>
-                    <p>Código Postal Fiscal: {contract.freelancerPostal}</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="rounded-xl border border-slate-100 dark:border-slate-900 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400 font-semibold block uppercase tracking-wider text-3xs">Cliente</span>
-                  {['sent', 'client_signed', 'accepted'].includes(contract.status) && (
-                    <button
-                      onClick={startProposingRevision}
-                      className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
-                      title="Proponer cambios a datos de cliente"
-                    >
-                      <Edit3 className="h-2.5 w-2.5" />
-                      Editar
-                    </button>
-                  )}
-                </div>
-                <span className="font-bold text-slate-800 dark:text-slate-200 mt-1 block">{contract.clientName}</span>
-                <span className="text-slate-500 dark:text-slate-400 mt-0.5 block">{contract.clientEmail}</span>
-                {contract.clientRfc ? (
-                  <div className="text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed font-light">
-                    <p>RFC: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.clientRfc}</span></p>
-                    {contract.clientRegimen && <p className="line-clamp-1">Regimen: {contract.clientRegimen}</p>}
-                    {contract.clientPostal && <p>Código Postal Fiscal: {contract.clientPostal}</p>}
-                  </div>
-                ) : (
-                  <p className="text-2xs text-slate-400 italic mt-2">Sin datos fiscales adicionales</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Scope details */}
-          <div className="py-6 border-b border-slate-100 dark:border-slate-900 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Declaraciones & Alcance del Proyecto</h3>
-              {['sent', 'client_signed', 'accepted'].includes(contract.status) && (
-                <button
-                  onClick={startProposingRevision}
-                  className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
-                  title="Proponer cambios al alcance del proyecto"
-                >
-                  <Edit3 className="h-2.5 w-2.5" />
-                  Editar
-                </button>
-              )}
-            </div>
-            <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-350 font-light">{contract.scopeDescription}</p>
-          </div>
-
-          {/* Clause list */}
-          <div className="py-6 border-b border-slate-100 dark:border-slate-900 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Cláusulas Legales Generales</h3>
-              {['sent', 'client_signed', 'accepted'].includes(contract.status) && (
-                <button
-                  onClick={startProposingRevision}
-                  className="text-5xs font-extrabold text-indigo-500 hover:text-indigo-600 flex items-center gap-1 uppercase transition-colors cursor-pointer"
-                  title="Proponer cambios a cláusulas legales"
-                >
-                  <Edit3 className="h-2.5 w-2.5" />
-                  Editar
-                </button>
-              )}
-            </div>
-            <div className="flex flex-col gap-4 text-xs">
-              {(() => {
-                const renderedClauses = contract.selectedClauses && contract.selectedClauses.length > 0
-                  ? MOCK_CLAUSES.filter(c => contract.selectedClauses?.includes(c.id))
-                  : MOCK_CLAUSES;
-                return renderedClauses.map((clause, idx) => (
-                  <div key={clause.id} className="flex gap-3">
-                    <span className="font-mono font-bold text-indigo-500 bg-indigo-500/5 h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">{idx + 1}</span>
-                    <div>
-                      <h4 className="font-bold text-slate-800 dark:text-slate-200">{clause.title}</h4>
-                      <p className="text-slate-500 dark:text-slate-400 mt-1 leading-relaxed font-light">{clause.content}</p>
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-          </div>
-
-          {/* Signature log block */}
-          <div className="py-6 flex flex-col gap-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Aceptación y Firmas Electrónicas</h3>
-            
-            {/* 1. Client signature details if present */}
-            {contract.acceptedAt ? (
-              <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4 text-xs flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-bold">
-                  <ShieldCheck className="h-4 w-4" />
-                  <span>Firmado Electrónicamente por el Cliente</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-500 dark:text-slate-400 mt-1 font-light">
-                  <p>Firmante: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.acceptedByName}</span></p>
-                  <p>Dirección IP: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.acceptedIp}</span></p>
-                  <p>Fecha/Hora: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.acceptedAt ? new Date(contract.acceptedAt).toLocaleString('es-MX') : ''}</span></p>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-slate-200 dark:border-slate-800 border-dashed p-6 text-center text-slate-400 text-xs font-light">
-                Pendiente de firma de aceptación del Cliente. Presiona el botón en la parte superior para firmar electrónicamente.
-              </div>
-            )}
-
-            {/* 2. Freelancer counter-signature details if present */}
-            {(contract.status === 'accepted' || contract.status === 'completed') && contract.freelancerAcceptedAt ? (
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-xs flex flex-col gap-3">
-                <div className="flex justify-between items-start gap-4">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold">
-                      <ShieldCheck className="h-4 w-4" />
-                      <span>Verificado y Contra-firmado por el Freelancer</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-500 dark:text-slate-400 mt-1 font-light">
-                      <p>Validador: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedByName}</span></p>
-                      <p>Dirección IP: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedIp}</span></p>
-                      <p>Fecha/Hora: <span className="font-semibold text-slate-700 dark:text-slate-300">{contract.freelancerAcceptedAt ? new Date(contract.freelancerAcceptedAt).toLocaleString('es-MX') : ''}</span></p>
-                    </div>
-                  </div>
-                  {profile?.signatureUrl && (
-                    <img src={profile.signatureUrl} alt="Firma Freelancer" className="max-h-12 object-contain bg-white rounded-lg p-1 border border-slate-100 dark:border-slate-800 dark:bg-slate-900/50" />
-                  )}
-                </div>
-              </div>
-            ) : contract.status === 'client_signed' ? (
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold">
-                  <Clock className="h-4 w-4" />
-                  <span>Pendiente de Validación Final por el Freelancer</span>
-                </div>
-                <p className="text-slate-500 dark:text-slate-400 leading-relaxed font-light mt-1">
-                  Tu firma ha sido registrada. El contrato se sellará y los cobros de hitos se habilitarán en cuanto el freelancer revise el documento y contra-firme.
-                </p>
-              </div>
-            ) : null}
-
-            {/* 3. Cryptographic seal explainer */}
-            {contract.contractHash && (
-              <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-5 text-xs flex flex-col gap-3 mt-2">
-                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold">
-                  <ShieldCheck className="h-5 w-5" />
-                  <span>Sello de Integridad Criptográfica Activo</span>
-                </div>
-                <p className="text-slate-500 dark:text-slate-400 leading-relaxed font-light">
-                  ¿Para qué sirve este sello? Este código hash es una huella digital única generada usando el algoritmo **SHA-256**. Captura el contenido exacto de este contrato (montos, hitos, términos y firmas de ambas partes). Cualquier modificación posterior rompería esta huella digital, garantizando la inmutabilidad absoluta y la validez legal del acuerdo.
-                </p>
-                <div className="bg-slate-100 dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200/40 dark:border-slate-800/40">
-                  <span className="text-3xs font-semibold text-slate-400 block mb-1 uppercase tracking-wider">Código de Seguridad Hash SHA-256</span>
-                  <span className="font-mono text-xs text-slate-600 dark:text-slate-300 break-all select-all font-light">{contract.contractHash}</span>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Timeline Audit Trail */}
-          {auditLogs.length > 0 && (
-            <div className="py-6 border-t border-slate-100 dark:border-slate-900 mt-6 flex flex-col gap-4">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Historial del Contrato (Audit Log)</h3>
-              
-              <div className="flow-root mt-2">
-                <ul role="list" className="-mb-8">
-                  {auditLogs.map((log, logIdx) => (
-                    <li key={log.id}>
-                      <div className="relative pb-8">
-                        {logIdx !== auditLogs.length - 1 ? (
-                          <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-slate-200 dark:bg-slate-800" aria-hidden="true" />
-                        ) : null}
-                        <div className="relative flex space-x-3 items-start">
-                          <div>
-                            <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white dark:ring-slate-950 ${
-                              log.action === 'created' ? 'bg-slate-100 dark:bg-slate-900 text-slate-500' :
-                              log.action === 'client_signed' ? 'bg-purple-100 dark:bg-purple-950/40 text-purple-600' :
-                              log.action === 'freelancer_accepted' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600' :
-                              log.action === 'milestone_requested' ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-600' :
-                              log.action === 'milestone_transferred' ? 'bg-blue-100 dark:bg-blue-950/40 text-blue-600' :
-                              'bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600'
-                            }`}>
-                              {log.action === 'created' && <Briefcase className="h-4 w-4" />}
-                              {log.action === 'client_signed' && <ShieldCheck className="h-4 w-4" />}
-                              {log.action === 'freelancer_accepted' && <CheckCircle2 className="h-4 w-4" />}
-                              {log.action === 'milestone_requested' && <Clock className="h-4 w-4" />}
-                              {log.action === 'milestone_transferred' && <CreditCard className="h-4 w-4" />}
-                              {log.action === 'milestone_confirmed' && <CheckCircle2 className="h-4 w-4" />}
-                            </span>
-                          </div>
-                          <div className="flex-1 min-w-0 pt-1.5 flex justify-between space-x-4">
-                            <div>
-                              <p className="text-xs text-slate-700 dark:text-slate-300">
-                                {log.details}
-                                {log.ip && <span className="text-3xs text-slate-400 block mt-0.5">IP registrada: {log.ip}</span>}
-                              </p>
-                            </div>
-                            <div className="text-right text-3xs whitespace-nowrap text-slate-400 self-start">
-                              <time dateTime={log.timestamp}>{new Date(log.timestamp).toLocaleString('es-MX', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}</time>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {/* Printable signature lines */}
-          <div className="hidden print:grid grid-cols-2 gap-16 mt-20 pt-8 border-t border-slate-200">
-            <div className="text-center flex flex-col items-center justify-between min-h-[90px]">
-              <div className="h-12 flex items-center justify-center">
-                {contract.freelancerAcceptedAt ? (
-                  profile?.signatureUrl ? (
-                    <img src={profile.signatureUrl} alt="Firma Freelancer" className="max-h-12 object-contain" />
-                  ) : (
-                    <div className="text-[#10b981] text-3xs font-mono leading-tight">
-                      [VALIDADO DIGITALMENTE]<br />
-                      FECHA: {new Date(contract.freelancerAcceptedAt).toLocaleDateString('es-MX')}<br />
-                      IP: {contract.freelancerAcceptedIp}
-                    </div>
-                  )
-                ) : (
-                  <span className="text-3xs text-slate-300 italic">Pendiente de firma del Prestador</span>
-                )}
-              </div>
-              <div className="w-full border-t border-slate-300 pt-2 text-xs">
-                <p className="font-bold text-slate-700">{contract.beneficiaryName}</p>
-                {contract.freelancerRfc && <p className="text-slate-400 font-mono text-3xs">RFC: {contract.freelancerRfc}</p>}
-                <p className="text-slate-400">Prestador de Servicios</p>
-              </div>
-            </div>
-
-            <div className="text-center flex flex-col items-center justify-between min-h-[90px]">
-              <div className="h-12 flex items-center justify-center">
-                {contract.acceptedAt ? (
-                  <div className="text-[#6366f1] text-3xs font-mono leading-tight">
-                    [FIRMADO ELECTRÓNICAMENTE]<br />
-                    FECHA: {new Date(contract.acceptedAt).toLocaleDateString('es-MX')}<br />
-                    IP: {contract.acceptedIp}<br />
-                    HASH: {contract.contractHash?.substring(0, 16)}...
-                  </div>
-                ) : (
-                  <span className="text-3xs text-slate-300 italic">Pendiente de firma del Cliente</span>
-                )}
-              </div>
-              <div className="w-full border-t border-slate-300 pt-2 text-xs">
-                <p className="font-bold text-slate-700">{contract.acceptedByName || contract.clientName}</p>
-                {contract.clientRfc && <p className="text-slate-400 font-mono text-3xs">RFC: {contract.clientRfc}</p>}
-                <p className="text-slate-400">Cliente</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ClientContractView
+          contract={contract}
+          profile={profile}
+          auditLogs={auditLogs}
+          startProposingRevision={startProposingRevision}
+        />
 
         <div className="lg:col-span-4 flex flex-col gap-6 print:hidden">
           {/* Freelancer Reputation / Standing Card */}
-          <div className="glass rounded-3xl p-5 border-emerald-500/20 bg-emerald-500/5 flex flex-col gap-4 text-left">
-            <h3 className="text-sm font-bold flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-              <Star className="h-4 w-4 fill-emerald-500 text-emerald-500" />
-              Freelancer en Buena Posición
-            </h3>
-            <div className="flex flex-col gap-2.5">
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-                Reputación de Confianza de Anticipo MX
-              </div>
-              <ul className="text-3xs text-slate-500 dark:text-slate-450 flex flex-col gap-1.5 leading-normal pl-1">
-                <li className="flex items-center gap-1.5">✓ Identidad fiscal emisor validada (RFC {contract.freelancerRfc ? "Registrado" : "N/A"})</li>
-                <li className="flex items-center gap-1.5">✓ Sello de integridad criptográfica activo</li>
-                <li className="flex items-center gap-1.5">✓ 0 penalizaciones ni disputas vigentes</li>
-                <li className="flex items-center gap-1.5">✓ Hitos financieros protegidos por escrow</li>
-              </ul>
-              <div className="border-t border-slate-100 dark:border-slate-800/80 pt-2.5 mt-1 flex justify-between items-center text-3xs text-slate-400">
-                <span>Miembro desde</span>
-                <span className="font-semibold text-slate-600 dark:text-slate-300">Julio 2026</span>
-              </div>
-            </div>
-          </div>
+          <StandingIndicator freelancerRfc={contract.freelancerRfc} />
 
           {/* SPEI bank details card */}
           <div className="glass rounded-3xl p-5 border-indigo-500/20 bg-white/70 dark:bg-slate-950/70 flex flex-col gap-4 text-left">
@@ -1346,332 +1035,49 @@ export default function ClientContractView() {
 
       {/* SPEI Payment Reference Input Modal Dialog */}
       {showPaymentModal && paymentMilestone && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
-          <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
-            <button
-              type="button"
-              onClick={() => {
-                setShowPaymentModal(false);
-                setPaymentMilestone(null);
-              }}
-              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-500">
-              <CreditCard className="h-6 w-6" />
-              Notificar Transferencia SPEI
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-              Por favor ingresa la **Clave de Rastreo** de tu transferencia bancaria (se obtiene de tu recibo SPEI, CEP o banca móvil). Esto ayudará al freelancer a asociar tu pago de forma instantánea.
-            </p>
-
-            <form onSubmit={handleMarkAsTransferred} className="mt-6 flex flex-col gap-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Clave de Rastreo SPEI / Referencia</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. 182746182903485761 o folio"
-                  value={trackingReference}
-                  onChange={(e) => setTrackingReference(e.target.value)}
-                  className="w-full rounded-xl border border-slate-350 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white font-mono transition-all duration-300"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Monto Transferido ({contract?.currency})</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">$</span>
-                  <input
-                    type="number"
-                    required
-                    value={transferredAmount}
-                    onChange={(e) => setTransferredAmount(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-350 dark:border-slate-700 bg-transparent pl-7 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white font-bold transition-all duration-300"
-                  />
-                </div>
-              </div>
-              {contract?.currency === "USD" && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Tipo de Cambio (Banxico sugerido: 20.15)</label>
-                    <input
-                      type="number"
-                      step="0.0001"
-                      required
-                      value={overrideExchangeRate}
-                      onChange={(e) => setOverrideExchangeRate(e.target.value)}
-                      className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white font-mono transition-all duration-300"
-                    />
-                  </div>
-
-                  <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-pink-500/5 dark:from-indigo-950/20 dark:via-purple-950/10 dark:to-pink-950/10 border border-indigo-500/15 rounded-xl p-4 text-xs flex flex-col gap-2 shadow-inner">
-                    <div className="flex justify-between text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-                      <span>Monto en USD:</span>
-                      <span className="font-bold text-slate-700 dark:text-slate-300">${transferredAmount.toFixed(2)} USD</span>
-                    </div>
-                    <div className="flex justify-between text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-                      <span>Tipo de Cambio:</span>
-                      <span className="font-bold text-slate-700 dark:text-slate-300">${(parseFloat(overrideExchangeRate) || 20.15).toFixed(4)} MXN</span>
-                    </div>
-                    <div className="flex justify-between items-center text-indigo-600 dark:text-indigo-400 font-bold border-t border-slate-200 dark:border-slate-800/80 pt-2.5 mt-1">
-                      <span className="text-[11px] uppercase tracking-wider">Total a Transferir:</span>
-                      <span className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-650 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
-                        ${(transferredAmount * (parseFloat(overrideExchangeRate) || 20.15)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
-                      </span>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-                  Método de Comprobante
-                </label>
-                <div className="flex gap-4 mb-3">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-655 dark:text-slate-350 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="receiptFileType"
-                      checked={receiptFileType === 'file'}
-                      onChange={() => setReceiptFileType('file')}
-                      className="text-indigo-600 focus:ring-indigo-500"
-                    />
-                    Subir Archivo (PDF, PNG, JPG)
-                  </label>
-                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-655 dark:text-slate-350 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="receiptFileType"
-                      checked={receiptFileType === 'url'}
-                      onChange={() => setReceiptFileType('url')}
-                      className="text-indigo-600 focus:ring-indigo-500"
-                    />
-                    Enlace URL
-                  </label>
-                </div>
-
-                {receiptFileType === 'file' ? (
-                  <div className="flex flex-col gap-2">
-                    <label 
-                      htmlFor="receipt-file-input"
-                      className="group relative flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 dark:border-slate-750 hover:border-indigo-500 dark:hover:border-indigo-500/80 rounded-2xl cursor-pointer bg-slate-50/50 dark:bg-slate-900/20 hover:bg-indigo-50/10 dark:hover:bg-indigo-950/10 transition-all duration-300"
-                    >
-                      <input
-                        type="file"
-                        id="receipt-file-input"
-                        accept=".pdf,.png,.jpg,.jpeg"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                      <div className="p-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:bg-indigo-100/50 dark:group-hover:bg-indigo-950/50 group-hover:text-indigo-500 transition-colors duration-300">
-                        <Upload className="h-6 w-6 group-hover:animate-bounce" />
-                      </div>
-                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-350 mt-3 group-hover:text-indigo-500 transition-colors">
-                        {receiptFileName ? receiptFileName : "Selecciona o arrastra tu comprobante"}
-                      </span>
-                      <p className="text-[10px] text-slate-450 dark:text-slate-500 mt-1">
-                        PDF, PNG, JPG hasta 5MB
-                      </p>
-                    </label>
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="Ej. https://dropbox.com/s/recibo.pdf o captura.png"
-                    value={receiptUrl}
-                    onChange={(e) => setReceiptUrl(e.target.value)}
-                    className="w-full rounded-xl border border-slate-355 dark:border-slate-700 bg-transparent px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white transition-all duration-300"
-                  />
-                )}
-              </div>
-
-              {modalError && (
-                <div className="rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 p-3 text-xs text-red-655 dark:text-red-400 flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <span>{modalError}</span>
-                </div>
-              )}
-
-              <div className="flex gap-3 justify-end mt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPaymentModal(false);
-                    setPaymentMilestone(null);
-                  }}
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || !trackingReference}
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/10"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Registrando...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-4 w-4" />
-                      Notificar Pago
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ClientPaymentUpload
+          showPaymentModal={showPaymentModal}
+          setShowPaymentModal={setShowPaymentModal}
+          paymentMilestone={paymentMilestone}
+          setPaymentMilestone={setPaymentMilestone}
+          contract={contract}
+          handleMarkAsTransferred={handleMarkAsTransferred}
+          trackingReference={trackingReference}
+          setTrackingReference={setTrackingReference}
+          transferredAmount={transferredAmount}
+          setTransferredAmount={setTransferredAmount}
+          overrideExchangeRate={overrideExchangeRate}
+          setOverrideExchangeRate={setOverrideExchangeRate}
+          receiptFileType={receiptFileType}
+          setReceiptFileType={setReceiptFileType}
+          receiptUrl={receiptUrl}
+          setReceiptUrl={setReceiptUrl}
+          receiptFileName={receiptFileName}
+          handleFileChange={handleFileChange}
+          modalError={modalError}
+          loading={loading}
+        />
       )}
 
       {/* Acceptance Modal Dialog */}
       {showAcceptModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md print:hidden">
-          <div className="relative glass rounded-3xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-left bg-white dark:bg-slate-950 shadow-2xl border border-indigo-500/20">
-            <button
-              type="button"
-              onClick={() => {
-                setShowAcceptModal(false);
-              }}
-              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-500">
-              <ShieldCheck className="h-6 w-6" />
-              Aceptar Contrato de Servicios
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-              Al escribir tu nombre completo a continuación, confirmas tu consentimiento y aceptación de todos los términos detallados en esta propuesta, incluyendo el alcance, la tarifa de {formatMoney(contract?.totalAmount || 0, contract?.currency || 'MXN')}, el esquema de anticipos y las cláusulas de ley adjuntas.
-            </p>
-
-            {/* Steps indicator */}
-            <div className="flex items-center justify-between w-full mt-4 mb-5 border-b border-slate-100 dark:border-slate-900 pb-3">
-              <div className="flex items-center gap-2">
-                <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${acceptStep === 'name' ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : 'bg-emerald-500 text-white'}`}>
-                  {acceptStep === 'otp' ? <Check className="h-3.5 w-3.5" /> : "1"}
-                </span>
-                <span className={`text-xs font-semibold ${acceptStep === 'name' ? 'text-indigo-650 dark:text-indigo-400 font-bold' : 'text-slate-450 dark:text-slate-500'}`}>
-                  Identidad
-                </span>
-              </div>
-              <div className="h-[1px] flex-1 mx-3 bg-slate-200 dark:bg-slate-800" />
-              <div className="flex items-center gap-2">
-                <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${acceptStep === 'otp' ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20' : 'bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-655'}`}>
-                  2
-                </span>
-                <span className={`text-xs font-semibold ${acceptStep === 'otp' ? 'text-indigo-650 dark:text-indigo-400 font-bold' : 'text-slate-450 dark:text-slate-650'}`}>
-                  Código OTP
-                </span>
-              </div>
-            </div>
-
-            <form onSubmit={handleAcceptContract} className="mt-4 flex flex-col gap-4">
-              {acceptStep === 'name' ? (
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Nombre completo del Firmante</label>
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="Escribe tu nombre y apellido"
-                      value={signerName}
-                      onChange={(e) => setSignerName(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-transparent pl-10 pr-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 focus:outline-none dark:text-white transition-all duration-300"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {debugOtp && (
-                    <div className="bg-gradient-to-r from-slate-900 to-indigo-950 dark:from-slate-950 dark:to-indigo-950 border border-indigo-500/30 rounded-2xl p-4 text-xs text-indigo-300 dark:text-indigo-400 font-mono leading-relaxed shadow-lg flex items-start gap-3">
-                      <span className="text-base select-none mt-0.5">📟</span>
-                      <div className="flex-1">
-                        <strong className="text-indigo-455 font-bold block mb-1">SYSTEM_DEBUG_OTP</strong>
-                        <span>El código de firma OTP es: </span>
-                        <span className="font-black text-white bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 tracking-wider select-all">{debugOtp}</span>
-                      </div>
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Código de Firma Electrónica (OTP de 6 dígitos)</label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      required
-                      disabled={otpAttempts >= 3}
-                      placeholder="••••••"
-                      value={otpInput}
-                      onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ""))}
-                      className="w-full rounded-2xl border border-slate-350 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 px-4 py-3 text-2xl font-black text-center tracking-[0.5em] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none dark:text-white disabled:opacity-50 font-mono transition-all duration-300"
-                    />
-                  </div>
-                  {otpError && (
-                    <span className="text-xs text-red-500 dark:text-red-400 font-semibold">{otpError}</span>
-                  )}
-                  {otpAttempts >= 3 && (
-                    <button
-                      type="button"
-                      onClick={handleRegenerateOtp}
-                      className="text-xs font-bold text-indigo-500 hover:text-indigo-400 text-left underline focus:outline-none"
-                    >
-                      Generar un nuevo código OTP
-                    </button>
-                  )}
-                </div>
-              )}
-
-              <p className="text-[11px] text-slate-450 dark:text-slate-500 leading-normal">
-                Guardaremos tu nombre completo, marca de tiempo y tu dirección IP pública para el registro de auditoría digital de conformidad con el Art. 89 del Código de Comercio de México.
-              </p>
-
-              <div className="flex gap-3 justify-end mt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (acceptStep === 'otp') {
-                      setAcceptStep('name');
-                    } else {
-                      setShowAcceptModal(false);
-                    }
-                  }}
-                  className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
-                >
-                  {acceptStep === 'otp' ? "Atrás" : "Cancelar"}
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || (acceptStep === 'name' ? !signerName : (otpInput.length < 6 || otpAttempts >= 3))}
-                  className="rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/10"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Procesando...
-                    </>
-                  ) : acceptStep === 'name' ? (
-                    <>
-                      <ShieldCheck className="h-4 w-4" />
-                      Enviar Código de Firma
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="h-4 w-4" />
-                      Verificar y Firmar
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ClientSigningFlow
+          showAcceptModal={showAcceptModal}
+          setShowAcceptModal={setShowAcceptModal}
+          acceptStep={acceptStep}
+          setAcceptStep={setAcceptStep}
+          signerName={signerName}
+          setSignerName={setSignerName}
+          otpInput={otpInput}
+          setOtpInput={setOtpInput}
+          handleAcceptContract={handleAcceptContract}
+          debugOtp={debugOtp}
+          otpError={otpError}
+          otpAttempts={otpAttempts}
+          handleRegenerateOtp={handleRegenerateOtp}
+          loading={loading}
+          contract={contract}
+        />
       )}
 
       {showRevisionModal && contract && (
