@@ -129,6 +129,13 @@ export default function Home() {
                   </Link>
                   <Link
                     href="/dashboard?demo=true"
+                    onClick={() => {
+                      localStorage.removeItem("sandbox_profile");
+                      localStorage.removeItem("sandbox_contracts");
+                      localStorage.removeItem("sandbox_milestones");
+                      localStorage.removeItem("sandbox_audit_logs");
+                      localStorage.removeItem("sandbox_contract_versions");
+                    }}
                     className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 py-3.5 text-base font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-all duration-200"
                   >
                     Probar Demo con Datos
