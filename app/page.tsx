@@ -331,7 +331,7 @@ export default function Home() {
               </div>
               <Link 
                 href="/register?tier=free"
-                className="mt-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 dark:bg-slate-800 text-center py-2.5 text-xs font-bold transition-colors cursor-pointer"
+                className="mt-8 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 text-center py-2.5 text-xs font-bold transition-colors cursor-pointer shadow-md"
               >
                 Comenzar Gratis
               </Link>

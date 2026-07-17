@@ -162,7 +162,7 @@ export default function PlansPage() {
   ];
 
   return (
-    <div className="relative isolate overflow-hidden flex flex-col flex-grow py-12 px-6 lg:px-8">
+    <div className="relative isolate overflow-hidden flex flex-col flex-grow py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
       {/* Background gradients */}
       <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
         <div className="relative left-[calc(50%-11rem)] aspect-1155/678 w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-indigo-500 to-[#10b981] opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"></div>
@@ -206,7 +206,7 @@ export default function PlansPage() {
           return (
             <div
               key={plan.id}
-              className={`relative flex flex-col justify-between rounded-3xl p-8 shadow-xl ring-1 ring-slate-200/80 dark:ring-slate-800/80 backdrop-blur-xl ${
+              className={`relative flex flex-col justify-between rounded-3xl p-6 sm:p-8 shadow-xl ring-1 ring-slate-200/80 dark:ring-slate-800/80 backdrop-blur-xl ${
                 isStarter
                   ? "bg-slate-50/70 dark:bg-slate-900/60 ring-2 ring-emerald-500/50 dark:ring-emerald-500/40"
                   : "bg-white/40 dark:bg-slate-900/30"
@@ -260,7 +260,7 @@ export default function PlansPage() {
                       ? "bg-emerald-600 text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/20"
                       : isPro
                         ? "bg-purple-600 text-white hover:bg-purple-500 shadow-md shadow-purple-600/20"
-                        : "bg-indigo-600 text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 shadow-md shadow-indigo-600/10"
+                        : "bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 shadow-md shadow-slate-900/10"
                   }`}
                 >
                   {loading === plan.id ? (

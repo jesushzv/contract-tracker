@@ -102,8 +102,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 py-24 text-center flex-grow flex items-center justify-center min-h-[80vh]">
-      <div className="glass rounded-3xl p-8 flex flex-col gap-6 w-full text-left border border-indigo-500/20 shadow-2xl relative overflow-hidden">
+    <div className="mx-auto w-full max-w-md px-4 py-12 sm:py-24 text-center flex-grow flex items-center justify-center min-h-[80vh]">
+      <div className="glass rounded-3xl p-6 sm:p-8 flex flex-col gap-6 w-full text-left border border-indigo-500/20 shadow-2xl relative overflow-hidden">
         {/* Back light glow */}
         <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-indigo-500/15 blur-3xl" />
 

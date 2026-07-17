@@ -56,7 +56,7 @@ export default function HashVerifierPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 flex flex-col gap-4">
-          <form onSubmit={handleVerify} className="glass rounded-3xl p-6 border border-slate-200 bg-white flex flex-col gap-4">
+          <form onSubmit={handleVerify} className="glass rounded-3xl p-4 sm:p-6 border border-slate-200 bg-white flex flex-col gap-4">
             <div className="flex flex-col gap-1.5 text-left">
               <label className="text-2xs font-extrabold text-slate-400 uppercase tracking-widest">Texto del Contrato</label>
               <textarea
@@ -91,7 +91,7 @@ export default function HashVerifierPage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          <div className="glass rounded-3xl p-6 border border-indigo-500/20 bg-indigo-500/5 text-left flex flex-col gap-4">
+          <div className="glass rounded-3xl p-4 sm:p-6 border border-indigo-500/20 bg-indigo-500/5 text-left flex flex-col gap-4">
             <h3 className="font-bold text-sm text-slate-900">¿Cómo funciona?</h3>
             <p className="text-xs leading-relaxed text-slate-500">
               Cada contrato firmado en <strong>Anticipo MX</strong> genera un <em>Sello de Integridad Digital</em> único (hash criptográfico SHA-256).
@@ -102,7 +102,7 @@ export default function HashVerifierPage() {
           </div>
 
           {computedHash && (
-            <div className="glass rounded-3xl p-6 border border-slate-200 bg-white text-left flex flex-col gap-3 animate-in fade-in duration-300">
+            <div className="glass rounded-3xl p-4 sm:p-6 border border-slate-200 bg-white text-left flex flex-col gap-3 animate-in fade-in duration-300">
               <span className="text-2xs font-extrabold text-slate-400 uppercase tracking-widest">Sello Calculado</span>
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 font-mono text-2xs break-all leading-normal select-all">
                 {computedHash}
@@ -118,7 +118,7 @@ export default function HashVerifierPage() {
           )}
 
           {verified !== null && (
-            <div className={`glass rounded-3xl p-6 border text-left flex flex-col gap-2 animate-in slide-in-from-bottom-2 duration-300 ${verified ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
+            <div className={`glass rounded-3xl p-4 sm:p-6 border text-left flex flex-col gap-2 animate-in slide-in-from-bottom-2 duration-300 ${verified ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
               <h4 className={`font-black text-sm ${verified ? 'text-emerald-600 ' : 'text-red-650 '}`}>
                 {verified ? "✓ Documento Auténtico" : "✗ Firma Inválida"}
               </h4>

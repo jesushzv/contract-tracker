@@ -707,10 +707,10 @@ export default function ClientPortalPage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 print:p-0 print:max-w-full">
       {/* Banner message at the top */}
-      <div className="flex items-center justify-between gap-4 print:hidden">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 print:hidden">
         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Vista del Cliente</span>
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button 
             onClick={handlePrint}
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 :bg-slate-800 transition-colors"
@@ -738,7 +738,7 @@ export default function ClientPortalPage() {
           )}
 
           {contract.status === 'client_signed' && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2.5 text-xs font-semibold text-purple-700">
                 <Clock className="h-4 w-4" />
                 Esperando Validación Final

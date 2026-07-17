@@ -99,43 +99,20 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
           </div>
         </Link>
         
-        <nav className="hidden md:flex items-center gap-6">
-          {showFullHeader ? (
-            <>
-              <Link href={panelUrl} className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
-                Panel
-              </Link>
-              <Link href="/contracts/new" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
-                Nuevo Contrato
-              </Link>
-              <Link href="/hash-verifier" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
-                Verificador
-              </Link>
-              <Link href="/documents" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
-                Expedientes
-              </Link>
-              <Link href="/notifications" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5">
-                Notificaciones
-              </Link>
-              <Link href="/dashboard/settings" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5">
-                Configuración
-              </Link>
-            </>
-          ) : null}
-        </nav>
 
-        <div className="flex items-center gap-4">
+
+        <div className="flex items-center gap-2 md:gap-4">
           {showFullHeader ? (
             <>
               <Link 
                 href={panelUrl} 
-                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
+                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 md:px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
               >
                 Mi Panel
               </Link>
               <button 
                 onClick={handleLogout}
-                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:bg-slate-800 transition-all duration-200"
+                className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-2 md:px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:bg-slate-800 transition-all duration-200"
                 title="Cerrar Sesión"
               >
                 <LogOut className="h-4 w-4 sm:mr-2" />
@@ -146,21 +123,24 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
             pathname.startsWith("/login") ? (
               <Link 
                 href="/register" 
-                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
+                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 md:px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
               >
                 Registrarse
               </Link>
             ) : (
               <Link 
                 href="/login" 
-                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
+                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 md:px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
               >
                 Iniciar Sesión
               </Link>
             )
           )}
+
         </div>
       </div>
+      
+
     </header>
   );
 }

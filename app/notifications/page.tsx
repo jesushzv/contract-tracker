@@ -95,7 +95,7 @@ export default function NotificationsPage() {
                 <div
                   key={notif.id}
                   onClick={() => !notif.isRead && handleMarkRead(notif.id)}
-                  className={`bg-white rounded-2xl p-5 border text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
+                  className={`bg-white rounded-2xl p-4 sm:p-5 border text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
                     notif.isRead
                       ? "border-slate-200 opacity-80"
                       : "border-indigo-500/25 bg-indigo-50/50 cursor-pointer shadow-sm shadow-indigo-500/5"

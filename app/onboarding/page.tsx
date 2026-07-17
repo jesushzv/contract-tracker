@@ -224,8 +224,8 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-16 text-center flex-grow flex items-center justify-center min-h-[90vh]">
-      <div className="glass rounded-3xl p-8 flex flex-col gap-6 w-full text-left border border-indigo-500/20 shadow-2xl relative overflow-hidden">
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:py-16 text-center flex-grow flex items-center justify-center min-h-[90vh]">
+      <div className="glass rounded-3xl p-6 sm:p-8 flex flex-col gap-6 w-full text-left border border-indigo-500/20 shadow-2xl relative overflow-hidden">
         {/* Back light glow */}
         <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-indigo-500/10 blur-3xl" />
 
@@ -247,10 +247,10 @@ export default function OnboardingPage() {
         )}
 
         {/* Stepper Indicator */}
-        <div className="flex items-center justify-between mb-8 max-w-md mx-auto relative px-4 pb-5 border-b border-slate-100 dark:border-slate-855">
-          <div className="absolute left-10 right-10 top-5 h-0.5 bg-slate-100 dark:bg-slate-800 -z-10" />
+        <div className="flex items-center justify-between mb-8 max-w-md mx-auto relative px-2 sm:px-4 pb-5 border-b border-slate-100 dark:border-slate-855">
+          <div className="absolute left-6 right-6 sm:left-10 sm:right-10 top-5 h-0.5 bg-slate-100 dark:bg-slate-800 -z-10" />
           <div 
-            className="absolute left-10 top-5 h-0.5 bg-indigo-500 transition-all duration-300 -z-10" 
+            className="absolute left-6 sm:left-10 top-5 h-0.5 bg-indigo-500 transition-all duration-300 -z-10" 
             style={{ width: currentStep === 1 ? "0%" : currentStep === 2 ? "44%" : "88%" }}
           />
 

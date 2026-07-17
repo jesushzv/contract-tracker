@@ -164,7 +164,7 @@ export default function Dashboard() {
   return (
     <AppShell activePath="/dashboard">
       <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center items-start gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Hola, {profile?.fullName?.split(' ')[0] || 'Usuario'}</h1>
             <p className="text-slate-500">Aquí está el resumen de tu negocio.</p>
@@ -181,9 +181,9 @@ export default function Dashboard() {
           <MoneyCard title="Pendiente (MXN)" amount={financialStats.pendienteMXN} currency="MXN" type="neutral" />
         </div>
 
-        <div className="flex justify-between items-center mt-4">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center items-start gap-3 mt-4">
           <h2 className="text-lg font-semibold text-slate-800">Tus Contratos</h2>
-          <div className="flex bg-slate-100 p-1 rounded-md">
+          <div className="flex bg-slate-100 p-1 rounded-md self-end sm:self-auto">
             <button 
               className={`p-1.5 rounded ${viewMode === 'board' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'}`}
               onClick={() => setViewMode('board')}

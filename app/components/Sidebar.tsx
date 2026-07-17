@@ -8,9 +8,10 @@ import { Profile } from "@/lib/types";
 
 interface SidebarProps {
   activePath?: string;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ activePath }: SidebarProps) {
+export function Sidebar({ activePath, onNavigate }: SidebarProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [demo, setDemo] = useState(false);
 
@@ -80,6 +81,7 @@ export function Sidebar({ activePath }: SidebarProps) {
             <Link
               key={link.name}
               href={link.href}
+              onClick={onNavigate}
               className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive 
                   ? "bg-slate-800 text-white" 
