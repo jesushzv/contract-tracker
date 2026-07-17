@@ -19,20 +19,24 @@ const serverActions = shouldUseSupabase() ? supabaseActions : localActions;
 export const isDemoMode = (): boolean => {
   if (typeof window === "undefined") return false;
 
-  const hasDemoParam = new URLSearchParams(window.location.search).get("demo") === "true";
+  const searchParams = new URLSearchParams(window.location.search);
+  
+  if (searchParams.get("demo") === "false") {
+    document.cookie = "demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    localStorage.removeItem("demo_mode");
+    return false;
+  }
+
+  const hasDemoParam = searchParams.get("demo") === "true";
   const hasDemoCookie = document.cookie.split("; ").some(row => row.trim().startsWith("demo_mode=true"));
   const hasDemoLocal = localStorage.getItem("demo_mode") === "true";
   
-  const isDevEnv = process.env.NEXT_PUBLIC_VERCEL_ENV !== "production";
-  
-  if (isDevEnv || hasDemoParam || hasDemoCookie || hasDemoLocal) {
-    if (hasDemoParam || isDevEnv || hasDemoLocal) {
-      if (!hasDemoCookie) {
-        document.cookie = "demo_mode=true; path=/; max-age=31536000";
-      }
-      if (hasDemoParam || isDevEnv) {
-        localStorage.setItem("demo_mode", "true");
-      }
+  if (hasDemoParam || hasDemoCookie || hasDemoLocal) {
+    if (!hasDemoCookie) {
+      document.cookie = "demo_mode=true; path=/; max-age=31536000";
+    }
+    if (!hasDemoLocal) {
+      localStorage.setItem("demo_mode", "true");
     }
     return true;
   }
