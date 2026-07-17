@@ -24,6 +24,7 @@ gantt
     Sprint SDET (QA Automation & CI/CD) :active, 2026-07-21, 2026-07-23
     Sprint 6 (Emails & Magic Links) :active, 2026-07-23, 2026-07-25
     Sprint WB-3 (UX & Completeness) :active, 2026-07-25, 2026-07-26
+    Sprint UX (P0 UX/UI Overhaul) :active, 2026-07-26, 2026-07-28
     Sprint 8 (Stripe Payments SaaS) :active, 2026-07-28, 2026-07-31
     section Pendiente
     Sprint 7 (CFDI 4.0 PAC Sandbox) :2026-07-26, 2026-07-28
@@ -119,6 +120,18 @@ gantt
 * **Payment Profiles CRUD UI**: Integrated a full management panel in dashboard settings to configure, edit, delete, and set default bank profiles.
 * **Standing Trust Element**: Added a verified status indicator card in the client contract view.
 * **Standalone Documents Archive**: Created a standalone route `/documents` to filter, search, and view all digital contracts, CEP receipts, and audit logs.
+
+### 🟢 Sprint UX: P0 UX/UI Overhaul (Completado)
+> **Design System Document:** [`design_docs/ux-ui-design-system.md`](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/contract-tracker/design_docs/ux-ui-design-system.md)
+
+A dedicated UX sprint that paused feature work to rebuild the application's entire front-end architecture. Executed across 5 phases over ~11 working days.
+
+* **Phase 0 — Visual Direction:** Evaluated 3 visual directions (Warm/Approachable, Sharp/Minimal, Premium SaaS). Selected **Direction B: Sharp & Minimal** (Linear/Stripe-inspired).
+* **Phase 1 — Design System Foundation:** Formalized design tokens (colors, typography, spacing) in `globals.css`. Built 9 atomic UI primitive components (`Button`, `Badge`, `Card`, `Input`, `SlideOver`, `Avatar`, `EmptyState`, `ConfirmDialog`, `Tooltip`). Extracted 5 state management hooks from the monolith dashboard.
+* **Phase 2 — Dashboard Rebuild:** Replaced the **2,895-line monolith** `dashboard/page.tsx` with a ~250-line orchestrator composing: `ContractPipeline` (Kanban board), `ContractCard`, `ContractDetail` (tabbed slide-over), `MoneyCard`, `MilestoneTimeline`, `AuditTimeline`, `TaxBreakdown`, `AppShell`, `Sidebar`, `NotificationBell`, and extracted payment/revision modals.
+* **Phase 3 — Wizard & Client Portal:** Decomposed the contract wizard into 5 step components (`TemplateGallery`, `ClientDetailsStep`, `FinancialSchemeStep`, `ClausesAndPaymentStep`, `ContractPreview`) + `useContractWizard` hook. Rebuilt the client portal with `ClientContractView`, `ClientSigningFlow`, `ClientPaymentUpload`, `StandingIndicator`, and `PrintableContract`.
+* **Phase 4 — Mobile, Motion & Polish:** Added `BottomNav` mobile navigation, slide-over/sidebar animations, card hover transitions, loading skeletons, empty states for all views, ARIA labels, focus trapping, `prefers-reduced-motion` support, and WCAG AA color contrast compliance.
+* **Phase 5 — Design Documentation:** Created the permanent `ux-ui-design-system.md` covering problem statement, user personas, design principles, information architecture, design tokens, full component library catalog, screen specifications, interaction & motion specs, design rationale, mobile strategy, and accessibility standards.
 
 ### 🔴 Sprint 7: Facturación Express (CFDI 4.0 PAC Sandbox) (Pendiente)
 * **Authorized Certification Provider (PAC)**: Integrate with Facturapi or FiscoClic sandbox endpoint to generate mock SAT invoices.

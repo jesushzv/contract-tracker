@@ -44,16 +44,42 @@ Here is a map of the repository's core directory structure:
 ```
 ├── app/                      # Next.js App Router root
 │   ├── admin/                # Freelancer admin metrics and ticker center
-│   ├── api/                  # Server-side endpoints (reminders, emails)
+│   ├── api/                  # Server-side endpoints (reminders, emails, Stripe webhooks)
 │   ├── c/                    # [id] Secure client portal view & OTP sign-off
-│   ├── contracts/            # Freelancer contract wizard creation & details views
-│   ├── dashboard/            # Freelancer dashboard workspace
-│   ├── documents/            # Unified document, receipt, and audit log search archive
+│   ├── components/           # Decomposed UI component library
+│   │   ├── ui/               # Atomic primitives (Button, Badge, Card, Input, etc.)
+│   │   ├── wizard/           # Contract creation wizard steps (TemplateGallery, etc.)
+│   │   ├── client/           # Client portal components (SigningFlow, PaymentUpload, etc.)
+│   │   ├── modals/           # Extracted modal dialogs (Payment, Revision, Resend, Edit)
+│   │   ├── AppShell.tsx      # Layout wrapper: sidebar + header + main content
+│   │   ├── Sidebar.tsx       # Desktop navigation with brand, links, and user profile
+│   │   ├── BottomNav.tsx     # Mobile-only fixed bottom tab bar
+│   │   ├── ContractPipeline.tsx  # Kanban board with snap-scroll columns
+│   │   ├── ContractCard.tsx  # Pipeline card: client, amount, status, overflow menu
+│   │   ├── ContractDetail.tsx    # Tabbed slide-over panel for contract management
+│   │   ├── ContractListView.tsx  # Sortable table alternative to the Kanban board
+│   │   ├── MoneyCard.tsx     # Financial summary card (Cobrado, Pendiente, etc.)
+│   │   ├── MilestoneTimeline.tsx # Vertical timeline with status dots and CTAs
+│   │   ├── AuditTimeline.tsx # Chronological event log with action icons
+│   │   ├── TaxBreakdown.tsx  # Collapsible fiscal ISR/IVA summary
+│   │   ├── NotificationBell.tsx  # Header dropdown notification panel
+│   │   └── UpgradeAlert.tsx  # Tier-limit upgrade banner
+│   ├── hooks/                # Extracted state management hooks
+│   │   ├── useContracts.ts   # Contract CRUD, filtering, and search
+│   │   ├── useMilestones.ts  # Milestone state transitions and receipt linking
+│   │   ├── useProfile.ts     # Profile data, tier info, demo mode detection
+│   │   ├── useFinancialStats.ts  # Memoized computed financial statistics
+│   │   └── useContractWizard.ts  # Wizard form state (all steps in one hook)
+│   ├── contracts/            # Freelancer contract wizard creation views
+│   ├── dashboard/            # Freelancer dashboard workspace (~250 lines orchestrator)
 │   ├── hash-verifier/        # Copy-paste contract hash verification interface
 │   ├── login/ / register/    # Authentication pages
+│   ├── notifications/        # Full notification history view
 │   ├── onboarding/           # Pricing tier and fiscal profile onboarding wizard
+│   ├── plans/                # Stripe checkout for tier upgrades
 │   ├── layout.tsx / page.tsx # Core layout and landing pages
 │   └── ApiKeyGuard.tsx       # Supabase configuration verification wrapper
+├── design_docs/              # Architecture, PRD, roadmap, and design system documentation
 ├── emails/                   # React Email templates (OTP, Invitations)
 ├── lib/                      # Business logic, validators, and database clients
 │   ├── emails.ts             # React Email & Resend transactional dispatchers (w/ local fallback)
@@ -92,6 +118,9 @@ A technical reference of the relational tables, version control structures, Row-
 
 ### 5. 💻 [Developer Lifecycle, Routing & SaaS Flows](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/contract-tracker/design_docs/architecture-dev-lifecycle-flows.md)
 An onboarding guide covering environment variables, setup commands, routing middleware protection, SaaS billing plan limits, and email/WhatsApp notification workers.
+
+### 6. 🎨 [UX/UI Design System](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/contract-tracker/design_docs/ux-ui-design-system.md)
+The single source of truth for all UI work: design tokens, component library, screen specs, interaction & motion specs, design rationale, mobile strategy, and accessibility standards. Created during the P0 UX Sprint.
 
 ---
 
