@@ -1,42 +1,45 @@
 import fs from "fs";
 import path from "path";
+import { Resend } from "resend";
+import { render } from "@react-email/render";
+import * as React from "react";
 
 export interface EmailParams {
   to: string;
   subject: string;
-  html: string;
+  react?: React.ReactElement;
+  html?: string;
   text?: string;
 }
 
+const resend = new Resend(process.env.RESEND_API_KEY || "re_123456789");
+
 export async function sendSimulatedEmail(params: EmailParams): Promise<boolean> {
-  const { to, subject, html, text } = params;
+  const { to, subject, react, text } = params;
+  let html = params.html || "";
+
+  if (react) {
+    html = await render(react);
+  }
 
   console.log(`📨 [Email Dispatch] Sent to: ${to} | Subject: ${subject}`);
 
-  // Try using Resend API if API Key is configured
   const resendApiKey = process.env.RESEND_API_KEY;
   if (resendApiKey) {
     try {
       console.log("⚡ Resend API Key detected. Dispatching real email via Resend API...");
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${resendApiKey}`
-        },
-        body: JSON.stringify({
-          from: "onboarding@resend.dev", // Default domain for sandbox testing
-          to,
-          subject,
-          html
-        })
+      const response = await resend.emails.send({
+        from: "onboarding@resend.dev", // Default domain for sandbox testing
+        to,
+        subject,
+        html,
+        text,
       });
 
-      if (response.ok) {
-        console.log("✅ Real email dispatched successfully through Resend API.");
+      if (response.error) {
+        console.error("❌ Resend API response error:", response.error);
       } else {
-        const errDetails = await response.text();
-        console.error("❌ Resend API response error:", errDetails);
+        console.log("✅ Real email dispatched successfully through Resend API.", response.data);
       }
     } catch (err) {
       console.error("❌ Failed to call Resend API:", err);

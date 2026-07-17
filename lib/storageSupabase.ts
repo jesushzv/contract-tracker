@@ -5,6 +5,10 @@ import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog
 import crypto from "crypto";
 import path from "path";
 import { sendSimulatedEmail } from "./emails";
+import React from "react";
+import { OTPEmail } from "@/emails/OTPEmail";
+import { ClientInvitationEmail } from "@/emails/ClientInvitationEmail";
+import { ContractChangeEmail } from "@/emails/ContractChangeEmail";
 import { headers, cookies } from "next/headers";
 
 // ── Contract State Machine ──────────────────────────────────────────────────
@@ -600,7 +604,13 @@ export async function saveContract(contract: Contract): Promise<Contract> {
     sendSimulatedEmail({
       to: contract.clientEmail,
       subject: `Propuesta de Contrato de Servicios Profesionales - ${contract.clientName}`,
-      html: `<p>Hola ${contract.clientName},</p><p>Te han compartido una propuesta de contrato por ${contract.totalAmount} ${contract.currency}.</p><p>Puedes revisarlo y firmar aquí: <a href="${clientUrl}">${clientUrl}</a></p>`
+      react: React.createElement(ClientInvitationEmail, {
+        clientName: contract.clientName,
+        freelancerName: "Freelancer",
+        contractUrl: clientUrl,
+        amount: contract.totalAmount.toString(),
+        currency: contract.currency,
+      }),
     }).catch(console.error);
   }
 
@@ -1008,6 +1018,19 @@ export async function generateClientOtp(contractId: string): Promise<string | nu
     console.error("Error generating OTP:", error);
     return null;
   }
+
+  const contract = await getContractById(contractId);
+  if (contract) {
+    sendSimulatedEmail({
+      to: contract.clientEmail,
+      subject: `Código de Verificación OTP - ${contract.clientName}`,
+      react: React.createElement(OTPEmail, {
+        clientName: contract.clientName,
+        otpCode: otpCode,
+      })
+    }).catch(console.error);
+  }
+
   return otpCode;
 }
 
@@ -1391,13 +1414,25 @@ export async function proposeContractRevision(
   sendSimulatedEmail({
     to: contract.clientEmail,
     subject: `Revisión Solicitada del Contrato - ${profile?.fullName || 'Freelancer'}`,
-    html: `<p>Hola ${contract.clientName},</p><p>Se ha solicitado una revisión para el contrato de servicios profesionales. El contrato ha vuelto al estado de borrador y requiere cambios.</p><p><strong>Motivo:</strong> ${reason}</p><p>Puedes ver los detalles aquí: <a href="${clientUrl}">${clientUrl}</a></p>`
+    react: React.createElement(ContractChangeEmail, {
+      recipientName: contract.clientName,
+      senderName: profile?.fullName || "Freelancer",
+      contractUrl: clientUrl,
+      actionMessage: "ha solicitado una revisión para el contrato de servicios profesionales. El contrato ha vuelto al estado de borrador",
+      details: reason,
+    })
   }).catch(console.error);
 
   sendSimulatedEmail({
     to: freelancerEmail,
     subject: `Revisión Solicitada del Contrato - ${contract.clientName}`,
-    html: `<p>Hola,</p><p>Se ha registrado una solicitud de revisión para el contrato de ${contract.clientName}. El contrato ha vuelto al estado de borrador.</p><p><strong>Motivo:</strong> ${reason}</p>`
+    react: React.createElement(ContractChangeEmail, {
+      recipientName: "Freelancer",
+      senderName: contract.clientName,
+      contractUrl: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard`,
+      actionMessage: "ha registrado una solicitud de revisión para el contrato. El contrato ha vuelto al estado de borrador",
+      details: reason,
+    })
   }).catch(console.error);
 
   return mapContractFromDb(data);

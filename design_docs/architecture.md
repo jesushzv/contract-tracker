@@ -54,8 +54,9 @@ Here is a map of the repository's core directory structure:
 │   ├── onboarding/           # Pricing tier and fiscal profile onboarding wizard
 │   ├── layout.tsx / page.tsx # Core layout and landing pages
 │   └── ApiKeyGuard.tsx       # Supabase configuration verification wrapper
+├── emails/                   # React Email templates (OTP, Invitations)
 ├── lib/                      # Business logic, validators, and database clients
-│   ├── emails.ts             # Console-simulated transactional email dispatchers
+│   ├── emails.ts             # React Email & Resend transactional dispatchers (w/ local fallback)
 │   ├── mockData.ts           # Demo mode and database seeding data
 │   ├── rfcValidator.ts       # Mexican RFC parser and Modulo 11 check digit validator
 │   ├── storage.ts            # Server-side file-based database actions (db.json)
