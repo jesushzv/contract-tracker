@@ -89,7 +89,7 @@ export function ContractDetail({
       <div className="flex flex-col h-full -mx-4 -mt-6">
         <div className="px-6 py-4 border-b border-slate-200">
           <div className="flex justify-between items-start mb-4">
-            <div>
+            <div className="flex-1 mr-4">
               <h2 className="text-xl font-semibold text-slate-900">{contract.clientName}</h2>
               <p className="text-sm text-slate-500 mt-1">{contract.scopeDescription}</p>
             </div>
