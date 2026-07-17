@@ -61,6 +61,8 @@ const seedSandboxIfNeeded = () => {
       regimenFiscal: "626 - Régimen Simplificado de Confianza (RESICO)",
       codigoPostal: "06700",
       tier: "pro",
+      stripeCustomerId: "cus_demo123",
+      stripeSubscriptionId: "sub_demo123",
       bankDetails: {
         clabe: "012180001509987654",
         bankName: "BBVA México",
@@ -71,10 +73,10 @@ const seedSandboxIfNeeded = () => {
   } else {
     try {
       const prof = JSON.parse(localStorage.getItem(KEYS.PROFILE) || "{}");
-      if (!prof.tier || prof.tier === "free") {
-        prof.tier = "pro";
-        localStorage.setItem(KEYS.PROFILE, JSON.stringify(prof));
-      }
+      if (!prof.tier || prof.tier === "free") prof.tier = "pro";
+      if (!prof.stripeCustomerId) prof.stripeCustomerId = "cus_demo123";
+      if (!prof.stripeSubscriptionId) prof.stripeSubscriptionId = "sub_demo123";
+      localStorage.setItem(KEYS.PROFILE, JSON.stringify(prof));
     } catch {}
   }
 
