@@ -229,12 +229,12 @@ export default function OnboardingPage() {
         {/* Back light glow */}
         <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-indigo-500/10 blur-3xl" />
 
-        <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-850 pb-5">
+        <div className="flex items-center gap-3 border-b border-slate-100  pb-5">
           <div className="h-10 w-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-500/20">
             <ShieldCheck className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Bienvenido a la Beta</h1>
+            <h1 className="text-xl font-black text-slate-900  tracking-tight">Bienvenido a la Beta</h1>
             <p className="text-xs text-slate-400 mt-0.5">Configura tu perfil fiscal y datos bancarios para emitir contratos legales.</p>
           </div>
         </div>
@@ -247,30 +247,30 @@ export default function OnboardingPage() {
         )}
 
         {/* Stepper Indicator */}
-        <div className="flex items-center justify-between mb-8 max-w-md mx-auto relative px-2 sm:px-4 pb-5 border-b border-slate-100 dark:border-slate-855">
-          <div className="absolute left-6 right-6 sm:left-10 sm:right-10 top-5 h-0.5 bg-slate-100 dark:bg-slate-800 -z-10" />
+        <div className="flex items-center justify-between mb-8 max-w-lg mx-auto relative px-0 pb-5 border-b border-slate-100">
+          <div className="absolute left-8 right-8 top-5 h-0.5 bg-slate-100 -z-10" />
           <div 
-            className="absolute left-6 sm:left-10 top-5 h-0.5 bg-indigo-500 transition-all duration-300 -z-10" 
-            style={{ width: currentStep === 1 ? "0%" : currentStep === 2 ? "44%" : "88%" }}
+            className="absolute left-8 top-5 h-0.5 bg-indigo-500 transition-all duration-300 -z-10" 
+            style={{ width: currentStep === 1 ? "0%" : currentStep === 2 ? "50%" : "100%" }}
           />
 
           {/* Step 1 */}
           <button 
             type="button"
             onClick={() => currentStep > 1 && setCurrentStep(1)}
-            className="flex flex-col items-center gap-1.5 focus:outline-none"
+            className="flex flex-col items-center gap-2 focus:outline-none w-24 bg-white"
           >
-            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-xs font-bold border transition-all ${
+            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border transition-all ${
               currentStep === 1 
-                ? "bg-indigo-600 text-white border-indigo-600 ring-4 ring-indigo-500/10" 
+                ? "bg-indigo-600 text-white border-indigo-600 ring-4 ring-indigo-50" 
                 : currentStep > 1
                   ? "bg-emerald-500 text-white border-emerald-500"
-                  : "bg-white dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-800"
+                  : "bg-slate-50 text-slate-400 border-slate-200"
             }`}>
-              {currentStep > 1 ? <Check className="h-4 w-4" /> : "1"}
+              {currentStep > 1 ? <Check className="h-5 w-5" /> : "1"}
             </div>
-            <span className={`text-4xs font-bold uppercase tracking-wider ${
-              currentStep === 1 ? "text-indigo-500" : currentStep > 1 ? "text-emerald-500" : "text-slate-400"
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${
+              currentStep === 1 ? "text-indigo-600" : currentStep > 1 ? "text-emerald-500" : "text-slate-400"
             }`}>
               Generales
             </span>
@@ -286,19 +286,19 @@ export default function OnboardingPage() {
                 setCurrentStep(2);
               }
             }}
-            className="flex flex-col items-center gap-1.5 focus:outline-none"
+            className="flex flex-col items-center gap-2 focus:outline-none w-24 bg-white"
           >
-            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-xs font-bold border transition-all ${
+            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border transition-all ${
               currentStep === 2 
-                ? "bg-indigo-600 text-white border-indigo-600 ring-4 ring-indigo-500/10" 
+                ? "bg-indigo-600 text-white border-indigo-600 ring-4 ring-indigo-50" 
                 : currentStep > 2
                   ? "bg-emerald-500 text-white border-emerald-500"
-                  : "bg-white dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-800"
+                  : "bg-slate-50 text-slate-400 border-slate-200"
             }`}>
-              {currentStep > 2 ? <Check className="h-4 w-4" /> : "2"}
+              {currentStep > 2 ? <Check className="h-5 w-5" /> : "2"}
             </div>
-            <span className={`text-4xs font-bold uppercase tracking-wider ${
-              currentStep === 2 ? "text-indigo-500" : currentStep > 2 ? "text-emerald-500" : "text-slate-400"
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${
+              currentStep === 2 ? "text-indigo-600" : currentStep > 2 ? "text-emerald-500" : "text-slate-400"
             }`}>
               Fiscales
             </span>
@@ -312,17 +312,17 @@ export default function OnboardingPage() {
                 setCurrentStep(3);
               }
             }}
-            className="flex flex-col items-center gap-1.5 focus:outline-none"
+            className="flex flex-col items-center gap-2 focus:outline-none w-24 bg-white"
           >
-            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-xs font-bold border transition-all ${
+            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold border transition-all ${
               currentStep === 3 
-                ? "bg-indigo-600 text-white border-indigo-600 ring-4 ring-indigo-500/10" 
-                : "bg-white dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-800"
+                ? "bg-indigo-600 text-white border-indigo-600 ring-4 ring-indigo-50" 
+                : "bg-slate-50 text-slate-400 border-slate-200"
             }`}>
               3
             </div>
-            <span className={`text-4xs font-bold uppercase tracking-wider ${
-              currentStep === 3 ? "text-indigo-500" : "text-slate-400"
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${
+              currentStep === 3 ? "text-indigo-600" : "text-slate-400"
             }`}>
               Cobro & Marca
             </span>
@@ -338,17 +338,17 @@ export default function OnboardingPage() {
                   {!isDemo ? "Plan de Suscripción" : "Selecciona tu Plan (Modo Demo)"}
                 </h3>
                 {!isDemo ? (
-                  <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-sm text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                        <span className="font-extrabold text-sm text-slate-800 uppercase tracking-wide">
                           Plan {tier}
                         </span>
-                        <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-4xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200">
                           Activo
                         </span>
                       </div>
-                      <p className="text-3xs text-slate-400 mt-1 leading-normal">
+                      <p className="text-xs text-slate-500 mt-1 leading-normal">
                         {tier === "free" && "Límite de 3 contratos. Branding personalizado bloqueado."}
                         {tier === "starter" && "Límite de 10 contratos. Identidad de marca (logo/firma) desbloqueada."}
                         {tier === "pro" && "Contratos ilimitados, branding desbloqueado y características premium."}
@@ -357,7 +357,7 @@ export default function OnboardingPage() {
                     <button
                       type="button"
                       onClick={() => router.push("/plans")}
-                      className="text-2xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline text-left cursor-pointer"
+                      className="text-xs font-bold text-indigo-600 hover:underline text-left cursor-pointer"
                     >
                       Cambiar Plan →
                     </button>
@@ -366,51 +366,51 @@ export default function OnboardingPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div 
                       onClick={() => setTier("free")}
-                      className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
+                      className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all bg-white ${
                         tier === "free" 
-                          ? "border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20" 
-                          : "border-slate-200 dark:border-slate-800 hover:border-slate-350 bg-white/40 dark:bg-slate-900/40"
+                          ? "border-indigo-500 ring-2 ring-indigo-50 shadow-md" 
+                          : "border-slate-200 hover:border-slate-300"
                       }`}
                     >
                       <div className="flex justify-between items-center">
-                        <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Gratuito</span>
-                        <span className="text-2xs font-extrabold text-indigo-500">$0 MXN</span>
+                        <span className="font-bold text-sm text-slate-800">Plan Gratuito</span>
+                        <span className="text-xs font-extrabold text-indigo-600">$0 MXN</span>
                       </div>
-                      <p className="text-3xs text-slate-400 mt-1 leading-normal">
+                      <p className="text-xs text-slate-500 mt-1 leading-normal">
                         Ideal para empezar. Máx. 3 contratos. Branding personalizado bloqueado.
                       </p>
                     </div>
 
                     <div 
                       onClick={() => setTier("starter")}
-                      className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
+                      className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all bg-white ${
                         tier === "starter" 
-                          ? "border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20" 
-                          : "border-slate-200 dark:border-slate-800 hover:border-slate-350 bg-white/40 dark:bg-slate-900/40"
+                          ? "border-emerald-500 ring-2 ring-emerald-50 shadow-md" 
+                          : "border-slate-200 hover:border-slate-300"
                       }`}
                     >
                       <div className="flex justify-between items-center">
-                        <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Starter</span>
-                        <span className="text-2xs font-extrabold text-indigo-500">$99 MXN</span>
+                        <span className="font-bold text-sm text-slate-800">Plan Starter</span>
+                        <span className="text-xs font-extrabold text-emerald-600">$99 MXN</span>
                       </div>
-                      <p className="text-3xs text-slate-400 mt-1 leading-normal">
+                      <p className="text-xs text-slate-500 mt-1 leading-normal">
                         Límite de 10 contratos. Identidad de marca (logo/firma) desbloqueada.
                       </p>
                     </div>
 
                     <div 
                       onClick={() => setTier("pro")}
-                      className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all ${
+                      className={`rounded-2xl border p-4 cursor-pointer flex flex-col gap-1 transition-all bg-white ${
                         tier === "pro" 
-                          ? "border-indigo-500 bg-indigo-500/5 dark:bg-indigo-500/10 ring-2 ring-indigo-500/20" 
-                          : "border-slate-200 dark:border-slate-800 hover:border-slate-350 bg-white/40 dark:bg-slate-900/40"
+                          ? "border-purple-500 ring-2 ring-purple-50 shadow-md" 
+                          : "border-slate-200 hover:border-slate-300"
                       }`}
                     >
                       <div className="flex justify-between items-center">
-                        <span className="font-bold text-sm text-slate-800 dark:text-slate-200">Plan Pro</span>
-                        <span className="text-2xs font-extrabold text-emerald-500">$199 MXN</span>
+                        <span className="font-bold text-sm text-slate-800">Plan Pro</span>
+                        <span className="text-xs font-extrabold text-purple-600">$199 MXN</span>
                       </div>
-                      <p className="text-3xs text-slate-400 mt-1 leading-normal">
+                      <p className="text-xs text-slate-500 mt-1 leading-normal">
                         Contratos ilimitados, branding desbloqueado y características premium.
                       </p>
                     </div>
@@ -418,42 +418,42 @@ export default function OnboardingPage() {
                 )}
               </div>
 
-              <div className="md:col-span-2 border-t border-slate-100 dark:border-slate-855 pt-4">
+              <div className="md:col-span-2 border-t border-slate-100  pt-4">
                 <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-3">Datos Generales</h3>
               </div>
 
-              <div className="flex flex-col gap-1.5 md:col-span-2">
-                <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Nombre Completo Titular</label>
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nombre Completo Titular</label>
                 <input
                   type="text"
                   required
                   placeholder="Ej. Héctor Guerrero"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none text-slate-900 transition-all"
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Teléfono (WhatsApp)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Teléfono (WhatsApp)</label>
                 <input
                   type="tel"
                   placeholder="Ej. +525512345678"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none text-slate-900 transition-all font-mono"
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Código Postal Fiscal</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Código Postal Fiscal</label>
                 <input
                   type="text"
                   maxLength={5}
                   placeholder="Ej. 06700"
                   value={codigoPostal}
                   onChange={(e) => setCodigoPostal(e.target.value)}
-                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none text-slate-900 transition-all font-mono"
                 />
               </div>
 
@@ -483,8 +483,8 @@ export default function OnboardingPage() {
                 <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-3">Datos Fiscales</h3>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">RFC Emisor (13 caracteres)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">RFC Emisor (13 caracteres)</label>
                 <input
                   type="text"
                   maxLength={13}
@@ -492,21 +492,21 @@ export default function OnboardingPage() {
                   value={rfc}
                   onChange={(e) => setRfc(e.target.value.toUpperCase())}
                   onBlur={handleRfcBlur}
-                  className={`rounded-xl border bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:outline-none dark:text-white uppercase font-mono ${
-                    rfcError ? "border-red-500 focus:border-red-500" : "border-slate-200 dark:border-slate-800 focus:border-indigo-500"
+                  className={`rounded-xl border bg-slate-50 px-4 py-3 text-sm focus:bg-white focus:ring-4 outline-none text-slate-900 uppercase font-mono transition-all ${
+                    rfcError ? "border-red-500 focus:border-red-500 focus:ring-red-500/10" : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/10"
                   }`}
                 />
                 {rfcError && (
-                  <span className="text-3xs text-red-500 font-semibold">{rfcError}</span>
+                  <span className="text-xs text-red-500 font-semibold">{rfcError}</span>
                 )}
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Régimen Fiscal (Sat)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Régimen Fiscal (Sat)</label>
                 <select
                   value={regimenFiscal}
                   onChange={(e) => setRegimenFiscal(e.target.value)}
-                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white dark:bg-slate-950"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none text-slate-900 transition-all"
                 >
                   <option value="">Selecciona una opción...</option>
                   <option value="626 - Régimen Simplificado de Confianza (RESICO)">626 - Régimen Simplificado de Confianza (RESICO)</option>
@@ -519,7 +519,7 @@ export default function OnboardingPage() {
                 <button
                   type="button"
                   onClick={() => setCurrentStep(1)}
-                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/45 dark:bg-slate-900/45 hover:bg-slate-50 dark:hover:bg-slate-850 dark:text-white font-bold px-6 py-2.5 text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="rounded-xl border border-slate-200  bg-white/45  hover:bg-slate-50   font-bold px-6 py-2.5 text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Atrás
@@ -552,31 +552,31 @@ export default function OnboardingPage() {
                 </h3>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Banco Receptor</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Banco Receptor</label>
                 <input
                   type="text"
                   placeholder="Ej. BBVA México o STP"
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
-                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none text-slate-900 transition-all"
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">CLABE Interbancaria (18 dígitos)</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">CLABE Interbancaria (18 dígitos)</label>
                 <input
                   type="text"
                   maxLength={18}
                   placeholder="18 dígitos para SPEI"
                   value={clabe}
                   onChange={(e) => setClabe(e.target.value)}
-                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white font-mono"
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none text-slate-900 transition-all font-mono"
                 />
               </div>
 
               {/* Section: Custom Branding (Optional) */}
-              <div className="md:col-span-2 border-t border-slate-100 dark:border-slate-850 pt-4">
+              <div className="md:col-span-2 border-t border-slate-100  pt-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-3">Identidad de Marca (Opcional)</h3>
                   {tier === "free" && (
@@ -585,17 +585,17 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5 relative">
-                <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Logo de tu Empresa (PNG, JPG, SVG - Máx 2MB)</label>
+              <div className="flex flex-col gap-2 relative">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Logo de tu Empresa (PNG, JPG, SVG - Máx 2MB)</label>
                 {tier === "free" ? (
                   <input
                     type="text"
                     disabled
                     placeholder="🔒 Carga de logo deshabilitada en Plan Gratuito"
-                    className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-indigo-500 outline-none text-slate-900 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 ) : (
-                  <div className="flex flex-col gap-2 text-left">
+                  <div className="flex flex-col gap-3 text-left">
                     <input
                       type="file"
                       accept="image/png, image/jpeg, image/jpg, image/svg+xml"
@@ -608,23 +608,23 @@ export default function OnboardingPage() {
                         hover:file:bg-indigo-100"
                     />
                     {logoUrl && (
-                      <img src={logoUrl} alt="Logo preview" className="h-10 w-auto object-contain border border-slate-200 dark:border-slate-850 rounded-lg self-start" />
+                      <img src={logoUrl} alt="Logo preview" className="h-10 w-auto object-contain border border-slate-200 rounded-lg self-start" />
                     )}
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-col gap-1.5 relative">
-                <label className="text-3xs font-semibold text-slate-455 dark:text-slate-400 uppercase tracking-wider">Tu Firma Digital (PNG, JPG - Máx 2MB)</label>
+              <div className="flex flex-col gap-2 relative">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tu Firma Digital (PNG, JPG - Máx 2MB)</label>
                 {tier === "free" ? (
                   <input
                     type="text"
                     disabled
                     placeholder="🔒 Carga de firma deshabilitada en Plan Gratuito"
-                    className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 px-4 py-2.5 text-sm focus:border-indigo-500 focus:outline-none dark:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-indigo-500 outline-none text-slate-900 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
                 ) : (
-                  <div className="flex flex-col gap-2 text-left">
+                  <div className="flex flex-col gap-3 text-left">
                     <input
                       type="file"
                       accept="image/png, image/jpeg, image/jpg"
@@ -637,17 +637,17 @@ export default function OnboardingPage() {
                         hover:file:bg-indigo-100"
                     />
                     {signatureUrl && (
-                      <img src={signatureUrl} alt="Firma preview" className="h-10 w-auto object-contain border border-slate-200 dark:border-slate-850 rounded-lg self-start" />
+                      <img src={signatureUrl} alt="Firma preview" className="h-10 w-auto object-contain border border-slate-200 rounded-lg self-start" />
                     )}
                   </div>
                 )}
               </div>
 
-              <div className="md:col-span-2 border-t border-slate-100 dark:border-slate-850 pt-5 flex justify-between">
+              <div className="md:col-span-2 border-t border-slate-100  pt-5 flex justify-between">
                 <button
                   type="button"
                   onClick={() => setCurrentStep(2)}
-                  className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/45 dark:bg-slate-900/45 hover:bg-slate-50 dark:hover:bg-slate-850 dark:text-white font-bold px-6 py-2.5 text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="rounded-xl border border-slate-200  bg-white/45  hover:bg-slate-50   font-bold px-6 py-2.5 text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Atrás
