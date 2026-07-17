@@ -77,15 +77,20 @@ export async function POST(req: NextRequest) {
         const active = status === "active" || status === "trialing";
         const finalTier = active ? tier : "free";
 
+        const cancelAt = subscription.cancel_at_period_end 
+          ? new Date((subscription as unknown as { current_period_end: number }).current_period_end * 1000).toISOString() 
+          : undefined;
+
         const profile = await getProfileByStripeCustomerId(stripeCustomerId);
         if (profile) {
           const updatedProfile = {
             ...profile,
             tier: finalTier,
             stripeSubscriptionId: subscription.id,
+            subscriptionCancelAt: cancelAt,
           };
           await updateProfile(updatedProfile, true);
-          console.log(`Subscription updated for customer ${stripeCustomerId}: tier set to ${finalTier} (status: ${status})`);
+          console.log(`Subscription updated for customer ${stripeCustomerId}: tier set to ${finalTier} (status: ${status}, cancel_at: ${cancelAt})`);
         } else {
           console.warn(`Customer profile not found for Stripe customer ID: ${stripeCustomerId}`);
         }
@@ -102,6 +107,7 @@ export async function POST(req: NextRequest) {
             ...profile,
             tier: "free" as const,
             stripeSubscriptionId: undefined,
+            subscriptionCancelAt: undefined,
           };
           await updateProfile(updatedProfile, true);
           console.log(`Subscription deleted for customer ${stripeCustomerId}: tier reset to free`);

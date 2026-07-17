@@ -143,6 +143,7 @@ A dedicated UX sprint that paused feature work to rebuild the application's enti
 * **Payment Gates**: Enforce contract creation limits in the wizard according to active subscription tiers (3 for Free, 10 for Starter) and gate custom branding features.
 * **Stripe Webhooks**: Webhook API `/api/webhooks/stripe` to keep database user subscription status and tiers in sync.
 * **Customer Billing Portal**: Link to Stripe's payment methods, cancellation, and invoice history portal.
+* **Subscription Cancellation Flow**: In-app multi-step cancellation flow with retention offers (pause/downgrade), reason survey, and Stripe `cancel_at_period_end` integration.
 
 ### 🔴 Sprint 9: Bóveda de CSD Segura (Pendiente)
 * **CSD File Vault**: Secure UI allowing freelancers to upload `.cer`, `.key` keys and password credentials.

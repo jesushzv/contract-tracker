@@ -7,7 +7,8 @@ import {
   CheckCircle2, 
   Settings,
   ArrowLeft,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from "lucide-react";
 import { 
   getProfile, 
@@ -21,6 +22,7 @@ import {
 import { Profile, Contract, PaymentProfile } from "@/lib/types";
 import { UpgradeAlert } from "@/app/components/UpgradeAlert";
 import { AppShell } from "../../components/AppShell";
+import { CancelPlanModal } from "@/app/components/modals/CancelPlanModal";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -53,6 +55,8 @@ export default function SettingsPage() {
   
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isBillingLoading, setIsBillingLoading] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isReactivating, setIsReactivating] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -225,6 +229,21 @@ export default function SettingsPage() {
       alert("Error al abrir portal de facturación: " + msg);
     } finally {
       setIsBillingLoading(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    setIsReactivating(true);
+    try {
+      const res = await fetch("/api/stripe/reactivate-subscription", { method: "POST" });
+      if (!res.ok) throw new Error("Fallo al reactivar");
+      
+      const prof = await getProfile();
+      setProfile(prof);
+    } catch (err: unknown) {
+      alert("Error al reactivar suscripción: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsReactivating(false);
     }
   };
 
@@ -593,9 +612,15 @@ export default function SettingsPage() {
                 <span className="font-extrabold text-lg text-slate-800 uppercase tracking-wide">
                   Plan {profile?.tier || "Gratuito"}
                 </span>
-                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 border border-emerald-500/20">
-                  Activo
-                </span>
+                {profile?.subscriptionCancelAt ? (
+                  <span className="inline-flex items-center rounded-full bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-600 border border-amber-500/20">
+                    Cancelación Programada
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 border border-emerald-500/20">
+                    Activo
+                  </span>
+                )}
               </div>
               
               {/* Progress Indicator */}
@@ -620,21 +645,32 @@ export default function SettingsPage() {
 
             <div className="flex-shrink-0 flex flex-col sm:flex-row items-center gap-3">
               {profile?.stripeCustomerId ? (
-                <button
-                  type="button"
-                  onClick={handleManageBilling}
-                  disabled={isBillingLoading}
-                  className="rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-5 py-3 text-sm transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-sm"
-                >
-                  {isBillingLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Cargando...
-                    </>
-                  ) : (
-                    "Administrar Facturación"
+                <>
+                  <button
+                    type="button"
+                    onClick={handleManageBilling}
+                    disabled={isBillingLoading}
+                    className="rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-5 py-3 text-sm transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-sm"
+                  >
+                    {isBillingLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Cargando...
+                      </>
+                    ) : (
+                      "Administrar Facturación"
+                    )}
+                  </button>
+                  {profile.tier !== 'free' && profile.stripeSubscriptionId && !profile.subscriptionCancelAt && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCancelModal(true)}
+                      className="rounded-xl bg-transparent hover:bg-red-50 text-red-600 font-bold px-5 py-3 text-sm transition-colors flex items-center gap-2 cursor-pointer border border-transparent hover:border-red-200"
+                    >
+                      Cancelar Suscripción
+                    </button>
                   )}
-                </button>
+                </>
               ) : (
                 <Link
                   href="/plans"
@@ -645,10 +681,42 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
+          
+          {profile?.subscriptionCancelAt && (
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div>
+                  <h5 className="text-sm font-semibold text-amber-900">Suscripción Cancelada</h5>
+                  <p className="text-xs text-amber-700 mt-1">
+                    Tu suscripción actual finalizará el <strong>{new Date(profile.subscriptionCancelAt).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>. Seguirás teniendo acceso a tu plan hasta entonces.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleReactivate}
+                disabled={isReactivating}
+                className="whitespace-nowrap rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 font-semibold px-4 py-2 text-xs transition-colors disabled:opacity-50 border border-amber-300/50 cursor-pointer"
+              >
+                {isReactivating ? 'Reactivando...' : 'Reactivar suscripción'}
+              </button>
+            </div>
+          )}
         </section>
 
       </div>
     </div>
+    <CancelPlanModal 
+      isOpen={showCancelModal}
+      onClose={() => setShowCancelModal(false)}
+      onSuccess={async () => {
+        const prof = await getProfile();
+        setProfile(prof);
+      }}
+      currentTier={(profile?.tier as 'free' | 'starter' | 'pro') || 'free'}
+      activeContractsCount={contractUsage}
+    />
     </AppShell>
   );
 }

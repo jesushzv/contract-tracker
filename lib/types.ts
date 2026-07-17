@@ -11,6 +11,7 @@ export interface Profile {
   phone?: string;
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
+  subscriptionCancelAt?: string;
   bankDetails: {
     clabe: string;
     bankName: string;
