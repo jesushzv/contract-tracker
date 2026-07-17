@@ -24,6 +24,7 @@ import { ClientContractView } from "@/app/components/client/ClientContractView";
 import { ClientSigningFlow } from "@/app/components/client/ClientSigningFlow";
 import { ClientPaymentUpload } from "@/app/components/client/ClientPaymentUpload";
 import { StandingIndicator } from "@/app/components/client/StandingIndicator";
+import { PrintableContract } from "@/app/components/client/PrintableContract";
 
 export default function ClientPortalPage() {
   const params = useParams();
@@ -705,7 +706,9 @@ export default function ClientPortalPage() {
   const activePayment = milestones.find(m => m.status === 'requested');
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 print:p-0 print:max-w-full">
+    <>
+      {contract && <PrintableContract contract={contract} profile={profile} />}
+      <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 print:hidden">
       {/* Banner message at the top */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 print:hidden">
         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Vista del Cliente</span>
@@ -1628,6 +1631,7 @@ export default function ClientPortalPage() {
         </div>
       )}
     </div>
+    </>
   );
 }
 
