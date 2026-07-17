@@ -6,9 +6,10 @@ import { AuditTimeline } from "./AuditTimeline";
 import { TaxBreakdown } from "./TaxBreakdown";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Copy, Edit2, ShieldCheck, AlertTriangle, ExternalLink, MessageCircle } from "lucide-react";
+import { Copy, Edit2, ShieldCheck, AlertTriangle, ExternalLink, MessageCircle, Mail } from "lucide-react";
 import { FreelancerEditModal } from "./modals/FreelancerEditModal";
-import { vetAndAcceptContract, cancelContract } from "@/lib/storageClient";
+import { ResendEmailModal } from "./modals/ResendEmailModal";
+import { vetAndAcceptContract, cancelContract, resendContractEmail } from "@/lib/storageClient";
 
 interface ContractDetailProps {
   contract: Contract | null;
@@ -39,6 +40,8 @@ export function ContractDetail({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showCounterSignConfirm, setShowCounterSignConfirm] = useState(false);
   const [isCounterSigning, setIsCounterSigning] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
+  const [showResendModal, setShowResendModal] = useState(false);
 
   // Cancellation state
   const [isCanceling, setIsCanceling] = useState(false);
@@ -221,6 +224,30 @@ export function ContractDetail({
                   </div>
                 )}
               </div>
+
+              {contract.status !== 'draft' && (
+                <div className="pt-6 border-t border-slate-200">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-2">Correos Electrónicos</h3>
+                  <p className="text-xs text-slate-500 mb-4">Reenvía la invitación por correo electrónico al cliente para que revise y firme el contrato.</p>
+                  
+                  <button 
+                    onClick={() => {
+                      if (!contract.clientEmail) {
+                        showToast?.('No hay correo registrado', 'error');
+                        return;
+                      }
+                      setShowResendModal(true);
+                    }}
+                    disabled={isResendingEmail}
+                    className="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-5 h-5 text-slate-400" />
+                      <span className="font-medium text-sm">{isResendingEmail ? 'Reenviando...' : 'Reenviar invitación por correo'}</span>
+                    </div>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -363,6 +390,31 @@ export function ContractDetail({
           </div>
         </div>
       )}
+
+      {/* Resend Email Modal */}
+      <ResendEmailModal
+        isOpen={showResendModal}
+        onClose={() => !isResendingEmail && setShowResendModal(false)}
+        contract={contract!}
+        isResending={isResendingEmail}
+        onConfirm={async (customMessage) => {
+          setIsResendingEmail(true);
+          try {
+            const success = await resendContractEmail(contract!.id, customMessage);
+            if (success) {
+              showToast?.('Correo reenviado con éxito', 'success');
+              setShowResendModal(false);
+            } else {
+              showToast?.('No se pudo reenviar el correo', 'error');
+            }
+          } catch (err) {
+            console.error(err);
+            showToast?.('Error de conexión', 'error');
+          } finally {
+            setIsResendingEmail(false);
+          }
+        }}
+      />
     </SlideOver>
   );
 }

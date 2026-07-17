@@ -446,6 +446,15 @@ export async function saveContract(contract: Contract): Promise<Contract> {
   return serverActions.saveContract(contract);
 }
 
+export async function resendContractEmail(contractId: string, customMessage?: string): Promise<boolean> {
+  if (isDemoMode()) {
+    // In demo mode, we just return true. Simulated emails would be handled by a real backend anyway.
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return true;
+  }
+  return serverActions.resendContractEmail(contractId, customMessage);
+}
+
 export async function getMilestones(contractId?: string): Promise<Milestone[]> {
   if (isDemoMode()) {
     seedSandboxIfNeeded();

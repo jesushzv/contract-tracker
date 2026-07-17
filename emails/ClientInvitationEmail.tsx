@@ -17,6 +17,7 @@ interface ClientInvitationEmailProps {
   contractUrl: string;
   amount: string;
   currency: string;
+  customMessage?: string;
 }
 
 export const ClientInvitationEmail = ({
@@ -25,6 +26,7 @@ export const ClientInvitationEmail = ({
   contractUrl = "https://contract-tracker.app",
   amount = "0.00",
   currency = "MXN",
+  customMessage,
 }: ClientInvitationEmailProps) => (
   <Html>
     <Head />
@@ -41,6 +43,11 @@ export const ClientInvitationEmail = ({
         <Text style={text}>
           Puedes revisar los detalles del contrato, los hitos de pago y firmar electrónicamente de conformidad accediendo al siguiente enlace seguro:
         </Text>
+        {customMessage && (
+          <Section style={customMessageSection}>
+            <Text style={customMessageText}>{customMessage}</Text>
+          </Section>
+        )}
         <Section style={btnContainer}>
           <Button style={button} href={contractUrl}>
             Revisar y Firmar Contrato
@@ -80,6 +87,22 @@ const h1 = {
   fontWeight: "bold",
   textAlign: "center" as const,
   padding: "20px",
+};
+
+const customMessageSection = {
+  margin: "24px 40px",
+  padding: "16px 20px",
+  backgroundColor: "#f1f5f9",
+  borderRadius: "8px",
+  borderLeft: "4px solid #3b82f6",
+};
+
+const customMessageText = {
+  color: "#334155",
+  fontSize: "15px",
+  lineHeight: "24px",
+  margin: 0,
+  whiteSpace: "pre-wrap" as const,
 };
 
 const text = {

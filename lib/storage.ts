@@ -367,6 +367,28 @@ export async function saveContract(contract: Contract): Promise<Contract> {
   return sanitizedContract;
 }
 
+export async function resendContractEmail(contractId: string, customMessage?: string): Promise<boolean> {
+  const contract = await getContractById(contractId);
+  if (!contract || contract.status === "draft") return false;
+
+  const tokenPart = contract.clientAccessToken ? `?token=${contract.clientAccessToken}` : "";
+  const clientUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/c/${contract.id}${tokenPart}`;
+  
+  await sendSimulatedEmail({
+    to: contract.clientEmail,
+    subject: `Propuesta de Contrato de Servicios Profesionales - ${contract.clientName}`,
+    react: React.createElement(ClientInvitationEmail, {
+      clientName: contract.clientName,
+      freelancerName: "Freelancer",
+      contractUrl: clientUrl,
+      amount: contract.totalAmount.toString(),
+      currency: contract.currency,
+      customMessage: customMessage
+    }),
+  });
+  return true;
+}
+
 export async function getMilestones(contractId?: string): Promise<Milestone[]> {
   const db = await readDb();
   const allMilestones: Milestone[] = db.milestones || [];
