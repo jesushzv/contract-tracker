@@ -86,6 +86,10 @@ export default function RegisterPage() {
       return;
     }
 
+    // Clear any leftover demo mode flags to ensure a clean real registration
+    localStorage.removeItem("demo_mode");
+    document.cookie = "demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+
     try {
       const { data, error: authError } = await supabase.auth.signUp({
         email,
