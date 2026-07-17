@@ -14,7 +14,6 @@ interface HeaderProps {
 export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
   const pathname = usePathname();
   const [isLoggedIn, setIsLoggedIn] = useState(hasAuthCookie);
-  const [isDemo, setIsDemo] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in via cookies or demo mode
@@ -35,12 +34,7 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
         }
         return false;
       });
-      const hasDemoParam = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("demo") === "true";
-      const hasDemoLocal = typeof window !== "undefined" && localStorage.getItem("demo_mode") === "true";
-      const hasDemoCookie = cookies.some((c) => c.trim().startsWith("demo_mode="));
-      
       setIsLoggedIn(hasCookie);
-      setIsDemo(hasDemoParam || hasDemoLocal || hasDemoCookie);
     };
     checkSession();
   }, [pathname]);
@@ -56,7 +50,7 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
     return null;
   }
 
-  const showFullHeader = isLoggedIn || isDemo;
+  const showFullHeader = isLoggedIn;
   const panelUrl = showFullHeader ? "/dashboard" : "/login";
 
   const handleLogout = async () => {

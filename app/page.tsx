@@ -39,8 +39,7 @@ export default function Home() {
         }
         return false;
       });
-      const hasDemoMode = localStorage.getItem("demo_mode") === "true";
-      setIsLoggedIn(hasCookie || hasDemoMode);
+      setIsLoggedIn(hasCookie);
     };
     checkSession();
   }, []);
