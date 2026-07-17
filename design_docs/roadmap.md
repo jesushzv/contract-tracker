@@ -24,9 +24,9 @@ gantt
     Sprint SDET (QA Automation & CI/CD) :active, 2026-07-21, 2026-07-23
     Sprint 6 (Emails & Magic Links) :active, 2026-07-23, 2026-07-25
     Sprint WB-3 (UX & Completeness) :active, 2026-07-25, 2026-07-26
+    Sprint 8 (Stripe Payments SaaS) :active, 2026-07-28, 2026-07-31
     section Pendiente
     Sprint 7 (CFDI 4.0 PAC Sandbox) :2026-07-26, 2026-07-28
-    Sprint 8 (Stripe Payments SaaS) :2026-07-28, 2026-07-31
     Sprint 9 (CSD Vault & Encryption) :2026-07-31, 2026-08-03
     Sprint 10 (NOM-151 preservation) :2026-08-03, 2026-08-05
 ```
@@ -124,7 +124,7 @@ gantt
 * **Authorized Certification Provider (PAC)**: Integrate with Facturapi or FiscoClic sandbox endpoint to generate mock SAT invoices.
 * **CSF Alignment**: Client data check ensuring RFC, Postal Code, and Regimen Fiscal match SAT's Constancia de Situación Fiscal requirement.
 
-### 🔴 Sprint 8: Stripe Payments & Onboarding Funnel (Monetización SaaS) (Pendiente)
+### 🟢 Sprint 8: Stripe Payments & Onboarding Funnel (Monetización SaaS) (Completado)
 * **Subscription Management & Middle Tier**: Support three subscription tiers: Free (max 3 contracts, basic templates, locked branding), Starter Middle Tier ($99 MXN/mo, max 10 contracts, unlocked branding), and Pro ($199 MXN/mo, unlimited contracts, unlocked branding, premium templates).
 * **Commercialization Funnel**: Implement the full registration-to-onboarding flow for new customers (User Registration -> Plan Selection card UI -> Stripe Checkout redirection for Starter/Pro tiers -> Post-payment Onboarding wizard to collect profiles and setup company branding assets).
 * **Payment Gates**: Enforce contract creation limits in the wizard according to active subscription tiers (3 for Free, 10 for Starter) and gate custom branding features.

@@ -15,7 +15,7 @@ _Use this prompt to generate the implementation plan without running long autono
 ```markdown
 Use the sprint-development-workflow skill and active ECC rules to plan.
 
-1. Read the roadmap, technical PRD files and architecture in `design_docs/` to understand the requirements.
+1. Read the roadmap, technical PRD files, architecture and UX/UI in `design_docs/` to understand the requirements and the current design and architecture.
 2. Search the codebase for files that need modifications using grep (do not read entire files yet).
 3. Create the implementation_plan.md artifact outlining the proposed modifications. For existing files, read only the target line ranges where code will be edited.
 4. Set request_feedback: true and wait for my approval.
@@ -34,7 +34,7 @@ _Once the plan is approved, start a new chat. This wipes the large PRD texts fro
 2. Initialize the task.md tracker.
 3. Modify the files step-by-step as planned. Preserve existing comments and style conventions. Use targeted line edits (avoid rewriting or reading entire files unless necessary).
 4. Update task.md as you complete each task.
-5. Update the files in the /design_docs (also the architecture if applicable) as needed.
+5. Update the files in the /design_docs as needed.
 6. Afer all tasks are finished make a local deployment so I can validate.
 ```
 

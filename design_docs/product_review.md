@@ -79,5 +79,5 @@ Based on exploratory testing and security feedback, we have scoped a dedicated *
    - Integrate Husky pre-commit hooks, generate unified LCOV coverage reports, and configure a mock Postgres database container for pipeline-friendly migration verification.
 7. **Sprint 6 (Pending): WhatsApp, Emails & Magic Links**
    - Client & Freelancer phone integration and contextual WhatsApp Click-to-Chat templates for state changes.
-8. **Sprint 8 (Pending): Stripe Payments & SaaS Onboarding Funnel**
+8. **Sprint 8 (Completed): Stripe Payments & SaaS Onboarding Funnel**
    - Three-tier pricing setup (Free, Starter, Pro), registration and Stripe checkout funnel, post-payment onboarding profile setup, and webhook syncing.

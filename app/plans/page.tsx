@@ -46,6 +46,18 @@ export default function PlansPage() {
       return;
     }
 
+    // If user already has an active subscription, direct them to the billing portal to upgrade/manage
+    if (currentProfile?.stripeSubscriptionId) {
+      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.location.assign(data.url);
+        return;
+      } else {
+        throw new Error(data.error || "Fallo al abrir el portal de facturación");
+      }
+    }
+
     // Production redirect to Stripe Checkout
     const res = await fetch("/api/stripe/checkout-session", {
       method: "POST",
