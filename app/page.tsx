@@ -160,6 +160,17 @@ export default function Home() {
                 Sin tarjeta de crédito. Configura en 2 minutos.
               </p>
             )}
+            
+            <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 mt-6 opacity-80">
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-100/50 px-3 py-1.5 rounded-full border border-slate-200/50">
+                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                Válido ante Código de Comercio (Art. 89)
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-100/50 px-3 py-1.5 rounded-full border border-slate-200/50">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                No Subordinación Laboral (LFT)
+              </div>
+            </div>
           </div>
         </div>
 

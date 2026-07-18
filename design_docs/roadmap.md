@@ -28,7 +28,8 @@ gantt
     Sprint 8 (Stripe Payments SaaS) :active, 2026-07-28, 2026-07-31
     Sprint Admin (Admin Overhaul) :active, 2026-07-31, 2026-08-02
     section Pendiente
-    Sprint 9 (SaaS Landing Page Parity) :2026-08-02, 2026-08-04
+    Sprint Legal (Audit & Compliance) :2026-08-02, 2026-08-04
+    Sprint 9 (SaaS Landing Page Parity) :2026-08-04, 2026-08-06
     Sprint 7 (Facturación Real & CSD Vault) :2026-08-04, 2026-08-09
     Sprint 10 (NOM-151 preservation) :2026-08-10, 2026-08-12
 ```
@@ -158,6 +159,12 @@ A dedicated UX sprint that paused feature work to rebuild the application's enti
 * **Promo Code Manager**: Ability to create, track, and expire promotional discount codes (both manual and Stripe-integrated).
 * **Automated Email Campaigns**: Interface to draft, segment, and dispatch email campaigns to users based on their subscription tier using React-Email and Resend.
 
+
+### 🔴 Sprint Legal: Legal Audit & Compliance (Pendiente)
+* **Contract Validity Check**: Verify standard freelance contracts under Código Civil Federal.
+* **Labor Law Protection**: Ensure clauses prevent *Relación Laboral* claims under LFT.
+* **Electronic Signatures**: Verify OTP + SHA-256 seal aligns with Código de Comercio (Art. 89).
+* **Legal Confidence UX**: UI badges and explainer tooltips highlighting legal protection.
 
 ### 🔴 Sprint 9: SaaS Landing Page Parity (Pendiente)
 * **Global Navigation:** Header links to features, pricing, FAQ.

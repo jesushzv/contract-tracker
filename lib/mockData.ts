@@ -42,6 +42,12 @@ export const MOCK_CLAUSES: ClauseTemplate[] = [
     category: 'consulting',
     title: 'Disponibilidad y Agendamiento de Sesiones',
     content: 'Las sesiones de consultoría y asesoría serán agendadas con al menos 48 horas de anticipación. Las cancelaciones o reprogramaciones por parte del Cliente deberán notificarse con al menos 24 horas de antelación; de lo contrario, la sesión se considerará como impartida y descontada de la bolsa de horas acordada.'
+  },
+  {
+    id: 'mx-electronic-signature',
+    category: 'general',
+    title: 'Consentimiento y Firma Electrónica (Código de Comercio)',
+    content: 'Las partes acuerdan expresamente que la aceptación de este contrato mediante contraseña de un solo uso (OTP), casilla de confirmación electrónica, y la generación del sello criptográfico (hash SHA-256) en esta plataforma tienen la misma validez legal, eficacia y fuerza probatoria que una firma autógrafa, de conformidad con el Artículo 89 y demás relativos del Código de Comercio y el Código Civil Federal aplicable.'
   }
 ];
 
@@ -49,21 +55,21 @@ export const CONTRACT_TEMPLATES = {
   general: {
     name: 'Servicios Generales / Freelance',
     description: 'Ideal para proyectos freelance estándar de cualquier sector en México.',
-    defaultClauses: ['mx-lft-independencia', 'mx-intellectual-property', 'mx-payment-terms', 'mx-cancellation']
+    defaultClauses: ['mx-lft-independencia', 'mx-intellectual-property', 'mx-payment-terms', 'mx-cancellation', 'mx-electronic-signature']
   },
   design: {
     name: 'Diseño y Creativos',
     description: 'Especializado para diseñadores, ilustradores y creadores de contenido.',
-    defaultClauses: ['mx-lft-independencia', 'mx-intellectual-property', 'mx-payment-terms', 'design-revisions', 'mx-cancellation']
+    defaultClauses: ['mx-lft-independencia', 'mx-intellectual-property', 'mx-payment-terms', 'design-revisions', 'mx-cancellation', 'mx-electronic-signature']
   },
   development: {
     name: 'Desarrollo de Software / Devs',
     description: 'Para programadores, agencias web y desarrollo de productos digitales.',
-    defaultClauses: ['mx-lft-independencia', 'mx-intellectual-property', 'dev-source-code', 'mx-payment-terms', 'mx-cancellation']
+    defaultClauses: ['mx-lft-independencia', 'mx-intellectual-property', 'dev-source-code', 'mx-payment-terms', 'mx-cancellation', 'mx-electronic-signature']
   },
   consulting: {
     name: 'Consultoría y Mentorías',
     description: 'Para consultores, asesores profesionales y coaches de negocios.',
-    defaultClauses: ['mx-lft-independencia', 'mx-payment-terms', 'consulting-schedule', 'mx-cancellation']
+    defaultClauses: ['mx-lft-independencia', 'mx-payment-terms', 'consulting-schedule', 'mx-cancellation', 'mx-electronic-signature']
   }
 };

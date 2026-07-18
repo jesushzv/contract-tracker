@@ -137,7 +137,7 @@ export function ClientSigningFlow({
           )}
 
           <p className="text-[11px] text-slate-450 leading-normal">
-            Guardaremos tu nombre completo, marca de tiempo y tu dirección IP pública para el registro de auditoría digital de conformidad con el Art. 89 del Código de Comercio de México.
+            Al firmar, aceptas que este mecanismo electrónico tiene idéntica validez que una firma autógrafa. Guardaremos tu nombre completo, marca de tiempo y dirección IP para el registro de auditoría digital, de conformidad con el <strong>Art. 89 del Código de Comercio de México</strong> y el <strong>Código Civil Federal</strong>.
           </p>
 
           <div className="flex gap-3 justify-end mt-2">

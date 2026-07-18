@@ -22,7 +22,13 @@ export function ClientContractView({ contract, profile, auditLogs, startProposin
             )}
             <div>
               <h1 className="text-2xl font-black uppercase text-slate-800 tracking-tight">Propuesta de Contrato</h1>
-              <p className="text-xs text-slate-400 font-mono mt-1">ID: {contract.id.substring(0, 18)}</p>
+              <div className="flex items-center gap-3 mt-1.5">
+                <p className="text-xs text-slate-400 font-mono">ID: {contract.id.substring(0, 18)}</p>
+                <div className="flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border border-indigo-100 cursor-help" title="Contrato amparado bajo el Código Civil Federal y firma electrónica válida según el Art. 89 del Código de Comercio en México.">
+                  <ShieldCheck className="h-3 w-3" />
+                  Validez Legal en México
+                </div>
+              </div>
             </div>
           </div>
           <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold uppercase ring-1 ring-inset ${ contract.status === 'accepted' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 ' : contract.status === 'completed' ? 'bg-blue-50 text-blue-700 ring-blue-600/20 ' : contract.status === 'client_signed' ? 'bg-purple-50 text-purple-700 ring-purple-600/20 ' : contract.status === 'sent' ? 'bg-amber-50 text-amber-700 ring-amber-600/20 ' : 'bg-slate-50 text-slate-700 ring-slate-600/20 ' }`}>
