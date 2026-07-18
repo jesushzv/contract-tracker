@@ -14,13 +14,11 @@ interface HeaderProps {
 export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
   const pathname = usePathname();
   const [isLoggedIn, setIsLoggedIn] = useState(hasAuthCookie);
-  const [debugCookie, setDebugCookie] = useState("");
 
   useEffect(() => {
     // Check if user is logged in via cookies or demo mode
     const checkSession = () => {
       const cookies = document.cookie;
-      setDebugCookie(cookies);
       const hasCookie = cookies.split(";").some((c) => {
         const trimmed = c.trim();
         if (trimmed === "demo_mode=true") return true;
@@ -103,7 +101,7 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
           </div>
           <div>
             <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Mi Pacto {debugCookie && <span className="text-[10px] text-red-500 block break-all">[{debugCookie}]</span>}
+              Mi Pacto
             </span>
           </div>
         </Link>

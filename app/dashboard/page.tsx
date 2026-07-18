@@ -131,12 +131,7 @@ export default function Dashboard() {
       return;
     }
 
-    if (receiptFileType === 'file' && !receiptFileBase64) {
-      setModalError("Debes adjuntar un comprobante en PDF o imagen.");
-      return;
-    }
-
-    if (receiptFileType === 'url' && (!receiptUrl || !receiptUrl.startsWith('http'))) {
+    if (receiptFileType === 'url' && receiptUrl && !receiptUrl.startsWith('http')) {
       setModalError("Debes proporcionar un enlace URL válido.");
       return;
     }
@@ -145,7 +140,12 @@ export default function Dashboard() {
     setModalError(null);
 
     try {
-      const finalReceiptUrl = receiptFileType === 'url' ? receiptUrl : `local-upload-${receiptFileName}`;
+      let finalReceiptUrl = undefined;
+      if (receiptFileType === 'url') {
+        finalReceiptUrl = receiptUrl || undefined;
+      } else if (receiptFileBase64 && receiptFileName) {
+        finalReceiptUrl = `local-upload-${receiptFileName}`;
+      }
       await markMilestoneAsTransferred(
         paymentMilestone.id, 
         trackingReference, 

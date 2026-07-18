@@ -653,14 +653,13 @@ export default function ClientPortalPage() {
     try {
       let resolvedReceiptUrl = undefined;
       if (receiptFileType === 'file') {
-        if (!receiptFileBase64) {
-          throw new Error("Por favor, seleccione un archivo de comprobante de pago.");
+        if (receiptFileBase64) {
+          resolvedReceiptUrl = await uploadReceiptFile(
+            receiptFileName,
+            receiptFileMimeType,
+            receiptFileBase64
+          );
         }
-        resolvedReceiptUrl = await uploadReceiptFile(
-          receiptFileName,
-          receiptFileMimeType,
-          receiptFileBase64
-        );
       } else {
         resolvedReceiptUrl = receiptUrl || undefined;
       }

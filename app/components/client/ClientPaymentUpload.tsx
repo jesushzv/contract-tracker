@@ -131,7 +131,7 @@ export function ClientPaymentUpload({
 
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-              Método de Comprobante
+              Método de Comprobante (Opcional)
             </label>
             <div className="flex gap-4 mb-3">
               <label className="flex items-center gap-2 text-xs font-semibold text-slate-655 cursor-pointer">

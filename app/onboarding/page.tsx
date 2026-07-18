@@ -173,9 +173,9 @@ export default function OnboardingPage() {
     setLoading(true);
 
     try {
-      const isDemo = new URLSearchParams(window.location.search).get("demo") === "true" || localStorage.getItem("demo_mode") === "true";
+      const isDemoActive = isDemoMode();
       let userId = "demo-freelancer-uuid";
-      if (!isDemo) {
+      if (!isDemoActive) {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           setError("La sesión ha expirado. Inicia sesión de nuevo.");
