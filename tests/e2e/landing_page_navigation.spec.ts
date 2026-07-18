@@ -26,6 +26,8 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     await expect(page.locator('text="Documentos"')).not.toBeVisible();
 
     // 3. Verify Hero CTA buttons & helper links
+    const heroHtml = await page.locator('.mt-10.flex.flex-col').first().innerHTML();
+    console.log("Hero HTML:", heroHtml);
     await expect(page.locator('a:has-text("Comenzar a Crear")')).toBeVisible();
     await expect(page.locator('a:has-text("Probar Demo con Datos")')).toBeVisible();
     await expect(page.locator('text="¿Ya tienes una cuenta?"')).toBeVisible();
