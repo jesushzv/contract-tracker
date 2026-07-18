@@ -30,13 +30,14 @@ export const isDemoMode = (): boolean => {
   const hasDemoParam = searchParams.get("demo") === "true";
   const hasDemoCookie = document.cookie.split("; ").some(row => row.trim().startsWith("demo_mode=true"));
   const hasDemoLocal = localStorage.getItem("demo_mode") === "true";
+  const hasDemoSession = sessionStorage.getItem("demo_mode") === "true";
   
-  if (hasDemoParam || hasDemoCookie || hasDemoLocal) {
+  if (hasDemoParam || hasDemoCookie || hasDemoLocal || hasDemoSession) {
     if (!hasDemoCookie) {
-      document.cookie = "demo_mode=true; path=/; max-age=31536000";
+      document.cookie = "demo_mode=true; path=/;";
     }
-    if (!hasDemoLocal) {
-      localStorage.setItem("demo_mode", "true");
+    if (!hasDemoSession) {
+      sessionStorage.setItem("demo_mode", "true");
     }
     return true;
   }

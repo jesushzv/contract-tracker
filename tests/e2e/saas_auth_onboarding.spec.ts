@@ -67,6 +67,9 @@ test.describe("Premium SaaS Auth & Onboarding E2E Flow", () => {
     await page.fill('input[placeholder="correo@ejemplo.com"]', `dynamic-${Date.now()}@example.com`);
     await page.fill('input[placeholder="••••••••"] >> nth=0', STRONG_PASSWORD);
     await page.fill('input[placeholder="••••••••"] >> nth=1', STRONG_PASSWORD);
+    
+    await page.check('input#privacy');
+
     await page.click('button[type="submit"]');
 
     // Wait for redirect to onboarding

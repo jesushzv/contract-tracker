@@ -29,6 +29,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
+  console.log("SERVER COOKIES:", cookieStore.getAll());
+  
   const hasAuthCookie = cookieStore.getAll().some((c) => {
     if (c.name.startsWith("sb-") && c.name.endsWith("-auth-token")) {
       try {

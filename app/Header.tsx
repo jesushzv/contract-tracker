@@ -14,12 +14,14 @@ interface HeaderProps {
 export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
   const pathname = usePathname();
   const [isLoggedIn, setIsLoggedIn] = useState(hasAuthCookie);
+  const [debugCookie, setDebugCookie] = useState("");
 
   useEffect(() => {
     // Check if user is logged in via cookies or demo mode
     const checkSession = () => {
-      const cookies = document.cookie.split(";");
-      const hasCookie = cookies.some((c) => {
+      const cookies = document.cookie;
+      setDebugCookie(cookies);
+      const hasCookie = cookies.split(";").some((c) => {
         const trimmed = c.trim();
         if (trimmed === "demo_mode=true") return true;
         if (trimmed.startsWith("sb-") && trimmed.includes("-auth-token=")) {
@@ -88,7 +90,7 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
           </div>
           <div>
             <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-emerald-500 bg-clip-text text-transparent dark:from-indigo-400 dark:to-emerald-400">
-              Anticipo
+              Anticipo {debugCookie && <span className="text-[10px] text-red-500 block break-all">[{debugCookie}]</span>}
             </span>
             <span className="text-xs font-semibold text-slate-400 ml-1 block sm:inline">MX</span>
           </div>

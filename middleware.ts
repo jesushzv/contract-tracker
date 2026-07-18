@@ -44,11 +44,6 @@ export function middleware(request: NextRequest) {
 
   const response = NextResponse.next();
 
-  // If the request had ?demo=true and the cookie is not set, set it
-  if (hasDemoParam && !hasDemoCookie) {
-    response.cookies.set("demo_mode", "true", { path: "/" });
-  }
-
   return response;
 }
 

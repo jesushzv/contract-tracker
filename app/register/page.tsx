@@ -72,7 +72,7 @@ export default function RegisterPage() {
       // Set mock authentication cookies and localStorage
       document.cookie = "sb-mock-auth-token=true; path=/";
       document.cookie = "demo_mode=true; path=/";
-      localStorage.setItem("demo_mode", "true");
+      sessionStorage.setItem("demo_mode", "true");
 
       const defaultProfile = {
         id: "demo-freelancer-uuid",

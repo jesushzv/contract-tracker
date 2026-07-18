@@ -29,10 +29,17 @@ export default function Home() {
     // Enable smooth scrolling for anchor links
     document.documentElement.style.scrollBehavior = "smooth";
     
+    // Clear demo mode if we land on the homepage
+    localStorage.removeItem("demo_mode");
+    sessionStorage.removeItem("demo_mode");
+    document.cookie = "demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    document.cookie = "sb-mock-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+
     const checkSession = () => {
       const cookies = document.cookie.split(";");
       const hasCookie = cookies.some((c) => {
         const trimmed = c.trim();
+        // Since we clear demo_mode cookie above, this will now only be true for real sessions
         if (trimmed === "demo_mode=true") return true;
         if (trimmed.startsWith("sb-") && trimmed.includes("-auth-token=")) {
           const valueStr = trimmed.substring(trimmed.indexOf("=") + 1);

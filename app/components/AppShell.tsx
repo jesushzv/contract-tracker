@@ -17,6 +17,7 @@ export function AppShell({ children, activePath = "/dashboard" }: AppShellProps)
     await supabase.auth.signOut();
     document.cookie = "sb-mock-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     localStorage.removeItem("demo_mode");
+    sessionStorage.removeItem("demo_mode");
     document.cookie = "demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
 
     const cookies = document.cookie.split(";");

@@ -65,6 +65,8 @@ test.describe("Authentication & Session Redirection E2E Suite", () => {
     await page.fill('input[placeholder="••••••••"] >> nth=0', STRONG_PASSWORD);
     await page.fill('input[placeholder="••••••••"] >> nth=1', STRONG_PASSWORD);
     
+    await page.check('input#privacy');
+    
     await page.click('button[type="submit"]');
 
     // Expect mock registration success message

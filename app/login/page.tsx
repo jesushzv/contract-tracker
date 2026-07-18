@@ -44,7 +44,7 @@ export default function LoginPage() {
       // Set mock authentication cookies and localStorage
       document.cookie = "sb-mock-auth-token=true; path=/";
       document.cookie = "demo_mode=true; path=/";
-      localStorage.setItem("demo_mode", "true");
+      sessionStorage.setItem("demo_mode", "true");
 
       if (selectedTier === "starter" || selectedTier === "pro") {
         // Also update tier in sandbox profile if exists

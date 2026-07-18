@@ -2,15 +2,19 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Landing Page & Navigation Header E2E Suite", () => {
   test.beforeEach(async ({ page }) => {
+    page.on('console', msg => console.log('BROWSER LOG:', msg.text()));
     // Clear cookies/localStorage to ensure clean logged-out state
     await page.context().clearCookies();
     await page.goto("/");
-    await page.evaluate(() => localStorage.clear());
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
   });
 
   test("should show simplified header and helper links when logged out, and toggle on login/demo", async ({ page }) => {
     // 1. Navigate to landing page (logged out)
-    await page.goto("/");
+    // already navigated in beforeEach
 
     // 2. Verify simplified header visible
     const header = page.locator("header");
@@ -55,15 +59,18 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     // Navigate to landing page (while logged in/in demo mode)
     await page.goto("/");
     
-    // Verify Hero CTA buttons show "Ir a mi Panel" instead of "Comenzar a Crear"
-    await expect(page.getByRole('link', { name: /Ir a mi Panel/i })).toBeVisible();
+    // Verify Hero CTA buttons show "Comenzar Gratis" because the sandbox session was cleared
+    await expect(page.getByRole('link', { name: /Comenzar Gratis/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Ir a mi Panel/i })).not.toBeVisible();
     await expect(page.getByRole('link', { name: /Comenzar a Crear/i })).not.toBeVisible();
     await expect(page.getByRole('link', { name: /Probar Demo con Datos/i })).not.toBeVisible();
     await expect(page.getByRole('link', { name: /¿Ya tienes una cuenta\? Inicia sesión aquí/i })).not.toBeVisible();
 
-    // 6. Logout and verify return to logged out state
+    // Wait for the useEffect to clear the cookies
+    await page.waitForFunction(() => !document.cookie.includes('demo_mode=true'));
+
+    // 6. Verify that going to dashboard now redirects to login because the session was cleared
     await page.goto("/dashboard");
-    await page.getByRole('button', { name: /Cerrar Sesión/i }).first().click();
     
     // Verify redirected to /login
     await expect(page).toHaveURL(/\/login/);
