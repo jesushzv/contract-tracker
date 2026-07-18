@@ -56,15 +56,26 @@ export function ClausesAndPaymentStep({
                   className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mt-0.5 pointer-events-none"
                 />
                 <div>
-                  <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                  <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 flex-wrap">
                     {clause.title}
                     <span className="text-3xs uppercase px-1 py-0.25 rounded bg-slate-100 text-slate-400 font-semibold">
                       {clause.category}
                     </span>
+                    {clause.legalBasis && (
+                      <span className="text-3xs flex items-center gap-1 bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                        <Info className="h-3 w-3" />
+                        Base Legal
+                      </span>
+                    )}
                   </h4>
                   <p className="text-xs text-slate-500 leading-relaxed mt-1 font-light">
                     {clause.content}
                   </p>
+                  {clause.legalBasis && (
+                    <div className="mt-2 text-2xs bg-emerald-50 text-emerald-800/80 p-2 rounded-lg border border-emerald-500/20 font-medium">
+                      <strong>Fundamento:</strong> {clause.legalBasis}
+                    </div>
+                  )}
                 </div>
               </div>
             );

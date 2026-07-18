@@ -19,6 +19,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [tier, setTier] = useState<string | null>(null);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -34,6 +35,12 @@ export default function RegisterPage() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    
+    if (!acceptPrivacy) {
+      setError("Debes aceptar el Aviso de Privacidad y los Términos de Servicio para continuar.");
+      return;
+    }
+    
     setLoading(true);
 
     if (password !== confirmPassword) {
@@ -262,6 +269,19 @@ export default function RegisterPage() {
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
+            
+            <div className="flex items-start gap-2 mt-2">
+              <input
+                type="checkbox"
+                id="privacy"
+                checked={acceptPrivacy}
+                onChange={(e) => setAcceptPrivacy(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-900/40"
+              />
+              <label htmlFor="privacy" className="text-xs text-slate-600 dark:text-slate-400">
+                Acepto el <Link href="#" className="text-indigo-600 dark:text-indigo-400 hover:underline">Aviso de Privacidad</Link> y los <Link href="#" className="text-indigo-600 dark:text-indigo-400 hover:underline">Términos de Servicio</Link>, consintiendo el tratamiento de mis datos conforme a la LFPDPPP.
+              </label>
             </div>
 
             <button

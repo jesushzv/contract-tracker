@@ -1,4 +1,4 @@
-import { ShieldCheck, Clock, CheckCircle2, Briefcase, Edit3, CreditCard } from "lucide-react";
+import { ShieldCheck, Clock, CheckCircle2, Briefcase, Edit3, CreditCard, Info } from "lucide-react";
 import { Contract, Profile, AuditLog } from "@/lib/types";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 
@@ -123,8 +123,21 @@ export function ClientContractView({ contract, profile, auditLogs, startProposin
               <div key={clause.id} className="flex gap-3">
                 <span className="font-mono font-bold text-indigo-500 bg-indigo-500/5 h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">{idx + 1}</span>
                 <div>
-                  <h4 className="font-bold text-slate-800">{clause.title}</h4>
+                  <h4 className="font-bold text-slate-800 flex items-center gap-2 flex-wrap">
+                    {clause.title}
+                    {clause.legalBasis && (
+                      <span className="text-3xs flex items-center gap-1 bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                        <Info className="h-3 w-3" />
+                        Base Legal
+                      </span>
+                    )}
+                  </h4>
                   <p className="text-slate-500 mt-1 leading-relaxed font-light">{clause.content}</p>
+                  {clause.legalBasis && (
+                    <div className="mt-2 text-2xs bg-emerald-50 text-emerald-800/80 p-2 rounded-lg border border-emerald-500/20 font-medium">
+                      <strong>Fundamento:</strong> {clause.legalBasis}
+                    </div>
+                  )}
                 </div>
               </div>
             ));

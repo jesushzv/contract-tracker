@@ -1,4 +1,4 @@
-import { FileText, CheckCircle2 } from "lucide-react";
+import { FileText, CheckCircle2, Info } from "lucide-react";
 import { MOCK_CLAUSES } from "@/lib/mockData";
 
 interface Milestone {
@@ -96,8 +96,21 @@ export function ContractPreview({
                   <li key={clauseId} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
                     <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
                     <div className="flex flex-col">
-                      <span className="font-semibold text-slate-900">{clause.title}</span>
+                      <span className="font-semibold text-slate-900 flex items-center gap-2 flex-wrap">
+                        {clause.title}
+                        {clause.legalBasis && (
+                          <span className="text-3xs flex items-center gap-1 bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                            <Info className="h-3 w-3" />
+                            Base Legal
+                          </span>
+                        )}
+                      </span>
                       <span className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2" title={clause.content}>{clause.content}</span>
+                      {clause.legalBasis && (
+                        <div className="mt-2 text-2xs bg-emerald-50 text-emerald-800/80 p-2 rounded-lg border border-emerald-500/20 font-medium">
+                          <strong>Fundamento:</strong> {clause.legalBasis}
+                        </div>
+                      )}
                     </div>
                   </li>
                 );

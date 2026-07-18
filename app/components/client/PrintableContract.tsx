@@ -28,7 +28,7 @@ export function PrintableContract({ contract, profile }: PrintableContractProps)
 
       <div className="mb-10 text-justify">
         <p className="mb-4">
-          Conste por el presente documento, el contrato de prestación de servicios profesionales que celebran, 
+          Conste por el presente documento, el contrato de prestación de servicios profesionales, regido por el Código Civil Federal, que celebran, 
           por una parte <strong>{contract.beneficiaryName || "_______________________"}</strong>, 
           a quien en lo sucesivo se le denominará &quot;EL PRESTADOR&quot;, y por la otra parte 
           <strong> {contract.clientName}</strong>, a quien en lo sucesivo se le denominará &quot;EL CLIENTE&quot;, 

@@ -113,6 +113,7 @@ export interface ClauseTemplate {
   category: 'general' | 'design' | 'development' | 'consulting';
   title: string;
   content: string;
+  legalBasis?: string;
 }
 
 export interface AuditLog {

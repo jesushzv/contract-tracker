@@ -169,7 +169,7 @@ A dedicated UX sprint that paused feature work to rebuild the application's enti
 * **Comprehensive Footer:** SaaS footer with proper links.
 
 
-### 🔴 Sprint Legal: Legal Audit & Compliance (Pendiente)
+### 🟢 Sprint Legal: Legal Audit & Compliance (Completado)
 * **Contract Validity Check**: Verify standard freelance contracts under Código Civil Federal.
 * **Labor Law Protection**: Ensure clauses prevent *Relación Laboral* claims under LFT.
 * **Electronic Signatures**: Verify OTP + SHA-256 seal aligns with Código de Comercio (Art. 89).

@@ -327,8 +327,8 @@ export default function Home() {
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5" />
                   <div>
-                    <div className="text-sm font-bold text-slate-900">Cumplimiento Fiscal RESICO</div>
-                    <div className="text-xs text-slate-500 mt-1">Cálculo de retenciones de ISR e IVA pre-configurado para personas físicas a morales.</div>
+                    <div className="text-sm font-bold text-slate-900">Validez Código de Comercio (Art. 89)</div>
+                    <div className="text-xs text-slate-500 mt-1">La firma electrónica mediante NIP/OTP tiene pleno valor probatorio y obligatoriedad legal.</div>
                   </div>
                 </div>
               </div>
@@ -343,17 +343,17 @@ export default function Home() {
               Diseñado específicamente para las leyes mexicanas
             </h2>
             <p className="text-lg text-slate-600 leading-relaxed">
-              No uses plantillas gringas traducidas. Nuestros contratos están redactados por abogados mexicanos para protegerte de demandas laborales por subordinación (Ley Federal del Trabajo) y cumplir con las retenciones fiscales actuales (RESICO / Honorarios).
+              No uses plantillas gringas genéricas. Nuestros contratos civiles (Código Civil Federal) están redactados para protegerte de demandas por subordinación (Ley Federal del Trabajo), cumplir con retenciones fiscales (RESICO) y garantizar firmas vinculantes (Código de Comercio).
             </p>
             <ul className="space-y-3 mt-2">
               <li className="flex items-center gap-3 text-sm font-medium text-slate-700">
-                <Check className="h-5 w-5 text-indigo-500" /> Válido ante tribunales civiles.
+                <Check className="h-5 w-5 text-indigo-500" /> Basado en el Código Civil Federal.
               </li>
               <li className="flex items-center gap-3 text-sm font-medium text-slate-700">
-                <Check className="h-5 w-5 text-indigo-500" /> Registro de IP y Timestamp de firma.
+                <Check className="h-5 w-5 text-indigo-500" /> Registro de IP y Timestamp de firma electrónica (Art. 89).
               </li>
               <li className="flex items-center gap-3 text-sm font-medium text-slate-700">
-                <Check className="h-5 w-5 text-indigo-500" /> Huella criptográfica SHA-256 por documento.
+                <Check className="h-5 w-5 text-indigo-500" /> Huella criptográfica SHA-256 inmutable por documento.
               </li>
             </ul>
           </div>
