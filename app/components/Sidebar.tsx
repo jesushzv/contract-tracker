@@ -49,24 +49,36 @@ export function Sidebar({ activePath, onNavigate }: SidebarProps) {
     <div className="flex flex-col h-full bg-slate-900 text-slate-300 border-r border-slate-800">
       <div className="p-6">
         <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-500 shadow-md shadow-indigo-500/20">
-            <span className="text-lg font-extrabold text-white">₳</span>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-accent shadow-md shadow-primary/20">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M14 2H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+              <path d="M14 2v6h6" />
+              <path d="m6 13 2 2 4-4" />
+            </svg>
           </div>
           <div>
-            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-emerald-400 bg-clip-text text-transparent">
-              Anticipo
+            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Mi Pacto
             </span>
-            <span className="text-xs font-semibold text-slate-400 ml-1 block sm:inline">MX</span>
           </div>
         </Link>
         
         {demo && (
-          <div className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 w-full">
+          <div className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary/10 border border-primary/20 px-3 py-1.5 w-full">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
             </span>
-            <span className="text-[10px] font-mono font-medium tracking-widest text-indigo-300 uppercase">
+            <span className="text-[10px] font-mono font-medium tracking-widest text-primary uppercase">
               Sandbox Mode
             </span>
           </div>
@@ -88,7 +100,7 @@ export function Sidebar({ activePath, onNavigate }: SidebarProps) {
                   : "hover:bg-slate-800 hover:text-white"
               }`}
             >
-              <Icon className={`w-5 h-5 ${isActive ? "text-indigo-400" : "text-slate-400"}`} />
+              <Icon className={`w-5 h-5 ${isActive ? "text-accent" : "text-slate-400"}`} />
               {link.name}
             </Link>
           );
@@ -97,7 +109,7 @@ export function Sidebar({ activePath, onNavigate }: SidebarProps) {
       
       <div className="p-4 border-t border-slate-800">
         <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm">
             {initials}
           </div>
           <div>

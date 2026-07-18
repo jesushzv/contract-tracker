@@ -82,32 +82,44 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#6366f1]/10 bg-white/70 backdrop-blur-md dark:bg-[#090d16]/70 dark:border-[#6366f1]/25 print:hidden">
+    <header className="sticky top-0 z-50 w-full border-b border-primary/10 bg-white/70 backdrop-blur-md dark:bg-[#090d16]/70 dark:border-primary/25 print:hidden">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-500 shadow-md shadow-indigo-500/20">
-            <span className="text-lg font-extrabold text-white">₳</span>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-accent shadow-md shadow-primary/20">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M14 2H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+              <path d="M14 2v6h6" />
+              <path d="m6 13 2 2 4-4" />
+            </svg>
           </div>
           <div>
-            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-emerald-500 bg-clip-text text-transparent dark:from-indigo-400 dark:to-emerald-400">
-              Anticipo {debugCookie && <span className="text-[10px] text-red-500 block break-all">[{debugCookie}]</span>}
+            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Mi Pacto {debugCookie && <span className="text-[10px] text-red-500 block break-all">[{debugCookie}]</span>}
             </span>
-            <span className="text-xs font-semibold text-slate-400 ml-1 block sm:inline">MX</span>
           </div>
         </Link>
         
 
         <div className="hidden lg:flex items-center gap-8 ml-8">
-          <Link href="/#beneficios" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+          <Link href="/#beneficios" className="text-sm font-semibold text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-accent transition-colors">
             Beneficios
           </Link>
-          <Link href="/#como-funciona" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+          <Link href="/#como-funciona" className="text-sm font-semibold text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-accent transition-colors">
             Cómo Funciona
           </Link>
-          <Link href="/#precios" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+          <Link href="/#precios" className="text-sm font-semibold text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-accent transition-colors">
             Precios
           </Link>
-          <Link href="/faq" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+          <Link href="/faq" className="text-sm font-semibold text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-accent transition-colors">
             FAQ
           </Link>
         </div>
@@ -117,7 +129,7 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
             <>
               <Link 
                 href={panelUrl} 
-                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 md:px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
+                className="inline-flex items-center justify-center rounded-xl bg-primary px-3 md:px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary/10 hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:bg-primary dark:hover:bg-primary-dark transition-all duration-200"
               >
                 Mi Panel
               </Link>
@@ -134,14 +146,14 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
             pathname.startsWith("/login") ? (
               <Link 
                 href="/register" 
-                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 md:px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
+                className="inline-flex items-center justify-center rounded-xl bg-primary px-3 md:px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary/10 hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:bg-primary dark:hover:bg-primary-dark transition-all duration-200"
               >
                 Registrarse
               </Link>
             ) : (
               <Link 
                 href="/login" 
-                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-3 md:px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
+                className="inline-flex items-center justify-center rounded-xl bg-primary px-3 md:px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary/10 hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:bg-primary dark:hover:bg-primary-dark transition-all duration-200"
               >
                 Iniciar Sesión
               </Link>

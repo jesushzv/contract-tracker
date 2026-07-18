@@ -23,7 +23,7 @@ interface ClientInvitationEmailProps {
 export const ClientInvitationEmail = ({
   clientName = "Cliente",
   freelancerName = "Freelancer",
-  contractUrl = "https://contract-tracker.app",
+  contractUrl = "https://mipacto.app",
   amount = "0.00",
   currency = "MXN",
   customMessage,
@@ -57,7 +57,7 @@ export const ClientInvitationEmail = ({
           Si tienes alguna duda sobre el alcance o los términos, puedes proponer una revisión directamente desde la plataforma.
         </Text>
         <Text style={footer}>
-          Este es un correo automático de Contract Tracker.
+          Este es un correo automático de Mi Pacto.
         </Text>
       </Container>
     </Body>

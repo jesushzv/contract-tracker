@@ -10,19 +10,23 @@ test.describe("Premium SaaS Auth & Onboarding E2E Flow", () => {
   test("should toggle password visibility in login and register forms", async ({ page }) => {
     // 1. Login Page password toggle
     await page.goto("/login");
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(500);
     const passwordInput = page.locator('input[placeholder="••••••••"]');
     await passwordInput.fill(TEST_PASSWORD);
     await expect(passwordInput).toHaveAttribute("type", "password");
 
-    const toggleBtn = page.locator('button[aria-label="Mostrar contraseña"]');
+    const toggleBtn = page.locator('button[aria-label="Mostrar contraseña"]').first();
     await toggleBtn.click();
     await expect(passwordInput).toHaveAttribute("type", "text");
 
-    await page.locator('button[aria-label="Ocultar contraseña"]').click();
+    await page.locator('button[aria-label="Ocultar contraseña"]').first().click();
     await expect(passwordInput).toHaveAttribute("type", "password");
 
     // 2. Register Page password toggle
     await page.goto("/register");
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(500);
     const regPasswordInput = page.locator('input[placeholder="••••••••"] >> nth=0');
     await regPasswordInput.fill(TEST_PASSWORD);
     await expect(regPasswordInput).toHaveAttribute("type", "password");
@@ -34,6 +38,8 @@ test.describe("Premium SaaS Auth & Onboarding E2E Flow", () => {
 
   test("should display password complexity checklist dynamically on register", async ({ page }) => {
     await page.goto("/register");
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(500);
     
     // Check that checklist is hidden initially
     const checklist = page.locator("text=Requisitos de Seguridad:");
@@ -64,12 +70,16 @@ test.describe("Premium SaaS Auth & Onboarding E2E Flow", () => {
   test("should step through multi-step onboarding wizard", async ({ page }) => {
     // Register dynamically in mock mode
     await page.goto("/register");
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(500);
     await page.fill('input[placeholder="correo@ejemplo.com"]', `dynamic-${Date.now()}@example.com`);
     await page.fill('input[placeholder="••••••••"] >> nth=0', STRONG_PASSWORD);
     await page.fill('input[placeholder="••••••••"] >> nth=1', STRONG_PASSWORD);
     
     await page.check('input#privacy');
 
+    // Wait briefly for React hydration to attach the onSubmit handler
+    await page.waitForTimeout(500);
     await page.click('button[type="submit"]');
 
     // Wait for redirect to onboarding

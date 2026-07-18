@@ -100,7 +100,7 @@ export default function CampaignsTab() {
   if (loading) {
     return (
       <div className="py-12 flex justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
       </div>
     );
   }
@@ -114,7 +114,7 @@ export default function CampaignsTab() {
         </div>
         <button 
           onClick={() => setShowCreate(!showCreate)}
-          className="flex items-center gap-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-md transition-colors"
+          className="flex items-center gap-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-md transition-colors"
         >
           {showCreate ? 'Cancel' : <><Mail className="h-4 w-4" /> Draft New Campaign</>}
         </button>
@@ -126,7 +126,7 @@ export default function CampaignsTab() {
             <h3 className="font-semibold text-neutral-900">Draft New Campaign</h3>
             <button 
               onClick={() => setPreviewMode(!previewMode)}
-              className="text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2 py-1 rounded"
+              className="text-xs font-medium text-purple-600 hover:text-purple-800 bg-purple-50 px-2 py-1 rounded"
             >
               {previewMode ? 'Edit Mode' : 'Preview Mode'}
             </button>
@@ -175,7 +175,7 @@ export default function CampaignsTab() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Big updates to Contract Tracker!"
+                  placeholder="e.g. Big updates to Mi Pacto!"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   className="w-full border border-neutral-300 rounded-md p-2 text-sm"
@@ -235,7 +235,7 @@ export default function CampaignsTab() {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={clsx(
                     "px-2 inline-flex text-xs leading-5 font-semibold rounded-full",
-                    campaign.target_audience === 'all' ? "bg-indigo-100 text-indigo-800" : "bg-purple-100 text-purple-800"
+                    campaign.target_audience === 'all' ? "bg-purple-100 text-purple-800" : "bg-purple-100 text-purple-800"
                   )}>
                     {campaign.target_audience.toUpperCase()}
                   </span>

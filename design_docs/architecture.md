@@ -1,6 +1,6 @@
 # System Architecture & Technical Design Reference
 
-Welcome to the central system architecture and technical design documentation for the **Contract & Anticipo Tracker (MX)**. This document serves as the entry point for understanding the codebase, its components, state machines, database structures, and Mexican tax integrations. Use this guide to plan new features, refactor components, and prevent regressions.
+Welcome to the central system architecture and technical design documentation for the **Mi Pacto (MX)**. This document serves as the entry point for understanding the codebase, its components, state machines, database structures, and Mexican tax integrations. Use this guide to plan new features, refactor components, and prevent regressions.
 
 ---
 
@@ -104,22 +104,22 @@ Here is a map of the repository's core directory structure:
 
 The architecture is divided into the following dedicated sub-documents:
 
-### 1. 🗄️ [Dual-Storage Engine Design](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/contract-tracker/design_docs/architecture-dual-storage.md)
+### 1. 🗄️ [Dual-Storage Engine Design](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/mi-pacto/design_docs/architecture-dual-storage.md)
 Detailed document on how the storage client routes database calls between LocalStorage, file-based JSON storage, and Cloud Supabase, as well as how Sandbox Mode functions.
 
-### 2. 🔄 [State Machines & Agreement Flow](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/contract-tracker/design_docs/architecture-state-machine.md)
+### 2. 🔄 [State Machines & Agreement Flow](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/mi-pacto/design_docs/architecture-state-machine.md)
 Defines the strict transitions of the contract lifecycle (`draft` ➡️ `sent` ➡️ `client_signed` ➡️ `accepted` ➡️ `completed`), the OTP identity verification flow for clients, and milestone tracking.
 
-### 3. 🇲🇽 [Mexican Localization & Integrations](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/contract-tracker/design_docs/architecture-mexican-localization.md)
+### 3. 🇲🇽 [Mexican Localization & Integrations](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/mi-pacto/design_docs/architecture-mexican-localization.md)
 Documents the Mexican taxpayer validation (RFC Modulo 11 algorithm), withholding tax calculations (RESICO IVA/ISR), Banxico SPEI reconciliation, and USD/MXN exchange tracking.
 
-### 4. 📊 [Database Schema, RLS & Security](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/contract-tracker/design_docs/architecture-data-model.md)
+### 4. 📊 [Database Schema, RLS & Security](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/mi-pacto/design_docs/architecture-data-model.md)
 A technical reference of the relational tables, version control structures, Row-Level Security (RLS) policies, rate-limiting rules, and safe file upload sanitizations.
 
-### 5. 💻 [Developer Lifecycle, Routing & SaaS Flows](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/contract-tracker/design_docs/architecture-dev-lifecycle-flows.md)
+### 5. 💻 [Developer Lifecycle, Routing & SaaS Flows](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/mi-pacto/design_docs/architecture-dev-lifecycle-flows.md)
 An onboarding guide covering environment variables, setup commands, routing middleware protection, SaaS billing plan limits, and email/WhatsApp notification workers.
 
-### 6. 🎨 [UX/UI Design System](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/contract-tracker/design_docs/ux-ui-design-system.md)
+### 6. 🎨 [UX/UI Design System](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/mi-pacto/design_docs/ux-ui-design-system.md)
 The single source of truth for all UI work: design tokens, component library, screen specs, interaction & motion specs, design rationale, mobile strategy, and accessibility standards. Created during the P0 UX Sprint.
 
 ---

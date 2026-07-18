@@ -66,19 +66,19 @@ export default function FaqPage() {
       
       
       <main className="flex-1 max-w-4xl mx-auto px-6 py-12 w-full">
-        <Link href="/" className="inline-flex items-center text-sm font-semibold text-indigo-600 hover:text-indigo-500 mb-8 transition-colors">
+        <Link href="/" className="inline-flex items-center text-sm font-semibold text-purple-600 hover:text-purple-500 mb-8 transition-colors">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver al inicio
         </Link>
         
         <div className="bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-slate-200">
-          <div className="inline-flex items-center justify-center p-3 bg-indigo-50 text-indigo-600 rounded-xl mb-6">
+          <div className="inline-flex items-center justify-center p-3 bg-purple-50 text-purple-600 rounded-xl mb-6">
             <HelpCircle className="h-8 w-8" />
           </div>
           
           <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Preguntas Frecuentes (FAQ)</h1>
           <p className="text-slate-500 mb-8 pb-8 border-b border-slate-100">
-            Encuentra respuestas a las preguntas más comunes sobre Anticipo MX, su validez legal y cómo manejar tus pagos.
+            Encuentra respuestas a las preguntas más comunes sobre Mi Pacto, su validez legal y cómo manejar tus pagos.
           </p>
           
           <div className="flex flex-col gap-10">
@@ -92,13 +92,13 @@ export default function FaqPage() {
                     return (
                       <div 
                         key={globalIndex}
-                        className="rounded-2xl p-4 transition-all duration-300 border border-slate-200 bg-slate-50 cursor-pointer hover:border-indigo-300"
+                        className="rounded-2xl p-4 transition-all duration-300 border border-slate-200 bg-slate-50 cursor-pointer hover:border-purple-300"
                         onClick={() => toggleFaq(globalIndex)}
                       >
                         <div className="flex items-center justify-between gap-4 font-bold text-sm text-slate-800">
                           <span>{faq.q}</span>
                           <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-300 ${
-                            isOpen ? "rotate-180 text-indigo-600" : ""
+                            isOpen ? "rotate-180 text-purple-600" : ""
                           }`} />
                         </div>
                         {isOpen && (

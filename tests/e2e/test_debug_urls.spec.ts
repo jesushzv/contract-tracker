@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 
 test("debug 500 urls", async ({ page }) => {
   page.on('response', response => {

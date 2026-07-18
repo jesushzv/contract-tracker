@@ -15,27 +15,27 @@ export async function GET() {
     const mockDeployments = [
       {
         id: 'dpl_1',
-        name: 'contract-tracker',
+        name: 'mi-pacto',
         state: 'READY',
         createdAt: new Date().getTime(),
         creator: 'jhzamora',
-        url: 'https://contract-tracker.vercel.app'
+        url: 'https://mi-pacto.vercel.app'
       },
       {
         id: 'dpl_2',
-        name: 'contract-tracker',
+        name: 'mi-pacto',
         state: 'READY',
         createdAt: new Date(Date.now() - 86400000).getTime(),
         creator: 'jhzamora',
-        url: 'https://contract-tracker-prev.vercel.app'
+        url: 'https://mi-pacto-prev.vercel.app'
       },
       {
         id: 'dpl_3',
-        name: 'contract-tracker',
+        name: 'mi-pacto',
         state: 'ERROR',
         createdAt: new Date(Date.now() - 172800000).getTime(),
         creator: 'jhzamora',
-        url: 'https://contract-tracker-failed.vercel.app'
+        url: 'https://mi-pacto-failed.vercel.app'
       }
     ];
 

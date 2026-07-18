@@ -1,26 +1,20 @@
 import type { Metadata } from "next";
-import { Outfit, Inter } from "next/font/google";
+import { Nunito } from "next/font/google";
 import { cookies } from "next/headers";
 import Header from "./Header";
 import Footer from "./Footer";
 import ApiKeyGuard from "./ApiKeyGuard";
 import "./globals.css";
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
-});
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
-  title: "Contrato & Anticipo Tracker | Freelance MX",
-  description: "Crea contratos con validez digital rápida y gestiona tus anticipos/pagos SPEI en un solo lugar.",
+  title: "Mi Pacto | Gestión de Contratos para Freelancers",
+  description: "Crea contratos con validez digital, firma express por WhatsApp y controla tus cobros SPEI. mipacto.app",
 };
 
 export default async function RootLayout({
@@ -51,7 +45,7 @@ export default async function RootLayout({
   return (
     <html
       lang="es"
-      className={`${outfit.variable} ${inter.variable} h-full antialiased`}
+      className={`${nunito.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#fafbfe] text-[#0f172a] transition-colors duration-300">
         <ApiKeyGuard>

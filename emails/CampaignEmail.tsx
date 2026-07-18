@@ -50,7 +50,7 @@ export const CampaignEmail = ({
             )}
 
             <Text className="text-[#6b7280] text-[12px] leading-[24px] mt-[40px]">
-              El Equipo de Contract Tracker
+              El Equipo de Mi Pacto
             </Text>
           </Container>
         </Body>

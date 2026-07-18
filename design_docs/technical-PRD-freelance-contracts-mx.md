@@ -1,4 +1,4 @@
-# Technical PRD: Contract & Anticipo Tracker for Freelancers (MX)
+# Technical PRD: Mi Pacto for Freelancers (MX)
 
 **Owner:** Hector Zamora  
 **Status:** Approved v1.3 (UX & Document Completeness Revision)  

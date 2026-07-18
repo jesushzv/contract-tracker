@@ -1,4 +1,4 @@
-# Product Manager Review — Contract & Anticipo Tracker MVP
+# Product Manager Review — Mi Pacto MVP
 
 This review analyzes the proposed feature backlog through a product management lens, evaluating **User Friction vs. Trust**, **Value Proposition Alignment**, and a **RICE Prioritization Matrix** to guide our development roadmap.
 

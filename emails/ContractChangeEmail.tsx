@@ -22,7 +22,7 @@ interface ContractChangeEmailProps {
 export const ContractChangeEmail = ({
   recipientName = "Usuario",
   senderName = "Sistema",
-  contractUrl = "https://contract-tracker.app",
+  contractUrl = "https://mipacto.app",
   actionMessage = "ha actualizado el estado del contrato",
   details = "",
 }: ContractChangeEmailProps) => (
@@ -53,7 +53,7 @@ export const ContractChangeEmail = ({
           </Button>
         </Section>
         <Text style={footer}>
-          Este es un correo automático de Contract Tracker.
+          Este es un correo automático de Mi Pacto.
         </Text>
       </Container>
     </Body>

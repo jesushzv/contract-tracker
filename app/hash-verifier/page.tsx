@@ -46,7 +46,7 @@ export default function HashVerifierPage() {
     <div className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6 lg:px-8 flex-grow flex flex-col gap-6 text-slate-800">
       <div>
         <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-          <ShieldCheck className="h-8 w-8 text-indigo-500" />
+          <ShieldCheck className="h-8 w-8 text-purple-500" />
           Verificador de Integridad de Contratos
         </h1>
         <p className="text-sm text-slate-500 mt-1">
@@ -65,7 +65,7 @@ export default function HashVerifierPage() {
                 placeholder="Pega aquí el contenido completo del contrato firmado (incluyendo nombres y declaraciones)..."
                 value={contractText}
                 onChange={(e) => setContractText(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white/40 px-4 py-2.5 text-sm font-mono focus:border-indigo-500 focus:outline-none transition-all resize-y"
+                className="rounded-xl border border-slate-200 bg-white/40 px-4 py-2.5 text-sm font-mono focus:border-purple-500 focus:outline-none transition-all resize-y"
               />
             </div>
 
@@ -76,13 +76,13 @@ export default function HashVerifierPage() {
                 placeholder="Pega el hash SHA-256 firmado del contrato (ej. del documento de auditoría)"
                 value={expectedHash}
                 onChange={(e) => setExpectedHash(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-white/40 px-4 py-2.5 text-sm font-mono focus:border-indigo-500 focus:outline-none transition-all"
+                className="rounded-xl border border-slate-200 bg-white/40 px-4 py-2.5 text-sm font-mono focus:border-purple-500 focus:outline-none transition-all"
               />
             </div>
 
             <button
               type="submit"
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/10 cursor-pointer"
+              className="rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md shadow-purple-500/10 cursor-pointer"
             >
               <ShieldCheck className="h-4 w-4" />
               Verificar Sello Digital
@@ -91,10 +91,10 @@ export default function HashVerifierPage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          <div className="glass rounded-3xl p-4 sm:p-6 border border-indigo-500/20 bg-indigo-500/5 text-left flex flex-col gap-4">
+          <div className="glass rounded-3xl p-4 sm:p-6 border border-purple-500/20 bg-purple-500/5 text-left flex flex-col gap-4">
             <h3 className="font-bold text-sm text-slate-900">¿Cómo funciona?</h3>
             <p className="text-xs leading-relaxed text-slate-500">
-              Cada contrato firmado en <strong>Anticipo MX</strong> genera un <em>Sello de Integridad Digital</em> único (hash criptográfico SHA-256).
+              Cada contrato firmado en <strong>Mi Pacto</strong> genera un <em>Sello de Integridad Digital</em> único (hash criptográfico SHA-256).
             </p>
             <p className="text-xs leading-relaxed text-slate-500">
               Si se cambia una sola letra, espacio o coma, la huella digital cambiará por completo. Esto garantiza la inmutabilidad legal de tu acuerdo.
@@ -111,15 +111,15 @@ export default function HashVerifierPage() {
                 onClick={copyComputedHash}
                 className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-3xs font-semibold text-slate-700 hover:bg-slate-50 :bg-slate-900 transition-all cursor-pointer self-start"
               >
-                {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                {copied ? <Check className="h-3 w-3 text-cyan-500" /> : <Copy className="h-3 w-3" />}
                 {copied ? "Copiado" : "Copiar Hash"}
               </button>
             </div>
           )}
 
           {verified !== null && (
-            <div className={`glass rounded-3xl p-4 sm:p-6 border text-left flex flex-col gap-2 animate-in slide-in-from-bottom-2 duration-300 ${verified ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
-              <h4 className={`font-black text-sm ${verified ? 'text-emerald-600 ' : 'text-red-650 '}`}>
+            <div className={`glass rounded-3xl p-4 sm:p-6 border text-left flex flex-col gap-2 animate-in slide-in-from-bottom-2 duration-300 ${verified ? 'border-cyan-500/20 bg-cyan-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
+              <h4 className={`font-black text-sm ${verified ? 'text-cyan-600 ' : 'text-red-650 '}`}>
                 {verified ? "✓ Documento Auténtico" : "✗ Firma Inválida"}
               </h4>
               <p className="text-2xs leading-relaxed text-slate-550">
