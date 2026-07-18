@@ -16,7 +16,7 @@ export default function Icon() {
       // ImageResponse JSX element
       <div
         style={{
-          background: 'linear-gradient(to bottom right, #6A1B9A, #00ACC1)',
+          background: 'linear-gradient(to top right, #4f46e5, #10b981)',
           width: '100%',
           height: '100%',
           display: 'flex',

@@ -7,13 +7,13 @@ export default function TermsPage() {
       
       
       <main className="flex-1 max-w-4xl mx-auto px-6 py-12 w-full">
-        <Link href="/" className="inline-flex items-center text-sm font-semibold text-purple-600 hover:text-purple-500 mb-8 transition-colors">
+        <Link href="/" className="inline-flex items-center text-sm font-semibold text-indigo-600 hover:text-indigo-500 mb-8 transition-colors">
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver al inicio
         </Link>
         
         <div className="bg-white p-8 md:p-12 rounded-3xl shadow-sm border border-slate-200">
-          <div className="inline-flex items-center justify-center p-3 bg-purple-50 text-purple-600 rounded-xl mb-6">
+          <div className="inline-flex items-center justify-center p-3 bg-indigo-50 text-indigo-600 rounded-xl mb-6">
             <ShieldCheck className="h-8 w-8" />
           </div>
           

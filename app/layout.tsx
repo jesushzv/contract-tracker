@@ -1,15 +1,21 @@
 import type { Metadata } from "next";
-import { Nunito } from "next/font/google";
+import { Outfit, Inter } from "next/font/google";
 import { cookies } from "next/headers";
 import Header from "./Header";
 import Footer from "./Footer";
 import ApiKeyGuard from "./ApiKeyGuard";
 import "./globals.css";
 
-const nunito = Nunito({
-  variable: "--font-nunito",
+const outfit = Outfit({
+  variable: "--font-outfit",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -45,7 +51,7 @@ export default async function RootLayout({
   return (
     <html
       lang="es"
-      className={`${nunito.variable} h-full antialiased`}
+      className={`${outfit.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#fafbfe] text-[#0f172a] transition-colors duration-300">
         <ApiKeyGuard>
