@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Inter } from "next/font/google";
 import { cookies } from "next/headers";
 import Header from "./Header";
+import Footer from "./Footer";
 import ApiKeyGuard from "./ApiKeyGuard";
 import "./globals.css";
 
@@ -58,16 +59,7 @@ export default async function RootLayout({
             {children}
           </main>
 
-          <footer className="border-t border-[#6366f1]/10 bg-white/50 py-8 print:hidden">
-            <div className="mx-auto max-w-7xl px-4 text-center text-sm text-slate-500 sm:px-6 lg:px-8">
-              <p className="font-medium">
-                &copy; {new Date().getFullYear()} Anticipo MX. Creado para los freelancers en México.
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                Aviso legal: Los formatos proveídos son plantillas de carácter ilustrativo y no constituyen asesoría legal.
-              </p>
-            </div>
-          </footer>
+          <Footer />
         </ApiKeyGuard>
       </body>
     </html>

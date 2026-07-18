@@ -794,53 +794,7 @@ export default function Home() {
         <div className="relative left-[calc(50%+3rem)] aspect-1155/678 w-[36.125rem] -translate-x-1/2 bg-gradient-to-tr from-emerald-400 to-indigo-500 opacity-20 sm:left-[calc(50%+36rem)] sm:w-[72.1875rem]"></div>
       </div>
 
-      {/* COMPREHENSIVE FOOTER */}
-      <footer className="w-full bg-white border-t border-slate-200 mt-auto">
-        <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-            <div className="col-span-2">
-              <Link href="/" className="flex items-center gap-2 mb-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-indigo-500 to-emerald-500 shadow-md">
-                  <span className="text-sm font-extrabold text-white">₳</span>
-                </div>
-                <span className="text-xl font-bold tracking-tight text-slate-900">
-                  Anticipo<span className="text-xs text-slate-500 ml-1">MX</span>
-                </span>
-              </Link>
-              <p className="text-sm text-slate-500 max-w-xs leading-relaxed">
-                El software de contratos y cobranza diseñado exclusivamente para el marco legal de freelancers en México.
-              </p>
-            </div>
-            
-            <div>
-              <h4 className="font-bold text-slate-900 mb-4 text-sm uppercase tracking-wider">Producto</h4>
-              <ul className="space-y-3 text-sm text-slate-500">
-                <li><Link href="/#beneficios" className="hover:text-indigo-600 transition-colors">Beneficios</Link></li>
-                <li><Link href="/#precios" className="hover:text-indigo-600 transition-colors">Precios</Link></li>
-                <li><Link href="/#como-funciona" className="hover:text-indigo-600 transition-colors">Cómo Funciona</Link></li>
-              </ul>
-            </div>
 
-            <div>
-              <h4 className="font-bold text-slate-900 mb-4 text-sm uppercase tracking-wider">Legal & Ayuda</h4>
-              <ul className="space-y-3 text-sm text-slate-500">
-                <li><Link href="/faq" className="hover:text-indigo-600 transition-colors">Preguntas Frecuentes</Link></li>
-                <li><Link href="/terms" className="hover:text-indigo-600 transition-colors">Términos de Servicio</Link></li>
-                <li><Link href="/privacy" className="hover:text-indigo-600 transition-colors">Aviso de Privacidad</Link></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-slate-400">
-              © {new Date().getFullYear()} Anticipo MX. Todos los derechos reservados.
-            </p>
-            <p className="text-xs text-slate-400">
-              Hecho en México.
-            </p>
-          </div>
-        </div>
-      </footer>
 
     </div>
   );
