@@ -656,12 +656,12 @@ export default function Home() {
             </div>
 
             {/* Starter tier */}
-            <div className="glass rounded-3xl p-6 flex flex-col justify-between border-purple-500/35 relative overflow-hidden bg-purple-500/5 hover:shadow-xl hover:shadow-purple-500/10 transition-shadow">
-              <div className="absolute top-3 right-3 bg-purple-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
+            <div className="glass rounded-3xl p-6 flex flex-col justify-between border-emerald-500/35 relative overflow-hidden bg-emerald-500/5 hover:shadow-xl hover:shadow-emerald-500/10 transition-shadow">
+              <div className="absolute top-3 right-3 bg-emerald-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
                 Popular
               </div>
               <div>
-                <h4 className="font-heading text-lg font-bold text-purple-600">Plan Emprendedor</h4>
+                <h4 className="font-heading text-lg font-bold text-emerald-600">Plan Emprendedor</h4>
                 <p className="text-2xs text-slate-500 mt-1">Para profesionales con flujo de clientes constante.</p>
                 <div className="mt-4 flex items-baseline">
                   <span className="text-4xl font-extrabold text-slate-900">$99</span>
@@ -669,26 +669,26 @@ export default function Home() {
                 </div>
                 <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-600 font-medium">
                   <li className="flex items-center gap-2 text-slate-900">
-                    <CheckCircle2 className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                     <strong>Hasta 10 contratos activos</strong>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                     Monedas múltiples (MXN & USD)
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                     Personalización de logotipos y firmas
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-purple-500 flex-shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                     Soporte prioritario
                   </li>
                 </ul>
               </div>
               <Link 
                 href="/register?tier=starter"
-                className="mt-8 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-center py-3 text-sm font-bold shadow-lg shadow-purple-600/15 transition-colors cursor-pointer w-full"
+                className="mt-8 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-center py-3 text-sm font-bold shadow-lg shadow-emerald-600/15 transition-colors cursor-pointer w-full"
               >
                 Suscribirse a Emprendedor
               </Link>
