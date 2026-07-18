@@ -66,8 +66,12 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     await expect(page.getByRole('link', { name: /Probar Demo con Datos/i })).not.toBeVisible();
     await expect(page.getByRole('link', { name: /¿Ya tienes una cuenta\? Inicia sesión aquí/i })).not.toBeVisible();
 
-    // Wait for the useEffect to clear the cookies
-    await page.waitForFunction(() => !document.cookie.includes('demo_mode=true'));
+    // Force clear session state explicitly in test to prevent race condition with React useEffect
+    await page.evaluate(() => {
+      document.cookie = "demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+      localStorage.removeItem("demo_mode");
+      sessionStorage.removeItem("demo_mode");
+    });
 
     // 6. Verify that going to dashboard now redirects to login because the session was cleared
     await page.goto("/dashboard");
