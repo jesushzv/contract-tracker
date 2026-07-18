@@ -16,6 +16,8 @@ interface ClientDetailsStepProps {
   setClientRegimen: (v: string) => void;
   clientPostal: string;
   setClientPostal: (v: string) => void;
+  clientCfdiUse: string;
+  setClientCfdiUse: (v: string) => void;
   scopeDescription: string;
   setScopeDescription: (v: string) => void;
   onNext: () => void;
@@ -30,6 +32,7 @@ export function ClientDetailsStep({
   clientRfcError,
   clientRegimen, setClientRegimen,
   clientPostal, setClientPostal,
+  clientCfdiUse, setClientCfdiUse,
   scopeDescription, setScopeDescription,
   onNext
 }: ClientDetailsStepProps) {
@@ -131,6 +134,28 @@ export function ClientDetailsStep({
                 onChange={(e) => setClientPostal(e.target.value.replace(/\D/g, ""))}
                 className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
               />
+            </div>
+            
+            <div>
+              <label className="block text-2xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Uso de CFDI</label>
+              <select
+                value={clientCfdiUse}
+                onChange={(e) => setClientCfdiUse(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
+              >
+                <option value="">Opcional (Selecciona Uso CFDI)</option>
+                <option value="G01 - Adquisición de mercancias">G01 - Adquisición de mercancias</option>
+                <option value="G02 - Devoluciones, descuentos o bonificaciones">G02 - Devoluciones, descuentos o bonificaciones</option>
+                <option value="G03 - Gastos en general">G03 - Gastos en general</option>
+                <option value="I01 - Construcciones">I01 - Construcciones</option>
+                <option value="I02 - Mobilario y equipo de oficina por inversiones">I02 - Mobilario y equipo de oficina por inversiones</option>
+                <option value="I03 - Equipo de transporte">I03 - Equipo de transporte</option>
+                <option value="I04 - Equipo de computo y accesorios">I04 - Equipo de computo y accesorios</option>
+                <option value="I08 - Otra maquinaria y equipo">I08 - Otra maquinaria y equipo</option>
+                <option value="D01 - Honorarios médicos, dentales y gastos hospitalarios">D01 - Honorarios médicos</option>
+                <option value="P01 - Por definir">P01 - Por definir (No válido 4.0)</option>
+                <option value="S01 - Sin efectos fiscales">S01 - Sin efectos fiscales</option>
+              </select>
             </div>
           </div>
         )}

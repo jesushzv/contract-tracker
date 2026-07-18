@@ -17,6 +17,7 @@ erDiagram
     CONTRACTS ||--o{ CONTRACT_VERSIONS : "versions"
     CONTRACTS ||--o{ EDIT_REQUESTS : "negotiates"
     PROFILES ||--o{ NOTIFICATIONS : "receives"
+    PROFILES ||--o| CSD_CREDENTIALS : "has active CSD"
 ```
 
 ### 1. Table Definitions & Types
@@ -37,7 +38,7 @@ Stores freelancer identity, fiscal settings, tier plans, and banking setups.
 Primary agreement document tracking client details, scopes, statuses, and signatures.
 *   `id` (TEXT, PK): Secure UUID string.
 *   `freelancer_id` (UUID, FK): References `profiles(id)`.
-*   `client_name` / `client_email` / `client_rfc` / `client_regimen` / `client_postal` (TEXT): Client profile snapshot.
+*   `client_name` / `client_email` / `client_rfc` / `client_regimen` / `client_postal` / `client_cfdi_use` (TEXT): Client profile snapshot for invoicing.
 *   `scope_description` (TEXT): Contract scope description.
 *   `total_amount` (NUMERIC(12,2)) / `currency` (VARCHAR(3)): Financial details.
 *   `status` (VARCHAR(20)): Current lifecycle state.
@@ -60,6 +61,18 @@ Milestone lists mapping contract payment stages.
 *   `trackingReference` (TEXT): SPEI tracking reference.
 *   `receiptUrl` (TEXT): URL to uploaded receipt.
 *   `exchangeRate` / `mxnAmount` (NUMERIC): USD exchange parameters.
+*   `cfdi_status` (VARCHAR): `none`, `pending_csd`, `pending_invoice`, `issued`.
+*   `cfdi_id` / `cfdi_xml_url` / `cfdi_pdf_url` (TEXT): Invoice artifacts.
+
+#### `public.csd_credentials`
+Stores encrypted CSD (Certificado de Sello Digital) credentials for CFDI 4.0 generation via Facturapi.
+*   `id` (UUID, PK)
+*   `freelancer_id` (UUID, FK, Unique constraint if active): References `profiles(id)`.
+*   `encrypted_cer` / `encrypted_key` / `encrypted_password` (TEXT): AES-256-GCM encrypted values.
+*   `iv` (TEXT): Initialization vector for decryption.
+*   `rfc` (TEXT): Freelancer's RFC extracted from the certificate.
+*   `is_active` (BOOLEAN): Identifies the currently active CSD (1-to-1).
+*   `created_at` (TIMESTAMP)
 
 #### `public.audit_logs`
 Chronological activity tracker for contract events.

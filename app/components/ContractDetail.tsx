@@ -73,6 +73,38 @@ export function ContractDetail({
     }
   };
 
+  const handleGenerateInvoice = async (milestone: Milestone) => {
+    try {
+      if (!contract) return;
+      if (showToast) showToast("Emitiendo factura...", "success");
+      
+      const res = await fetch("/api/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          milestoneId: milestone.id,
+          contractId: contract.id,
+          freelancerId: contract.freelancerId
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.code === "NO_CSD") {
+          throw new Error("No tienes un CSD activo. Configúralo en Configuración > Branding.");
+        }
+        throw new Error(data.error || "Fallo al generar factura");
+      }
+      
+      if (showToast) showToast("Factura emitida con éxito", "success");
+      if (onRefresh) onRefresh();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error al emitir CFDI.";
+      if (showToast) showToast("Error: " + message, "error");
+      else alert("Error: " + message);
+    }
+  };
+
   if (!contract) return null;
 
   const getStatusBadge = (status: string) => {
@@ -169,6 +201,7 @@ export function ContractDetail({
               currency={contract.currency}
               onUpdateMilestone={onUpdateMilestone}
               onOpenPaymentModal={onOpenPaymentModal}
+              onGenerateInvoice={handleGenerateInvoice}
             />
           )}
 
@@ -407,9 +440,10 @@ export function ContractDetail({
             } else {
               showToast?.('No se pudo reenviar el correo', 'error');
             }
-          } catch (err) {
+          } catch (err: unknown) {
             console.error(err);
-            showToast?.('Error de conexión', 'error');
+            const message = err instanceof Error ? err.message : "Error al reenviar correo.";
+            showToast?.(message, 'error');
           } finally {
             setIsResendingEmail(false);
           }

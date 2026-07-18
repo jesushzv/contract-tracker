@@ -1020,11 +1020,21 @@ export default function ClientPortalPage() {
                       )}
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end gap-1">
                       <p className="font-bold text-xs text-slate-800">{formatMoney(m.amount, contract.currency)}</p>
                       <span className={`text-4xs font-bold uppercase ${ m.status === 'confirmed' ? 'text-indigo-500' : m.status === 'marked_paid' ? 'text-emerald-500' : m.status === 'requested' ? 'text-amber-500' : 'text-slate-400' }`}>
                         {m.status === 'pending' ? 'pendiente' : m.status === 'requested' ? 'solicitado' : m.status === 'marked_paid' ? 'verificando' : 'confirmado'}
                       </span>
+                      {m.cfdiStatus === 'issued' && (
+                        <div className="flex gap-2 items-center mt-1">
+                          {m.cfdiPdfUrl && (
+                            <a href={m.cfdiPdfUrl} target="_blank" rel="noreferrer" className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded px-1.5 py-0.5 text-3xs font-semibold transition-colors">PDF</a>
+                          )}
+                          {m.cfdiXmlUrl && (
+                            <a href={m.cfdiXmlUrl} target="_blank" rel="noreferrer" className="bg-slate-100 hover:bg-slate-200 text-slate-700 rounded px-1.5 py-0.5 text-3xs font-semibold transition-colors">XML</a>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

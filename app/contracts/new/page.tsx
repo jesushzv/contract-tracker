@@ -143,6 +143,7 @@ function NewContractForm() {
       clientRfc: wizard.clientRfc || undefined,
       clientRegimen: wizard.clientRegimen || undefined,
       clientPostal: wizard.clientPostal || undefined,
+      clientCfdiUse: wizard.clientCfdiUse || undefined,
       clientPhone: wizard.clientPhone || undefined,
       
       scopeDescription: wizard.scopeDescription,
@@ -162,6 +163,8 @@ function NewContractForm() {
       taxWithholdingAmount: (wizard.retencionIsr ? wizard.totalAmount * 0.10 : 0) + (wizard.retencionIva ? wizard.totalAmount * 0.16 * (2 / 3) : 0),
       ivaAmount: wizard.totalAmount * 0.16,
       subtotalAmount: wizard.totalAmount,
+      satProductCode: wizard.satProductCode,
+      taxRegimeType: wizard.taxRegimeType,
       clientOtpVerified: false,
       paymentProfileId: wizard.selectedProfileId || undefined,
       selectedClauses: wizard.selectedClauses,
@@ -233,6 +236,7 @@ function NewContractForm() {
                   clientRfc={wizard.clientRfc} setClientRfc={wizard.setClientRfc}
                   clientRegimen={wizard.clientRegimen} setClientRegimen={wizard.setClientRegimen}
                   clientPostal={wizard.clientPostal} setClientPostal={wizard.setClientPostal}
+                  clientCfdiUse={wizard.clientCfdiUse} setClientCfdiUse={wizard.setClientCfdiUse}
                   clientRfcError={wizard.clientRfcError}
                   handleClientRfcBlur={wizard.handleClientRfcBlur}
                   scopeDescription={wizard.scopeDescription} setScopeDescription={wizard.setScopeDescription}
@@ -248,6 +252,8 @@ function NewContractForm() {
                   totalAmount={wizard.totalAmount} setTotalAmount={wizard.setTotalAmount}
                   retencionIsr={wizard.retencionIsr} setRetencionIsr={wizard.setRetencionIsr}
                   retencionIva={wizard.retencionIva} setRetencionIva={wizard.setRetencionIva}
+                  satProductCode={wizard.satProductCode} setSatProductCode={wizard.setSatProductCode}
+                  taxRegimeType={wizard.taxRegimeType} setTaxRegimeType={wizard.setTaxRegimeType}
                   milestones={wizard.milestones}
                   setMilestoneField={wizard.setMilestoneField}
                   handleMilestonePctChange={wizard.handleMilestonePctChange}

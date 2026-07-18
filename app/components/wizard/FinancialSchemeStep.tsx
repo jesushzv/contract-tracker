@@ -16,6 +16,10 @@ interface FinancialSchemeStepProps {
   setRetencionIsr: (v: boolean) => void;
   retencionIva: boolean;
   setRetencionIva: (v: boolean) => void;
+  satProductCode: string;
+  setSatProductCode: (v: string) => void;
+  taxRegimeType: string;
+  setTaxRegimeType: (v: string) => void;
   milestones: Milestone[];
   setMilestoneField: (index: number, field: 'label' | 'dueDate' | 'amount', value: string | number) => void;
   handleMilestonePctChange: (index: number, pct: number) => void;
@@ -40,6 +44,8 @@ export function FinancialSchemeStep({
   totalAmount, setTotalAmount,
   retencionIsr, setRetencionIsr,
   retencionIva, setRetencionIva,
+  satProductCode, setSatProductCode,
+  taxRegimeType, setTaxRegimeType,
   milestones, setMilestoneField, handleMilestonePctChange, handleAddMilestone, handleRemoveMilestone,
   isBalanceValid, getMilestoneSum, getMilestonePctSum,
   onBack, onNext
@@ -78,8 +84,35 @@ export function FinancialSchemeStep({
         </div>
 
         {/* Withholdings Toggles for Mexico (ISR/IVA) */}
-        <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50/10 flex flex-col gap-3 mt-1">
-          <span className="text-2xs font-extrabold text-slate-400 uppercase tracking-wider block">Retenciones Fiscales (Personas Morales)</span>
+        <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50/10 flex flex-col gap-4 mt-1">
+          <span className="text-2xs font-extrabold text-slate-400 uppercase tracking-wider block">Configuración Fiscal (Facturación SAT)</span>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Código de Producto (SAT)</label>
+              <input
+                type="text"
+                placeholder="Ej. 81111509"
+                value={satProductCode}
+                onChange={(e) => setSatProductCode(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Régimen Fiscal (TuyO)</label>
+              <select
+                value={taxRegimeType}
+                onChange={(e) => setTaxRegimeType(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white/10 text-slate-800 px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
+              >
+                <option value="general">Persona Física (Actividad Empresarial/Profesional)</option>
+                <option value="resico">RESICO (Régimen Simplificado de Confianza)</option>
+                <option value="moral">Persona Moral</option>
+              </select>
+            </div>
+          </div>
+
+          <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block border-t border-slate-200 pt-3">Retenciones (Si facturas a Persona Moral)</span>
           <div className="flex flex-col sm:flex-row gap-4">
             <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-700">
               <input
@@ -88,7 +121,7 @@ export function FinancialSchemeStep({
                 onChange={(e) => setRetencionIsr(e.target.checked)}
                 className="rounded border-slate-350 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
               />
-              Retener ISR (10%)
+              Retener ISR (10%) o (1.25% RESICO)
             </label>
             <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-700">
               <input

@@ -187,6 +187,7 @@ Freelancers in Mexico experience significant transaction friction and payment de
 * `client_rfc` (TEXT)
 * `client_regimen` (TEXT)
 * `client_postal` (TEXT)
+* `client_cfdi_use` (TEXT)
 * `client_phone` (TEXT, Nullable)
 * `scope_description` (TEXT)
 * `total_amount` (NUMERIC)
@@ -214,6 +215,21 @@ Freelancers in Mexico experience significant transaction friction and payment de
 * `due_date` (DATE)
 * `status` (ENUM: `pending`, `requested`, `marked_paid`, `confirmed`)
 * `receipt_url` (TEXT, Nullable)
+* `cfdi_status` (ENUM: `none`, `pending_csd`, `pending_invoice`, `issued`)
+* `cfdi_id` (TEXT, Nullable)
+* `cfdi_xml_url` (TEXT, Nullable)
+* `cfdi_pdf_url` (TEXT, Nullable)
+
+### CSD Credentials
+* `id` (UUID, PK)
+* `freelancer_id` (UUID, FK, Unique constraint if active)
+* `encrypted_cer` (TEXT)
+* `encrypted_key` (TEXT)
+* `encrypted_password` (TEXT)
+* `iv` (TEXT)
+* `rfc` (TEXT)
+* `is_active` (BOOLEAN)
+* `created_at` (TIMESTAMP)
 
 ### Payment Profiles
 * `id` (UUID, PK)

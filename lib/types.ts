@@ -18,6 +18,8 @@ export interface Profile {
     beneficiaryName: string;
   };
   isAdmin?: boolean;
+  facturapiOrganizationId?: string;
+  facturapiLiveKey?: string;
 }
 
 export type ContractStatus = 'draft' | 'sent' | 'client_signed' | 'accepted' | 'completed' | 'cancelled';
@@ -30,6 +32,7 @@ export interface Contract {
   clientRfc?: string;
   clientRegimen?: string;
   clientPostal?: string;
+  clientCfdiUse?: string;
   clientPhone?: string;
   
   scopeDescription: string;
@@ -71,6 +74,8 @@ export interface Contract {
   taxWithholdingAmount?: number;
   ivaAmount?: number;
   subtotalAmount?: number;
+  satProductCode?: string;
+  taxRegimeType?: string;
 
   // OTP Verification
   clientOtpCode?: string;
@@ -105,6 +110,22 @@ export interface Milestone {
   mxnAmount?: number; // Amount converted to MXN
   receiptUploadedBy?: 'freelancer' | 'client';
   speiReference?: string;
+  cfdiId?: string;
+  cfdiXmlUrl?: string;
+  cfdiPdfUrl?: string;
+  cfdiStatus?: string;
+  created_at: string;
+}
+
+export interface CsdCredential {
+  id: string;
+  freelancerId: string;
+  certificateBase64: string;
+  privateKeyEncrypted: string;
+  passwordEncrypted: string;
+  rfc: string;
+  isActive: boolean;
+  expiresAt?: string;
   created_at: string;
 }
 

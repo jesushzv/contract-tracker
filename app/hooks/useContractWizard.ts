@@ -18,7 +18,10 @@ export function useContractWizard(
   const [clientRfc, setClientRfc] = useState("");
   const [clientRegimen, setClientRegimen] = useState("");
   const [clientPostal, setClientPostal] = useState("");
+  const [clientCfdiUse, setClientCfdiUse] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [satProductCode, setSatProductCode] = useState("81111509");
+  const [taxRegimeType, setTaxRegimeType] = useState("general");
   
   const [scopeDescription, setScopeDescription] = useState("");
   const [totalAmount, setTotalAmount] = useState<number>(30000);
@@ -194,7 +197,10 @@ export function useContractWizard(
     clientRfc, setClientRfc,
     clientRegimen, setClientRegimen,
     clientPostal, setClientPostal,
+    clientCfdiUse, setClientCfdiUse,
     clientPhone, setClientPhone,
+    satProductCode, setSatProductCode,
+    taxRegimeType, setTaxRegimeType,
     scopeDescription, setScopeDescription,
     totalAmount, setTotalAmount: handleTotalAmountChange,
     currency, setCurrency,

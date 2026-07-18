@@ -8,9 +8,11 @@ interface MilestoneTimelineProps {
   currency: string;
   onUpdateMilestone?: (id: string, status: string) => void;
   onOpenPaymentModal?: (milestone: Milestone) => void;
+  onGenerateInvoice?: (milestone: Milestone) => void;
+  isClientView?: boolean;
 }
 
-export function MilestoneTimeline({ milestones, currency, onUpdateMilestone, onOpenPaymentModal }: MilestoneTimelineProps) {
+export function MilestoneTimeline({ milestones, currency, onUpdateMilestone, onOpenPaymentModal, onGenerateInvoice, isClientView }: MilestoneTimelineProps) {
   const [revertingMilestoneId, setRevertingMilestoneId] = React.useState<string | null>(null);
 
   const getMilestoneIcon = (status: string) => {
@@ -44,11 +46,18 @@ export function MilestoneTimeline({ milestones, currency, onUpdateMilestone, onO
                 <h4 className="text-sm font-medium text-slate-900">{m.label || `Hito ${i + 1}`}</h4>
                 <p className="text-sm text-slate-500">Vence: {m.dueDate}</p>
               </div>
-              <div className="text-right">
+              <div className="text-right flex flex-col items-end">
                 <p className="text-sm font-medium text-slate-900">
                   {new Intl.NumberFormat('es-MX', { style: 'currency', currency }).format(m.amount)}
                 </p>
-                <div className="mt-1">{getMilestoneStatus(m.status)}</div>
+                <div className="mt-1 flex flex-col gap-1 items-end">
+                  {getMilestoneStatus(m.status)}
+                  {m.cfdiStatus && m.cfdiStatus !== 'none' && (
+                    <Badge variant={m.cfdiStatus === 'issued' ? 'success' : 'warning'}>
+                      {m.cfdiStatus === 'issued' ? 'Factura Emitida' : (m.cfdiStatus === 'pending_csd' ? 'Falta CSD' : 'Factura Pendiente')}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -85,6 +94,24 @@ export function MilestoneTimeline({ milestones, currency, onUpdateMilestone, onO
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
+              )}
+              {m.status === 'confirmed' && !isClientView && (m.cfdiStatus === 'pending_invoice' || m.cfdiStatus === 'pending_csd') && onGenerateInvoice && (
+                <button
+                  onClick={() => onGenerateInvoice(m)}
+                  className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
+                >
+                  Emitir CFDI
+                </button>
+              )}
+              {m.cfdiStatus === 'issued' && (
+                <div className="flex gap-2 items-center ml-2 border-l border-slate-200 pl-2">
+                  {m.cfdiPdfUrl && (
+                    <a href={m.cfdiPdfUrl} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline text-xs font-semibold px-2 py-1">PDF</a>
+                  )}
+                  {m.cfdiXmlUrl && (
+                    <a href={m.cfdiXmlUrl} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline text-xs font-semibold px-2 py-1">XML</a>
+                  )}
+                </div>
               )}
             </div>
           </div>
