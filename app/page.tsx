@@ -277,7 +277,7 @@ export default function Home() {
           </p>
           
           <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            <div className="hidden md:block absolute top-12 left-1/6 right-1/6 h-0.5 bg-gradient-to-r from-indigo-100 via-indigo-500 to-indigo-100 z-0"></div>
+            <div className="hidden md:block absolute top-12 left-1/6 right-1/6 h-0.5 bg-gradient-to-r from-indigo-500 via-sky-400 to-emerald-500 z-0 opacity-30"></div>
             
             <div className="relative z-10 flex flex-col items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/20">
               <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-indigo-600/30 mb-6 ring-8 ring-white">1</div>
@@ -288,7 +288,7 @@ export default function Home() {
             </div>
             
             <div className="relative z-10 flex flex-col items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/20">
-              <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-indigo-600/30 mb-6 ring-8 ring-white">2</div>
+              <div className="w-16 h-16 bg-sky-500 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-sky-500/30 mb-6 ring-8 ring-white">2</div>
               <h3 className="text-xl font-bold text-slate-900">Envía por WhatsApp</h3>
               <p className="text-sm text-slate-500 mt-2 text-center">
                 Genera un link seguro. Tu cliente lo abre en su celular y acepta los términos con un clickwrap legal (NOM-151).

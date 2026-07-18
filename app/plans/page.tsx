@@ -169,7 +169,7 @@ export default function PlansPage() {
       ],
       icon: Sparkles,
       buttonText: "Suscribirse a Pro",
-      accent: "purple",
+      accent: "indigo",
     },
   ];
 
@@ -271,7 +271,7 @@ export default function PlansPage() {
                     isStarter
                       ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20"
                       : isPro
-                        ? "bg-purple-600 text-white hover:bg-purple-700 shadow-md shadow-purple-600/20"
+                        ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20"
                         : "bg-slate-900 text-white hover:bg-slate-800 shadow-md shadow-slate-900/10"
                   }`}
                 >
