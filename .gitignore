@@ -42,3 +42,19 @@ next-env.d.ts
 
 # design docs
 /design_docs
+
+# credentials & accounts reference
+/admin_accounts.md
+/test_accounts.md
+
+# temporary scratch & testing files
+/test-check*.js
+/test-cookies.js
+/test-header.js
+/test-login-header.js
+/debug_test.js
+/fix_test.js
+/clean-classes.js
+/clean-specific.js
+/remove-dark.js
+

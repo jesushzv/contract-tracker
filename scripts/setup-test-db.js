@@ -90,7 +90,8 @@ async function main() {
         { email: 'test-starter@example.com', password: pass12345, tier: 'starter', name: 'Test Starter User' },
         { email: 'test-pro@example.com', password: pass12345, tier: 'pro', name: 'Test Pro User' },
         { email: 'monetization-test@example.com', password: pass123, tier: 'free', name: 'Monetization Test User' },
-        { email: 'testlogin@example.com', password: strongPass, tier: 'pro', name: 'Test Login User' }
+        { email: 'testlogin@example.com', password: strongPass, tier: 'pro', name: 'Test Login User' },
+        { email: 'admin@example.com', password: pass12345, tier: 'pro', name: 'Admin User', is_admin: true }
       ];
 
       // Helper to clean up previous test users
@@ -124,7 +125,8 @@ async function main() {
           id: userData.user.id,
           email: u.email,
           full_name: u.name,
-          tier: u.tier
+          tier: u.tier,
+          is_admin: u.is_admin || false
         });
       }
 
