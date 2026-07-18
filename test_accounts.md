@@ -12,6 +12,8 @@ This document lists the persistent test accounts created in the Supabase databas
 | `monetization-test@example.com` | `password123` | `free` | E2E automation tests for Stripe checkout & monetization |
 | `testlogin@example.com` | `StrongPass1!` | `pro` | E2E automation tests for authentication & login onboarding |
 | `admin@example.com` | `Password12345!` | `pro` (Admin) | Manual testing of the admin dashboard / Admin Command Center |
+| `jhector.zamora@hotmail.com` | `Password12345!` | `pro` (Admin) | Personal administrative account for testing and validation |
+
 
 
 ---

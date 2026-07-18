@@ -86,4 +86,27 @@ test.describe("Authentication & Session Redirection E2E Suite", () => {
     // Expect redirect to dashboard
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 5000 });
   });
+
+  test("should render registered email and change password successfully in mock mode", async ({ page }) => {
+    // Navigate to settings with demo mode
+    await page.goto("/dashboard/settings?demo=true");
+    
+    // Expect registered email field to contain the default mock profile email and be disabled
+    const emailInput = page.locator('input[type="email"]').first();
+    await expect(emailInput).toHaveValue("hector@freelancemx.dev");
+    await expect(emailInput).toBeDisabled();
+    
+    // Verify Security section exists
+    await expect(page.locator('text="Seguridad y Contraseña"')).toBeVisible();
+    
+    // Fill in passwords
+    await page.fill('input[placeholder="••••••••"] >> nth=0', "StrongPass1!");
+    await page.fill('input[placeholder="••••••••"] >> nth=1', "StrongPass1!");
+    
+    // Click submit
+    await page.click('button:has-text("Actualizar Contraseña")');
+    
+    // Expect success message
+    await expect(page.locator("body")).toContainText("Contraseña actualizada con éxito.");
+  });
 });
