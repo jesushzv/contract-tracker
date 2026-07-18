@@ -14,7 +14,7 @@ import { useMilestones } from "../hooks/useMilestones";
 import { useProfile } from "../hooks/useProfile";
 import { useFinancialStats } from "../hooks/useFinancialStats";
 
-import { getContracts, getMilestones, getAuditLogs, updateMilestoneStatus, markMilestoneAsTransferred } from "@/lib/storageClient";
+import { getContracts, getMilestones, getAuditLogs, updateMilestoneStatus, markMilestoneAsTransferred, isDemoMode } from "@/lib/storageClient";
 import { LayoutList, LayoutGrid, Plus } from "lucide-react";
 import { ClientPaymentUpload } from "../components/client/ClientPaymentUpload";
 
@@ -214,7 +214,8 @@ export default function Dashboard() {
         onClose={() => setIsDetailOpen(false)} 
         onCopyLink={(id) => {
           const token = selectedContract?.clientAccessToken || `token-${id}`;
-          const url = `${window.location.origin}/c/${id}?demo=true&token=${token}`;
+          const demoParam = isDemoMode() ? "&demo=true" : "";
+          const url = `${window.location.origin}/c/${id}?token=${token}${demoParam}`;
           navigator.clipboard.writeText(url);
           alert("Link copiado: " + url);
         }}
