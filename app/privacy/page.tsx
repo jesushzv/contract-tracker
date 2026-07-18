@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
-import Header from "../Header";
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      <Header hasAuthCookie={false} useSupabase={true} />
+      
       
       <main className="flex-1 max-w-4xl mx-auto px-6 py-12 w-full">
         <Link href="/" className="inline-flex items-center text-sm font-semibold text-indigo-600 hover:text-indigo-500 mb-8 transition-colors">
