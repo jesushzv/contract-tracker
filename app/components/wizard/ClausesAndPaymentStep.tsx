@@ -108,8 +108,8 @@ export function ClausesAndPaymentStep({
                   setClabe(selected.clabe);
                   setBankName(selected.bankName);
                 } else if (profile) {
-                  setClabe(profile.bankDetails.clabe);
-                  setBankName(profile.bankDetails.bankName);
+                  setClabe(profile.bankDetails?.clabe || "");
+                  setBankName(profile.bankDetails?.bankName || "");
                 }
               }}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs focus:border-indigo-500 focus:outline-none transition-all cursor-pointer"

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { LogOut } from "lucide-react";
+import { LogOut, Menu, X } from "lucide-react";
 
 interface HeaderProps {
   hasAuthCookie: boolean;
@@ -14,6 +14,7 @@ interface HeaderProps {
 export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
   const pathname = usePathname();
   const [isLoggedIn, setIsLoggedIn] = useState(hasAuthCookie);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in via cookies or demo mode
@@ -83,7 +84,11 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-primary/10 bg-white/70 backdrop-blur-md dark:bg-[#090d16]/70 dark:border-primary/25 print:hidden">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+        <Link 
+          href="/" 
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+        >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-primary to-accent shadow-md shadow-primary/20">
             <svg
               width="20"
@@ -128,6 +133,7 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
             <>
               <Link 
                 href={panelUrl} 
+                onClick={() => setIsMobileMenuOpen(false)}
                 className="inline-flex items-center justify-center rounded-xl bg-primary px-3 md:px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary/10 hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:bg-primary dark:hover:bg-primary-dark transition-all duration-200"
               >
                 Mi Panel
@@ -145,6 +151,7 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
             pathname.startsWith("/login") ? (
               <Link 
                 href="/register" 
+                onClick={() => setIsMobileMenuOpen(false)}
                 className="inline-flex items-center justify-center rounded-xl bg-primary px-3 md:px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary/10 hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:bg-primary dark:hover:bg-primary-dark transition-all duration-200"
               >
                 Registrarse
@@ -152,6 +159,7 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
             ) : (
               <Link 
                 href="/login" 
+                onClick={() => setIsMobileMenuOpen(false)}
                 className="inline-flex items-center justify-center rounded-xl bg-primary px-3 md:px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary/10 hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:bg-primary dark:hover:bg-primary-dark transition-all duration-200"
               >
                 Iniciar Sesión
@@ -159,10 +167,50 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
             )
           )}
 
+          {/* Hamburger Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="inline-flex lg:hidden items-center justify-center rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none transition-all cursor-pointer"
+            aria-label="Toggle navigation menu"
+          >
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
       </div>
       
-
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div data-testid="mobile-menu" className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#090d16] px-4 py-4 space-y-3 flex flex-col animate-in slide-in-from-top-4 duration-200">
+          <Link
+            href="/#beneficios"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="text-base font-semibold text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-accent py-2 transition-colors border-b border-slate-50 dark:border-slate-900"
+          >
+            Beneficios
+          </Link>
+          <Link
+            href="/#como-funciona"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="text-base font-semibold text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-accent py-2 transition-colors border-b border-slate-50 dark:border-slate-900"
+          >
+            Cómo Funciona
+          </Link>
+          <Link
+            href="/#precios"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="text-base font-semibold text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-accent py-2 transition-colors border-b border-slate-50 dark:border-slate-900"
+          >
+            Precios
+          </Link>
+          <Link
+            href="/faq"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="text-base font-semibold text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-accent py-2 transition-colors"
+          >
+            FAQ
+          </Link>
+        </div>
+      )}
     </header>
   );
 }

@@ -85,4 +85,47 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     await expect(header.getByRole('link', { name: /Iniciar Sesión/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /Pipeline/i })).not.toBeVisible();
   });
+
+  test("should toggle mobile navigation menu at mobile viewport sizes", async ({ page }) => {
+    // 1. Set viewport to mobile size
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/");
+
+    const header = page.locator("header");
+    const hamburgerBtn = header.getByRole("button", { name: /Toggle navigation menu/i });
+    
+    // 2. Verify hamburger button is visible, but desktop menu links are hidden
+    await expect(hamburgerBtn).toBeVisible();
+    
+    // Desktop links container should be hidden or its links should not be visible in header
+    const desktopLinksContainer = header.locator(".hidden.lg\\:flex");
+    await expect(desktopLinksContainer).toBeHidden();
+
+    // Mobile menu dropdown should be hidden initially
+    const mobileMenu = page.getByTestId("mobile-menu");
+    await expect(mobileMenu).toBeHidden();
+
+    // 3. Click hamburger menu to open
+    await hamburgerBtn.click();
+
+    // Verify mobile menu and links are visible
+    await expect(mobileMenu).toBeVisible();
+    
+    const beneficiosMobileLink = mobileMenu.locator("a:has-text('Beneficios')");
+    await expect(beneficiosMobileLink).toBeVisible();
+    
+    const comoFuncionaMobileLink = mobileMenu.locator("a:has-text('Cómo Funciona')");
+    await expect(comoFuncionaMobileLink).toBeVisible();
+
+    // 4. Click hamburger menu again to close
+    await hamburgerBtn.click();
+
+    // Verify mobile menu is hidden
+    await expect(mobileMenu).toBeHidden();
+
+    // 5. Verify that on desktop size the hamburger button is hidden and desktop links are visible
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await expect(hamburgerBtn).toBeHidden();
+    await expect(desktopLinksContainer).toBeVisible();
+  });
 });

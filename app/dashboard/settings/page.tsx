@@ -92,46 +92,54 @@ export default function SettingsPage() {
 
   useEffect(() => {
     async function loadInitialData() {
-      if (typeof window !== "undefined") {
-        setIsDemo(localStorage.getItem("demo_mode") === "true");
-      }
-      
-      const prof = await getProfile();
-      setProfile(prof);
-      setFullName(prof.fullName);
-      setClabe(prof.bankDetails.clabe);
-      setBankName(prof.bankDetails.bankName);
-      setBeneficiaryName(prof.bankDetails.beneficiaryName);
-      setRfc(prof.rfc || "");
-      setRegimenFiscal(prof.regimenFiscal || "");
-      setCodigoPostal(prof.codigoPostal || "");
-      setLogoUrl(prof.logoUrl || "");
-      setSignatureUrl(prof.signatureUrl || "");
-      setPhone(prof.phone || "");
-
       try {
-        const profilesList = await getPaymentProfiles(prof.id);
-        setPaymentProfiles(profilesList);
-      } catch (err) {
-        console.error("Error loading payment profiles:", err);
-      }
+        if (typeof window !== "undefined") {
+          setIsDemo(localStorage.getItem("demo_mode") === "true");
+        }
+        
+        const prof = await getProfile();
+        setProfile(prof);
+        if (prof) {
+          setFullName(prof.fullName || "");
+          setClabe(prof.bankDetails?.clabe || "");
+          setBankName(prof.bankDetails?.bankName || "");
+          setBeneficiaryName(prof.bankDetails?.beneficiaryName || "");
+          setRfc(prof.rfc || "");
+          setRegimenFiscal(prof.regimenFiscal || "");
+          setCodigoPostal(prof.codigoPostal || "");
+          setLogoUrl(prof.logoUrl || "");
+          setSignatureUrl(prof.signatureUrl || "");
+          setPhone(prof.phone || "");
+        }
 
-      const allContracts = await getContracts();
-      setContracts(allContracts);
-      
-      try {
-        const csdRes = await fetch(`/api/csd?freelancerId=${prof.id}`);
-        if (csdRes.ok) {
-          const csdData = await csdRes.json();
-          if (csdData.hasCsd) {
-            setHasActiveCsd(true);
+        try {
+          const profilesList = await getPaymentProfiles(prof?.id);
+          setPaymentProfiles(profilesList || []);
+        } catch (err) {
+          console.error("Error loading payment profiles:", err);
+        }
+
+        const allContracts = await getContracts();
+        setContracts(allContracts || []);
+        
+        if (prof?.id) {
+          try {
+            const csdRes = await fetch(`/api/csd?freelancerId=${prof.id}`);
+            if (csdRes.ok) {
+              const csdData = await csdRes.json();
+              if (csdData.hasCsd) {
+                setHasActiveCsd(true);
+              }
+            }
+          } catch (err) {
+            console.error("Error loading CSD:", err);
           }
         }
       } catch (err) {
-        console.error("Error loading CSD:", err);
+        console.error("Error in loadInitialData:", err);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     }
     loadInitialData();
   }, []);

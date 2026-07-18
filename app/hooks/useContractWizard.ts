@@ -54,7 +54,7 @@ export function useContractWizard(
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     if (initialProfile) {
-      setBeneficiaryName(initialProfile.bankDetails.beneficiaryName || "");
+      setBeneficiaryName(initialProfile.bankDetails?.beneficiaryName || "");
       setFreelancerRfc(initialProfile.rfc || "");
       setFreelancerRegimen(initialProfile.regimenFiscal || "");
       setFreelancerPostal(initialProfile.codigoPostal || "");
@@ -65,8 +65,8 @@ export function useContractWizard(
         setClabe(defaultProfile.clabe);
         setBankName(defaultProfile.bankName);
       } else {
-        setClabe(initialProfile.bankDetails.clabe);
-        setBankName(initialProfile.bankDetails.bankName);
+        setClabe(initialProfile.bankDetails?.clabe || "");
+        setBankName(initialProfile.bankDetails?.bankName || "");
       }
     }
     /* eslint-enable react-hooks/set-state-in-effect */

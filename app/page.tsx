@@ -184,7 +184,7 @@ export default function Home() {
         {/* HERO MOCKUP VISUALIZATION */}
         <div className="mx-auto max-w-5xl w-full -mt-8 relative z-0 perspective-1000">
           <div className="relative rounded-2xl bg-slate-900/5 p-2 md:p-4 ring-1 ring-inset ring-slate-900/10 shadow-2xl backdrop-blur-sm transform rotate-x-2 hover:rotate-x-0 transition-transform duration-700 overflow-hidden">
-            <div className="rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm flex flex-col h-[500px]">
+            <div className="rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm flex flex-col h-auto min-h-[500px] md:h-[500px]">
               {/* Fake browser header */}
               <div className="h-10 bg-slate-50 border-b border-slate-200 flex items-center px-4 gap-2">
                 <div className="flex gap-1.5">
@@ -192,7 +192,7 @@ export default function Home() {
                   <div className="w-3 h-3 rounded-full bg-amber-400"></div>
                   <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
                 </div>
-                <div className="mx-auto bg-white rounded-md border border-slate-200 text-3xs text-slate-400 px-24 py-1 flex items-center gap-1">
+                <div className="mx-auto bg-white rounded-md border border-slate-200 text-xs text-slate-400 px-24 py-1 flex items-center gap-1">
                   <ShieldCheck className="h-3 w-3 text-emerald-500" />
                   app.mipacto.app/dashboard
                 </div>
@@ -219,7 +219,7 @@ export default function Home() {
                     </div>
                     <div className="h-10 w-32 bg-indigo-600 rounded-lg"></div>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="h-24 bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
                       <div className="h-3 w-20 bg-slate-300 rounded"></div>
                       <div className="h-6 w-32 bg-emerald-500 rounded"></div>
@@ -486,7 +486,7 @@ export default function Home() {
 
               <div className="flex flex-col gap-4 mt-2">
                 <div>
-                  <div className="flex justify-between text-2xs font-semibold text-slate-500 uppercase mb-2">
+                  <div className="flex justify-between text-xs font-semibold text-slate-500 uppercase mb-2">
                     <span>Cobro promedio por Proyecto</span>
                     <span className="text-indigo-500 font-bold">${projectRate.toLocaleString("es-MX")} MXN</span>
                   </div>
@@ -502,7 +502,7 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-2xs font-semibold text-slate-500 uppercase mb-2">
+                  <div className="flex justify-between text-xs font-semibold text-slate-500 uppercase mb-2">
                     <span>Proyectos al Año</span>
                     <span className="text-indigo-500 font-bold">{projectCount} proyectos</span>
                   </div>
@@ -518,7 +518,7 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-2xs font-semibold text-slate-500 uppercase mb-2">
+                  <div className="flex justify-between text-xs font-semibold text-slate-500 uppercase mb-2">
                     <span>Días promedio de retraso en pago</span>
                     <span className="text-indigo-500 font-bold">{delayDays} días</span>
                   </div>
@@ -537,26 +537,26 @@ export default function Home() {
 
             <div className="w-full md:w-80 rounded-2xl bg-indigo-900/10 p-6 border border-indigo-500/20 flex flex-col gap-6">
               <div>
-                <span className="text-3xs font-semibold text-slate-400 uppercase tracking-wider block">Ingresos anuales estimados</span>
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Ingresos anuales estimados</span>
                 <span className="text-xl font-bold text-slate-800">{formatMoney(totalYearlyRevenue)}</span>
               </div>
 
               <div className="border-t border-slate-200 pt-4">
-                <span className="text-3xs font-semibold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
                   <Clock className="h-3 w-3 text-amber-500" />
                   Días de demora acumulados
                 </span>
                 <span className="text-2xl font-black text-amber-600 ">{yearlyDaysDelayed} días/año</span>
-                <p className="text-4xs text-slate-400 mt-1">Tiempo que pasas persiguiendo transferencias bancarias.</p>
+                <p className="text-xs text-slate-400 mt-1">Tiempo que pasas persiguiendo transferencias bancarias.</p>
               </div>
 
               <div className="border-t border-slate-200 pt-4">
-                <span className="text-3xs font-semibold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-indigo-500" />
                   Liquidez atorada en cartera
                 </span>
                 <span className="text-xl font-black text-indigo-600 ">{formatMoney(liquidityAtRisk)}</span>
-                <p className="text-4xs text-slate-400 mt-1">Capital de trabajo atrapado por la falta de cobranza automatizada.</p>
+                <p className="text-xs text-slate-400 mt-1">Capital de trabajo atrapado por la falta de cobranza automatizada.</p>
               </div>
             </div>
 

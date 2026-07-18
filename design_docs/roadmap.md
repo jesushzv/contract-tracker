@@ -167,6 +167,7 @@ A dedicated UX sprint that paused feature work to rebuild the application's enti
 * **How It Works (Step-by-Step):** Visual flow of Create -> Send -> Get Paid.
 * **Deep-Dive Feature Sections:** Alternating layouts detailing RESICO/LFT legal protection and WhatsApp flow.
 * **Comprehensive Footer:** SaaS footer with proper links.
+* **Mobile Responsiveness & Accessibility:** Added collapsible mobile navigation menu (drawer), prevented dashboard mockup squishing on mobile viewports, and increased ROI calculator micro-fonts (`text-xs`) to pass WCAG readability guidelines.
 
 
 ### 🟢 Sprint Legal: Legal Audit & Compliance (Completado)
