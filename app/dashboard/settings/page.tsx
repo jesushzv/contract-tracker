@@ -68,8 +68,6 @@ export default function SettingsPage() {
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
 
   // CSD States
-  const [csdCerBase64, setCsdCerBase64] = useState("");
-  const [csdKeyBase64, setCsdKeyBase64] = useState("");
   const [csdPassword, setCsdPassword] = useState("");
   const [isUploadingCsd, setIsUploadingCsd] = useState(false);
   const [hasActiveCsd, setHasActiveCsd] = useState(false);
@@ -180,8 +178,8 @@ export default function SettingsPage() {
   const handleCsdUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
-    if (!csdCerBase64 || !csdKeyBase64 || !csdPassword) {
-      setCsdError("Por favor, sube el archivo .cer, .key y proporciona la contraseña.");
+    if (!csdPassword) {
+      setCsdError("Por favor, proporciona tu Facturapi Live Secret Key.");
       return;
     }
     if (!profile.rfc || profile.rfc.length < 12) {
@@ -198,10 +196,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           freelancerId: profile.id,
-          certificateBase64: csdCerBase64,
-          privateKeyBase64: csdKeyBase64,
           password: csdPassword,
-          rfc: profile.rfc
         })
       });
 
@@ -210,8 +205,6 @@ export default function SettingsPage() {
       
       setHasActiveCsd(true);
       setCsdUploadSuccess(true);
-      setCsdCerBase64("");
-      setCsdKeyBase64("");
       setCsdPassword("");
       setTimeout(() => setCsdUploadSuccess(false), 5000);
     } catch (err: unknown) {
@@ -222,20 +215,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleCsdFile = (file: File | undefined, type: "cer" | "key") => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      const base64 = result.split(",")[1];
-      if (type === "cer") {
-        setCsdCerBase64(base64);
-      } else {
-        setCsdKeyBase64(base64);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
+
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -561,14 +541,14 @@ export default function SettingsPage() {
 
         <hr className="border-slate-200" />
 
-        {/* Section 3: Facturación y Bóveda CSD */}
+        {/* Section 3: Facturación Automática (BYOK) */}
         <section>
           <div className="mb-6">
             <h3 className="text-lg font-bold text-slate-900">
-              Facturación 4.0 y Bóveda CSD
+              Facturación 4.0 Automática
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Sube tu Certificado de Sello Digital (CSD) para poder emitir facturas automáticamente.
+              Conecta tu cuenta de Facturapi para emitir comprobantes CFDI 4.0 automáticamente al completar un hito.
             </p>
           </div>
           
@@ -578,15 +558,9 @@ export default function SettingsPage() {
               description="Habilita la emisión automática de CFDI 4.0 al completar tus hitos."
               planNeeded="Pro"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Certificado (.cer)</label>
-                  <input type="file" disabled className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-xs opacity-50" />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Llave Privada (.key)</label>
-                  <input type="file" disabled className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-xs opacity-50" />
-                </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-3xs font-semibold text-slate-400 uppercase tracking-wider">Facturapi Live Secret Key</label>
+                <input type="password" disabled className="rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-xs opacity-50 w-full" value="sk_live_*****************" />
               </div>
             </UpgradeAlert>
           ) : (
@@ -598,46 +572,32 @@ export default function SettingsPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div>
-                      <h4 className="font-semibold text-sm">CSD Configurado Correctamente</h4>
+                      <h4 className="font-semibold text-sm">Conectado a Facturapi</h4>
                       <p className="text-xs opacity-80 mt-0.5">Tus credenciales están encriptadas y listas para facturar.</p>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-500">¿Necesitas actualizar tus sellos? Sube los nuevos archivos a continuación.</p>
+                  <p className="text-xs text-slate-500">¿Necesitas actualizar tu llave? Ingrésala nuevamente abajo.</p>
                 </div>
-              ) : null}
+              ) : (
+                <div className="mb-4">
+                  <p className="text-xs text-slate-600 leading-relaxed bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <strong>Instrucciones:</strong><br />
+                    1. Ve a <a href="https://www.facturapi.io" target="_blank" rel="noreferrer" className="text-blue-600 underline">Facturapi.com</a> y crea una cuenta gratuita.<br />
+                    2. Sube tus archivos CSD (.cer y .key) en su plataforma y activa el modo <b>Live</b>.<br />
+                    3. Ve a <i>Configuración {'>'} API Keys</i>, copia tu <b>Secret Key</b> (inicia con <code className="bg-blue-100 px-1 rounded">sk_live_</code>) y pégala aquí.
+                  </p>
+                </div>
+              )}
 
               <form onSubmit={handleCsdUpload} className="mt-4 flex flex-col gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-3xs font-semibold text-slate-500 uppercase tracking-wider">Certificado (.cer)</label>
-                    <input
-                      type="file"
-                      accept=".cer"
-                      onChange={(e) => handleCsdFile(e.target.files?.[0], "cer")}
-                      className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none"
-                      required={!hasActiveCsd}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-3xs font-semibold text-slate-500 uppercase tracking-wider">Llave Privada (.key)</label>
-                    <input
-                      type="file"
-                      accept=".key"
-                      onChange={(e) => handleCsdFile(e.target.files?.[0], "key")}
-                      className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none"
-                      required={!hasActiveCsd}
-                    />
-                  </div>
-                </div>
-                
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-3xs font-semibold text-slate-500 uppercase tracking-wider">Contraseña de la Llave Privada</label>
+                  <label className="text-3xs font-semibold text-slate-500 uppercase tracking-wider">Facturapi Live Secret Key</label>
                   <input
                     type="password"
                     value={csdPassword}
                     onChange={(e) => setCsdPassword(e.target.value)}
-                    placeholder="Contraseña del SAT"
-                    className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none w-full md:w-1/2"
+                    placeholder="sk_live_..."
+                    className="rounded-xl border border-slate-300 bg-transparent px-3 py-2 text-xs focus:border-indigo-500 focus:outline-none w-full"
                     required={!hasActiveCsd}
                   />
                 </div>
@@ -650,17 +610,17 @@ export default function SettingsPage() {
 
                 {csdUploadSuccess && (
                   <div className="text-xs text-green-600 font-semibold bg-green-500/5 p-3 rounded-xl border border-green-500/10">
-                    ✓ Credenciales guardadas y encriptadas con éxito.
+                    ✓ Llave guardada y encriptada con éxito.
                   </div>
                 )}
 
                 <div className="flex justify-end mt-2">
                   <button
                     type="submit"
-                    disabled={isUploadingCsd || (!csdCerBase64 && !csdKeyBase64 && !csdPassword)}
+                    disabled={isUploadingCsd || !csdPassword}
                     className="rounded-xl bg-indigo-600 px-6 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isUploadingCsd ? "Guardando..." : (hasActiveCsd ? "Actualizar Credenciales" : "Guardar Credenciales")}
+                    {isUploadingCsd ? "Guardando..." : (hasActiveCsd ? "Actualizar Llave" : "Guardar Llave")}
                   </button>
                 </div>
               </form>

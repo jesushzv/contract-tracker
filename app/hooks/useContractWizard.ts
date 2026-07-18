@@ -142,13 +142,25 @@ export function useContractWizard(
   }, [totalAmount]);
 
   const handleAddMilestone = useCallback(() => {
-    const defaultPct = 20;
-    const defaultAmount = Math.round((defaultPct / 100) * totalAmount);
-    setMilestones(prev => [
-      ...prev,
-      { label: `Hito de pago #${prev.length + 1}`, pct: defaultPct, amount: defaultAmount, dueDate: "" }
-    ]);
-  }, [totalAmount]);
+    if (!initialProfile) return;
+    
+    const tier = initialProfile.tier || "free";
+    const maxMilestones = tier === "free" ? 3 : (tier === "starter" ? 5 : 20);
+    
+    setMilestones(prev => {
+      if (prev.length >= maxMilestones) {
+        alert(`Tu plan ${tier} permite un máximo de ${maxMilestones} hitos por contrato.`);
+        return prev;
+      }
+      
+      const defaultPct = 20;
+      const defaultAmount = Math.round((defaultPct / 100) * totalAmount);
+      return [
+        ...prev,
+        { label: `Hito de pago #${prev.length + 1}`, pct: defaultPct, amount: defaultAmount, dueDate: "" }
+      ];
+    });
+  }, [totalAmount, initialProfile]);
 
   const handleRemoveMilestone = useCallback((index: number) => {
     setMilestones(prev => {

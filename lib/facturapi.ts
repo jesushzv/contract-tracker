@@ -5,41 +5,6 @@ const facturapi = new Facturapi(API_KEY);
 
 export default facturapi;
 
-export async function uploadCsdToFacturapi(
-  freelancerName: string,
-  cerBase64: string, 
-  keyBase64: string, 
-  passwordPlain: string
-) {
-  if (!API_KEY) {
-    throw new Error("Missing FACTURAPI_SECRET_KEY");
-  }
-  
-  // 1. Create the organization for the freelancer
-  const organization = await facturapi.organizations.create({
-    name: freelancerName
-  });
-
-  // 2. Upload the CSD certificate
-  const cerBuffer = Buffer.from(cerBase64, 'base64');
-  const keyBuffer = Buffer.from(keyBase64, 'base64');
-  
-  // Notice we pass the raw Buffers representing the binary files
-  await facturapi.organizations.uploadCertificate(
-    organization.id, 
-    cerBuffer, 
-    keyBuffer, 
-    passwordPlain
-  );
-
-  // 3. Obtain the Live API key for issuing invoices
-  const liveApiKey = await facturapi.organizations.renewLiveApiKey(organization.id);
-
-  return { 
-    facturapiOrganizationId: organization.id,
-    facturapiLiveKey: liveApiKey
-  };
-}
 
 export interface InvoiceGenerationPayload {
   facturapiLiveKey: string;
