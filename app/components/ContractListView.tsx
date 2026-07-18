@@ -3,6 +3,7 @@ import { Contract } from "@/lib/types";
 import { Badge } from "./ui/Badge";
 import { EmptyState } from "./ui/EmptyState";
 import { FileText, MoreHorizontal, Eye, Copy } from "lucide-react";
+import { isDemoMode } from "@/lib/storageClient";
 
 interface ContractListViewProps {
   contracts: Contract[];
@@ -101,7 +102,8 @@ export function ContractListView({ contracts, onSelectContract, onCreateNew }: C
                             e.stopPropagation(); 
                             setOpenMenuId(null); 
                             const token = contract.clientAccessToken || `token-${contract.id}`;
-                            navigator.clipboard.writeText(`${window.location.origin}/c/${contract.id}?demo=true&token=${token}`);
+                            const demoParam = isDemoMode() ? "&demo=true" : "";
+                            navigator.clipboard.writeText(`${window.location.origin}/c/${contract.id}?token=${token}${demoParam}`);
                           }}
                         >
                           <Copy className="w-4 h-4" /> Copiar Link

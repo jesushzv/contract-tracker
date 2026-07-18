@@ -9,7 +9,7 @@ import { Badge } from "./ui/Badge";
 import { Copy, Edit2, ShieldCheck, AlertTriangle, ExternalLink, MessageCircle, Mail } from "lucide-react";
 import { FreelancerEditModal } from "./modals/FreelancerEditModal";
 import { ResendEmailModal } from "./modals/ResendEmailModal";
-import { vetAndAcceptContract, cancelContract, resendContractEmail } from "@/lib/storageClient";
+import { vetAndAcceptContract, cancelContract, resendContractEmail, isDemoMode } from "@/lib/storageClient";
 
 interface ContractDetailProps {
   contract: Contract | null;
@@ -220,7 +220,8 @@ export function ContractDetail({
                     <button 
                       onClick={() => {
                         const token = contract.clientAccessToken || `token-${contract.id}`;
-                        const url = `${window.location.origin}/c/${contract.id}?demo=true&token=${token}`;
+                        const demoParam = isDemoMode() ? "&demo=true" : "";
+                        const url = `${window.location.origin}/c/${contract.id}?token=${token}${demoParam}`;
                         const message = `Hola ${contract.clientName}, te comparto el enlace seguro para revisar y firmar tu contrato: ${url}`;
                         window.open(`https://wa.me/${(contract.clientPhone || '').replace(/\D/g,'')}?text=${encodeURIComponent(message)}`, '_blank');
                       }}
@@ -236,7 +237,8 @@ export function ContractDetail({
                     <button 
                       onClick={() => {
                         const token = contract.clientAccessToken || `token-${contract.id}`;
-                        const url = `${window.location.origin}/c/${contract.id}?demo=true&token=${token}`;
+                        const demoParam = isDemoMode() ? "&demo=true" : "";
+                        const url = `${window.location.origin}/c/${contract.id}?token=${token}${demoParam}`;
                         const message = `Hola ${contract.clientName}, te escribo para recordarte el pago pendiente de nuestro proyecto. Puedes ver los detalles aquí: ${url}`;
                         window.open(`https://wa.me/${(contract.clientPhone || '').replace(/\D/g,'')}?text=${encodeURIComponent(message)}`, '_blank');
                       }}
@@ -299,7 +301,8 @@ export function ContractDetail({
             className="flex-1 min-w-[140px]" 
             onClick={() => {
               const token = contract.clientAccessToken || `token-${contract.id}`;
-              window.open(`/c/${contract.id}?demo=true&token=${token}`, '_blank');
+              const demoParam = isDemoMode() ? "&demo=true" : "";
+              window.open(`/c/${contract.id}?token=${token}${demoParam}`, '_blank');
             }}
           >
             <ExternalLink className="w-4 h-4 mr-2" />
