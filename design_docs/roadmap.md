@@ -26,6 +26,7 @@ gantt
     Sprint WB-3 (UX & Completeness) :active, 2026-07-25, 2026-07-26
     Sprint UX (P0 UX/UI Overhaul) :active, 2026-07-26, 2026-07-28
     Sprint 8 (Stripe Payments SaaS) :active, 2026-07-28, 2026-07-31
+    Sprint Admin (Admin Overhaul) :active, 2026-07-31, 2026-08-02
     section Pendiente
     Sprint 7 (CFDI 4.0 PAC Sandbox) :2026-07-26, 2026-07-28
     Sprint 9 (CSD Vault & Encryption) :2026-07-31, 2026-08-03
@@ -144,6 +145,14 @@ A dedicated UX sprint that paused feature work to rebuild the application's enti
 * **Stripe Webhooks**: Webhook API `/api/webhooks/stripe` to keep database user subscription status and tiers in sync.
 * **Customer Billing Portal**: Link to Stripe's payment methods, cancellation, and invoice history portal.
 * **Subscription Cancellation Flow**: In-app multi-step cancellation flow with retention offers (pause/downgrade), reason survey, and Stripe `cancel_at_period_end` integration.
+
+### 🟢 Sprint Admin: Panel de Administración SaaS (Completado)
+* **Secure Admin Shell**: Dedicated `/admin` route protected by an HMAC-signed `admin_session` cookie and verified via edge middleware.
+* **Service Role Access**: Supabase client bypassing RLS specifically for admin management operations.
+* **Admin Dashboard & Analytics**: High-level KPIs and Recharts-powered graphs tracking revenue and contract volume over time, exportable to CSV.
+* **User & Feedback Management**: Views to monitor all registered users, their subscription tiers, and a system to track user feedback submitted from their dashboard settings.
+* **Promo Code Manager**: Ability to create, track, and expire promotional discount codes (both manual and Stripe-integrated).
+* **Automated Email Campaigns**: Interface to draft, segment, and dispatch email campaigns to users based on their subscription tier using React-Email and Resend.
 
 ### 🔴 Sprint 9: Bóveda de CSD Segura (Pendiente)
 * **CSD File Vault**: Secure UI allowing freelancers to upload `.cer`, `.key` keys and password credentials.

@@ -60,6 +60,13 @@ export default function SettingsPage() {
   const [isDemo, setIsDemo] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Feedback States
+  const [feedbackCategory, setFeedbackCategory] = useState("bug");
+  const [feedbackSubject, setFeedbackSubject] = useState("");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+
   useEffect(() => {
     async function loadInitialData() {
       if (typeof window !== "undefined") {
@@ -244,6 +251,34 @@ export default function SettingsPage() {
       alert("Error al reactivar suscripción: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setIsReactivating(false);
+    }
+  };
+
+  const handleFeedbackSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingFeedback(true);
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: feedbackCategory,
+          subject: feedbackSubject,
+          message: feedbackMessage
+        })
+      });
+      if (res.ok) {
+        setFeedbackSuccess(true);
+        setFeedbackSubject("");
+        setFeedbackMessage("");
+        setTimeout(() => setFeedbackSuccess(false), 3000);
+      } else {
+        alert("Error al enviar comentarios.");
+      }
+    } catch {
+      alert("Error de conexión al enviar comentarios.");
+    } finally {
+      setIsSubmittingFeedback(false);
     }
   };
 
@@ -703,6 +738,82 @@ export default function SettingsPage() {
               </button>
             </div>
           )}
+        </section>
+
+        <hr className="border-slate-200" />
+
+        {/* Section 5: Ayuda y Comentarios */}
+        <section>
+          <div className="mb-6">
+            <h4 className="text-lg font-bold text-slate-900">
+              Ayuda y Comentarios
+            </h4>
+            <p className="text-xs text-slate-500 mt-0.5">
+              ¿Tienes algún problema o sugerencia? Envíanos un mensaje directo.
+            </p>
+          </div>
+          
+          <form onSubmit={handleFeedbackSubmit} className="bg-slate-50/50 border border-slate-200/50 rounded-2xl p-5 flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-3xs font-semibold text-slate-455 uppercase tracking-wider">Categoría</label>
+                <select
+                  value={feedbackCategory}
+                  onChange={(e) => setFeedbackCategory(e.target.value)}
+                  className="rounded-xl border border-slate-300 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                >
+                  <option value="bug">Reportar un error</option>
+                  <option value="feature-request">Sugerir una función</option>
+                  <option value="billing">Duda de facturación</option>
+                  <option value="other">Otro</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-3xs font-semibold text-slate-455 uppercase tracking-wider">Asunto</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Error al descargar PDF"
+                  value={feedbackSubject}
+                  onChange={(e) => setFeedbackSubject(e.target.value)}
+                  className="rounded-xl border border-slate-300 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                />
+              </div>
+            </div>
+            
+            <div className="flex flex-col gap-1.5">
+              <label className="text-3xs font-semibold text-slate-455 uppercase tracking-wider">Mensaje</label>
+              <textarea
+                required
+                rows={4}
+                placeholder="Describe tu problema o sugerencia con el mayor detalle posible..."
+                value={feedbackMessage}
+                onChange={(e) => setFeedbackMessage(e.target.value)}
+                className="rounded-xl border border-slate-300 bg-transparent px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none resize-none"
+              />
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-2">
+              {feedbackSuccess && (
+                <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Mensaje enviado
+                </span>
+              )}
+              <button
+                type="submit"
+                disabled={isSubmittingFeedback || !feedbackSubject || !feedbackMessage}
+                className="rounded-xl bg-indigo-600 px-6 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isSubmittingFeedback ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Enviando...
+                  </span>
+                ) : 'Enviar Mensaje'}
+              </button>
+            </div>
+          </form>
         </section>
 
       </div>

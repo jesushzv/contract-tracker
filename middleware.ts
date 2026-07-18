@@ -33,6 +33,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
+  // Admin API protection (except the verify endpoint which issues the cookie)
+  const isAdminApi = nextUrl.pathname.startsWith("/api/admin") && !nextUrl.pathname.startsWith("/api/admin/verify");
+  if (isAdminApi && !isDemo) {
+    const hasAdminSession = cookies.get("admin_session")?.value;
+    if (!hasAdminSession) {
+      return NextResponse.json({ error: "Admin session required" }, { status: 403 });
+    }
+  }
+
   const response = NextResponse.next();
 
   // If the request had ?demo=true and the cookie is not set, set it
@@ -48,5 +57,6 @@ export const config = {
     "/dashboard/:path*",
     "/contracts/:path*",
     "/admin/:path*",
+    "/api/admin/:path*",
   ],
 };

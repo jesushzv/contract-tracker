@@ -34,6 +34,7 @@ Freelancers in Mexico experience significant transaction friction and payment de
 
 * **Freelancer (Account Holder):** Registers via email/password, performs fiscal onboarding, selects subscription tier, uploads custom logo/signature branding, manages bank accounts (Payment Profiles), drafts contracts with dynamic templates, and approves client signatures.
 * **Client (No Account Required):** Receives a secure contract link, verifies their identity via a 6-digit email OTP, reviews freelancer verified standing, signs electronically, and uploads SPEI payment receipts for milestones.
+* **Administrator (Owner):** Accesses a protected `/admin` shell utilizing an HMAC-signed session to view platform metrics, manage users, read feedback, create promotional codes, and orchestrate email campaigns.
 
 ---
 
@@ -56,7 +57,8 @@ Freelancers in Mexico experience significant transaction friction and payment de
   2. **Tier Selection:** Prompt user to select between the Free, Starter, or Pro tiers.
   3. **Stripe Checkout Integration (Paid Tiers):** Redirect Starter/Pro signups to a secure Stripe Checkout page to complete subscription payment.
   4. **Post-Payment Onboarding Wizard:** Immediately redirect the user back to setup their profile (RFC, Fiscal Regimen, Postal Code, Bank details, Phone number) and upload brand assets (logo, signature) if unlocked.
-  5. **Subscription sync via webhooks:** Update profile `tier` and access rights via Stripe Webhook events.
+  5. **Subscription sync via webhooks:** Update profile `tier` and access rights via Stripe Webhook events. Handle `cancel_at_period_end` states.
+  6. **Subscription Cancellation Flow:** Allow users to cancel their plan through a multi-step modal that presents retention offers and collects cancellation reasons before scheduling a downgrade at the billing period end.
 * **Enforced Caps:** The creation wizard will check the active contract count against the freelancer's tier limit (3 for Free, 10 for Starter). If they reach the cap, it will display a clean modal outlining their usage and prompting them to upgrade to a higher tier, blocking further contract submissions.
 
 ### 4.3 Mexican Tax Compliance (RESICO & Retenciones)
@@ -133,6 +135,11 @@ Freelancers in Mexico experience significant transaction friction and payment de
 ### 4.13 Standalone Documents Archive (Expediente)
 * **Unified Portfolio Archive:** A dedicated route `/documents` that dynamically lists and filters contracts, SPEI receipt uploads, and transaction audit trails across all projects.
 
+### 4.14 Administrative Shell & SaaS Tools
+* **Admin Authentication:** Secure, cookie-based session signed via HMAC utilizing the Supabase JWT secret to verify `is_admin` flags without exposing RLS bypass logic to the client.
+* **System Operations:** Admin interface provides full visibility into registered users, system analytics (revenue and contract creation volume), and active promo codes.
+* **Targeted Email Campaigns:** React-Email integrated drafting system to send broadcasts specifically to free, starter, or pro users.
+
 ---
 
 ## 5. Non-Functional & Security Requirements
@@ -170,6 +177,7 @@ Freelancers in Mexico experience significant transaction friction and payment de
 * `signature_url` (TEXT)
 * `tier` (TEXT DEFAULT 'free') -- supports 'free' | 'starter' | 'pro'
 * `phone` (TEXT, Nullable)
+* `is_admin` (BOOLEAN DEFAULT false)
 
 ### Contracts
 * `id` (UUID, PK)
@@ -224,3 +232,23 @@ Freelancers in Mexico experience significant transaction friction and payment de
 * `details` (TEXT)
 * `ip` (TEXT)
 * `signature` (TEXT, Nullable)
+
+### Promo Codes
+* `id` (UUID, PK)
+* `code` (TEXT)
+* `discount_type` (TEXT)
+* `discount_amount` (NUMERIC)
+* `max_uses` (INT, Nullable)
+* `times_used` (INT)
+* `expires_at` (TIMESTAMP, Nullable)
+* `is_active` (BOOLEAN)
+* `is_stripe_coupon` (BOOLEAN)
+
+### Email Campaigns
+* `id` (UUID, PK)
+* `name` (TEXT)
+* `subject` (TEXT)
+* `content` (TEXT)
+* `target_audience` (TEXT)
+* `status` (TEXT)
+* `sent_count` (INT)

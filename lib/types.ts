@@ -17,6 +17,7 @@ export interface Profile {
     bankName: string;
     beneficiaryName: string;
   };
+  isAdmin?: boolean;
 }
 
 export type ContractStatus = 'draft' | 'sent' | 'client_signed' | 'accepted' | 'completed' | 'cancelled';
@@ -181,3 +182,42 @@ export interface Notification {
   created_at: string;
 }
 
+export interface UserFeedback {
+  id: string;
+  userId: string;
+  userEmail?: string;
+  category: 'bug' | 'feature-request' | 'question' | 'billing';
+  subject: string;
+  message: string;
+  status: 'new' | 'in-progress' | 'resolved' | 'archived';
+  adminReply?: string;
+  created_at: string;
+  replied_at?: string;
+}
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_amount: number;
+  max_uses: number | null;
+  times_used: number;
+  expires_at: string | null;
+  is_active: boolean;
+  stripe_coupon_id?: string;
+  is_stripe_coupon: boolean;
+  created_at: string;
+  created_by?: string;
+}
+
+export interface EmailCampaign {
+  id: string;
+  name: string;
+  subject: string;
+  content: string;
+  target_audience: string;
+  status: 'draft' | 'scheduled' | 'sent';
+  sent_at?: string;
+  sent_count: number;
+  created_at: string;
+}
