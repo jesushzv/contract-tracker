@@ -105,7 +105,7 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
           <Link href="/#precios" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
             Precios
           </Link>
-          <Link href="/#faq" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+          <Link href="/faq" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
             FAQ
           </Link>
         </div>

@@ -748,6 +748,11 @@ export default function Home() {
               );
             })}
           </div>
+          <div className="mt-8 text-center">
+            <Link href="/faq" className="inline-flex items-center justify-center rounded-xl bg-indigo-50 px-6 py-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-100 transition-colors">
+              Ver todas las preguntas frecuentes
+            </Link>
+          </div>
         </div>
 
         {/* Call to Action card */}
@@ -808,9 +813,9 @@ export default function Home() {
             <div>
               <h4 className="font-bold text-slate-900 mb-4 text-sm uppercase tracking-wider">Legal & Ayuda</h4>
               <ul className="space-y-3 text-sm text-slate-500">
-                <li><Link href="/#faq" className="hover:text-indigo-600 transition-colors">Preguntas Frecuentes</Link></li>
-                <li><Link href="#" className="hover:text-indigo-600 transition-colors">Términos de Servicio</Link></li>
-                <li><Link href="#" className="hover:text-indigo-600 transition-colors">Aviso de Privacidad</Link></li>
+                <li><Link href="/faq" className="hover:text-indigo-600 transition-colors">Preguntas Frecuentes</Link></li>
+                <li><Link href="/terms" className="hover:text-indigo-600 transition-colors">Términos de Servicio</Link></li>
+                <li><Link href="/privacy" className="hover:text-indigo-600 transition-colors">Aviso de Privacidad</Link></li>
               </ul>
             </div>
           </div>
