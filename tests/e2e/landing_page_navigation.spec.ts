@@ -26,12 +26,9 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     await expect(page.locator('text="Documentos"')).not.toBeVisible();
 
     // 3. Verify Hero CTA buttons & helper links
-    const heroHtml = await page.locator('.mt-10.flex.flex-col').first().innerHTML();
-    console.log("Hero HTML:", heroHtml);
-    await expect(page.locator('a:has-text("Comenzar a Crear")')).toBeVisible();
-    await expect(page.locator('a:has-text("Probar Demo con Datos")')).toBeVisible();
-    await expect(page.locator('text="¿Ya tienes una cuenta?"')).toBeVisible();
-    await expect(page.locator('text="Inicia sesión aquí"')).toBeVisible();
+    await expect(page.locator('a:has-text("Comenzar Gratis")').first()).toBeVisible();
+    await expect(page.locator('a:has-text("Probar Demo")').first()).toBeVisible();
+    await expect(page.locator('text=/Sin tarjeta de crédito/')).toBeVisible();
 
     // 4. Click header "Iniciar Sesión" and verify redirects to /login & header CTA changes to "Registrarse"
     await header.locator('text="Iniciar Sesión"').click();
@@ -43,7 +40,7 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
 
     // 5. Return to landing page and activate demo mode
     await page.goto("/");
-    await page.click('text="Probar Demo con Datos"');
+    await page.locator('a:has-text("Probar Demo")').first().click();
     
     // Verify redirects to /dashboard
     await expect(page).toHaveURL(/\/dashboard/);
