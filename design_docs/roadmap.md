@@ -32,6 +32,7 @@ gantt
     Sprint 9 (SaaS Landing Page Parity) :2026-08-04, 2026-08-06
     Sprint 7 (Facturación Real & CSD Vault) :2026-08-04, 2026-08-09
     Sprint 10 (NOM-151 preservation) :2026-08-10, 2026-08-12
+    Sprint 11 (Domains & Logos) :2026-08-12, 2026-08-14
 ```
 
 ---
@@ -177,3 +178,10 @@ A dedicated UX sprint that paused feature work to rebuild the application's enti
 ### 🔴 Sprint 10: NOM-151 Preservación Legal (Pendiente)
 * **Unified Contract Package**: Package compiling contract clauses, acceptance records, signatures, and cryptographic seals.
 * **NOM-151 Stamp sandbox**: Call a digital preservation service provider (PSC sandbox) to stamp the contract PDF.
+
+### 🔴 Sprint 11: Dominios y Logos para Lanzamiento a Producción (Pendiente)
+* **Configuración de Dominio Personalizado**: Setup del dominio oficial en Vercel con certificados SSL.
+* **Configuración de DNS y Correos**: Registros DNS (CNAME, A) y autenticación de correos electrónicos transaccionales (DKIM, DMARC, SPF en Resend).
+* **Activos de Marca Oficiales**: Diseño, exportación e integración de logotipos oficiales, favicons, iconos de aplicación web y meta imágenes (Open Graph).
+* **Actualización de Variables de Entorno**: Migración de `NEXT_PUBLIC_APP_URL` y URLs de webhooks (Stripe) al dominio de producción final.
+* **Redirecciones de Terceros**: Actualizar las URLs permitidas en Supabase Auth y las redirecciones de checkout en Stripe.
