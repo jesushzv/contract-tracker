@@ -28,9 +28,9 @@ gantt
     Sprint 8 (Stripe Payments SaaS) :active, 2026-07-28, 2026-07-31
     Sprint Admin (Admin Overhaul) :active, 2026-07-31, 2026-08-02
     section Pendiente
-    Sprint 7 (CFDI 4.0 PAC Sandbox) :2026-07-26, 2026-07-28
-    Sprint 9 (CSD Vault & Encryption) :2026-07-31, 2026-08-03
-    Sprint 10 (NOM-151 preservation) :2026-08-03, 2026-08-05
+    Sprint 9 (SaaS Landing Page Parity) :2026-08-02, 2026-08-04
+    Sprint 7 (Facturación Real & CSD Vault) :2026-08-04, 2026-08-09
+    Sprint 10 (NOM-151 preservation) :2026-08-10, 2026-08-12
 ```
 
 ---
@@ -134,9 +134,13 @@ A dedicated UX sprint that paused feature work to rebuild the application's enti
 * **Phase 4 — Mobile, Motion & Polish:** Added `BottomNav` mobile navigation, slide-over/sidebar animations, card hover transitions, loading skeletons, empty states for all views, ARIA labels, focus trapping, `prefers-reduced-motion` support, and WCAG AA color contrast compliance.
 * **Phase 5 — Design Documentation:** Created the permanent `ux-ui-design-system.md` covering problem statement, user personas, design principles, information architecture, design tokens, full component library catalog, screen specifications, interaction & motion specs, design rationale, mobile strategy, and accessibility standards.
 
-### 🔴 Sprint 7: Facturación Express (CFDI 4.0 PAC Sandbox) (Pendiente)
-* **Authorized Certification Provider (PAC)**: Integrate with Facturapi or FiscoClic sandbox endpoint to generate mock SAT invoices.
-* **CSF Alignment**: Client data check ensuring RFC, Postal Code, and Regimen Fiscal match SAT's Constancia de Situación Fiscal requirement.
+### 🔴 Sprint 7: Facturación Express & Bóveda CSD (CFDI 4.0 Real) (Pendiente)
+* **CSD File Vault**: Secure UI allowing freelancers to upload `.cer`, `.key` files and password credentials.
+* **AES-256 Symmetric Encryption**: Server-side cryptography to securely encrypt CSD keys before database persistence.
+* **Production PAC Integration**: Integrate with a production PAC endpoint (Facturapi or FiscoClic) to generate legally valid, stamped SAT invoices (CFDI 4.0) upon milestone completion.
+* **Timbre Management**: Integration to handle real timbre (stamp) consumption when issuing invoices.
+* **CSF Alignment**: Strict validation ensuring client RFC, Postal Code, and Regimen Fiscal match SAT's Constancia de Situación Fiscal requirement prior to issuance to prevent PAC errors.
+* **XML/PDF Exporter**: Expose downloads of the certified XML and visual invoice PDF copies from the client portal and dashboard.
 
 ### 🟢 Sprint 8: Stripe Payments & Onboarding Funnel (Monetización SaaS) (Completado)
 * **Subscription Management & Middle Tier**: Support three subscription tiers: Free (max 3 contracts, basic templates, locked branding), Starter Middle Tier ($99 MXN/mo, max 10 contracts, unlocked branding), and Pro ($199 MXN/mo, unlimited contracts, unlocked branding, premium templates).
@@ -154,10 +158,14 @@ A dedicated UX sprint that paused feature work to rebuild the application's enti
 * **Promo Code Manager**: Ability to create, track, and expire promotional discount codes (both manual and Stripe-integrated).
 * **Automated Email Campaigns**: Interface to draft, segment, and dispatch email campaigns to users based on their subscription tier using React-Email and Resend.
 
-### 🔴 Sprint 9: Bóveda de CSD Segura (Pendiente)
-* **CSD File Vault**: Secure UI allowing freelancers to upload `.cer`, `.key` keys and password credentials.
-* **AES-256 Symmetric Encryption**: Server-side cryptography to encrypt CSD keys before persistence.
-* **XML/PDF Exporter**: Expose downloads of certified XML and visual invoice PDF copies.
+
+### 🔴 Sprint 9: SaaS Landing Page Parity (Pendiente)
+* **Global Navigation:** Header links to features, pricing, FAQ.
+* **Product Visualization:** HTML/CSS mockups in the Hero section and feature deep-dives to visualize the product before signup.
+* **Social Proof:** Trust badges and testimonials tailored to Mexican freelancers.
+* **How It Works (Step-by-Step):** Visual flow of Create -> Send -> Get Paid.
+* **Deep-Dive Feature Sections:** Alternating layouts detailing RESICO/LFT legal protection and WhatsApp flow.
+* **Comprehensive Footer:** SaaS footer with proper links.
 
 ### 🔴 Sprint 10: NOM-151 Preservación Legal (Pendiente)
 * **Unified Contract Package**: Package compiling contract clauses, acceptance records, signatures, and cryptographic seals.

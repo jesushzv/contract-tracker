@@ -4,6 +4,8 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
   test.beforeEach(async ({ page }) => {
     // Clear cookies/localStorage to ensure clean logged-out state
     await page.context().clearCookies();
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
   });
 
   test("should show simplified header and helper links when logged out, and toggle on login/demo", async ({ page }) => {
@@ -24,17 +26,18 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     await expect(page.locator('text="Documentos"')).not.toBeVisible();
 
     // 3. Verify Hero CTA buttons & helper links
-    await expect(page.locator('text="Comenzar a Crear"')).toBeVisible();
-    await expect(page.locator('text="Probar Demo con Datos"')).toBeVisible();
+    await expect(page.locator('a:has-text("Comenzar a Crear")')).toBeVisible();
+    await expect(page.locator('a:has-text("Probar Demo con Datos")')).toBeVisible();
     await expect(page.locator('text="¿Ya tienes una cuenta?"')).toBeVisible();
     await expect(page.locator('text="Inicia sesión aquí"')).toBeVisible();
 
     // 4. Click header "Iniciar Sesión" and verify redirects to /login & header CTA changes to "Registrarse"
     await header.locator('text="Iniciar Sesión"').click();
-    await expect(page).toHaveURL(/\/login/);
+    await page.waitForURL(/\/login/);
     await page.waitForLoadState('networkidle');
-    await expect(header.locator('text="Registrarse"')).toBeVisible();
-    await expect(header.locator('text="Iniciar Sesión"')).not.toBeVisible();
+    const updatedHeader = page.locator("header");
+    await expect(updatedHeader.locator('text="Registrarse"')).toBeVisible({ timeout: 10000 });
+    await expect(updatedHeader.locator('text="Iniciar Sesión"')).not.toBeVisible();
 
     // 5. Return to landing page and activate demo mode
     await page.goto("/");

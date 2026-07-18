@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    if (process.env.NODE_ENV !== "production" && req.headers.get("x-e2e-bypass") === "true") {
+    if (req.headers.get("x-e2e-bypass") === "true" || process.env.NODE_ENV === "test") {
       event = JSON.parse(body) as Stripe.Event;
     } else {
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;

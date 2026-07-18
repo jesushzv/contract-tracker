@@ -95,8 +95,22 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
         </Link>
         
 
+        <div className="hidden lg:flex items-center gap-8 ml-8">
+          <Link href="/#beneficios" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+            Beneficios
+          </Link>
+          <Link href="/#como-funciona" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+            Cómo Funciona
+          </Link>
+          <Link href="/#precios" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+            Precios
+          </Link>
+          <Link href="/#faq" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
+            FAQ
+          </Link>
+        </div>
 
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex flex-1 justify-end items-center gap-2 md:gap-4">
           {showFullHeader ? (
             <>
               <Link 
