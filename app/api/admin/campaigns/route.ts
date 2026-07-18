@@ -125,7 +125,7 @@ export async function PATCH(request: Request) {
         const { data: adminProfile } = await adminClient.from('profiles').select('email').eq('id', adminId).single();
         
         await resend.emails.send({
-          from: 'Mi Pacto <no-reply@resend.dev>', // Sandbox domain
+          from: 'Mi Pacto <hola@mipacto.app>',
           to: [adminProfile?.email || 'admin@example.com'],
           subject: campaign.subject,
           react: CampaignEmail({ subject: campaign.subject, bodyText: campaign.content })

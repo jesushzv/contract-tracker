@@ -29,7 +29,7 @@ export async function sendSimulatedEmail(params: EmailParams): Promise<boolean> 
     try {
       console.log("⚡ Resend API Key detected. Dispatching real email via Resend API...");
       const response = await resend.emails.send({
-        from: "onboarding@resend.dev", // Default domain for sandbox testing
+        from: "Mi Pacto <hola@mipacto.app>",
         to,
         subject,
         html,
