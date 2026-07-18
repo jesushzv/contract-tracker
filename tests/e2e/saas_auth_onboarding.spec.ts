@@ -46,9 +46,9 @@ test.describe("Premium SaaS Auth & Onboarding E2E Flow", () => {
     await expect(checklist).toBeVisible();
 
     // Verify checkmark conditions
-    await expect(page.locator("span:has-text('Mínimo 8 caracteres')")).toHaveClass(/text-slate-400/);
+    await expect(page.locator("span:has-text('Mínimo 8 caracteres')")).toHaveClass(/text-slate-500/);
     await expect(page.locator("span:has-text('1 Minúscula')")).toHaveClass(/text-emerald-600|text-emerald-450/);
-    await expect(page.locator("span:has-text('1 Mayúscula')")).toHaveClass(/text-slate-400/);
+    await expect(page.locator("span:has-text('1 Mayúscula')")).toHaveClass(/text-slate-500/);
 
     // Complete the password requirement
     await regPasswordInput.fill(COMPLEX_PASSWORD);

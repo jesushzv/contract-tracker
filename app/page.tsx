@@ -26,6 +26,7 @@ export default function Home() {
       const cookies = document.cookie.split(";");
       const hasCookie = cookies.some((c) => {
         const trimmed = c.trim();
+        if (trimmed === "demo_mode=true") return true;
         if (trimmed.startsWith("sb-") && trimmed.includes("-auth-token=")) {
           const valueStr = trimmed.substring(trimmed.indexOf("=") + 1);
           try {

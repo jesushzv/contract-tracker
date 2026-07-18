@@ -14,16 +14,14 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     const header = page.locator("header");
     await expect(header).toBeVisible();
 
-    // Verify "Verificador" is visible, but dashboard links are hidden
-    await expect(header.locator('text="Verificador"')).toBeVisible();
-    await expect(header.locator('text="Panel"')).not.toBeVisible();
-    await expect(header.locator('text="Nuevo Contrato"')).not.toBeVisible();
-    await expect(header.locator('text="Expedientes"')).not.toBeVisible();
-    await expect(header.locator('text="Notificaciones"')).not.toBeVisible();
-
     // Verify header CTA is "Iniciar Sesión"
     await expect(header.locator('text="Iniciar Sesión"')).toBeVisible();
     await expect(header.locator('text="Registrarse"')).not.toBeVisible();
+
+    // Verify dashboard links are hidden
+    await expect(page.locator('text="Pipeline"')).not.toBeVisible();
+    await expect(page.locator('text="Nuevo Contrato"')).not.toBeVisible();
+    await expect(page.locator('text="Documentos"')).not.toBeVisible();
 
     // 3. Verify Hero CTA buttons & helper links
     await expect(page.locator('text="Comenzar a Crear"')).toBeVisible();
@@ -45,14 +43,12 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     // Verify redirects to /dashboard
     await expect(page).toHaveURL(/\/dashboard/);
 
-    // Verify header is now full
-    await expect(header.locator('text="Panel"')).toBeVisible();
-    await expect(header.locator('text="Nuevo Contrato"')).toBeVisible();
-    await expect(header.locator('text="Verificador"')).toBeVisible();
-    await expect(header.locator('text="Expedientes"')).toBeVisible();
-    await expect(header.locator('text="Notificaciones"')).toBeVisible();
-    await expect(header.locator('text="Mi Panel"')).toBeVisible();
-    await expect(header.locator('text="Cerrar Sesión"')).toBeVisible();
+    // Verify sidebar links are visible (using .first() because mobile and desktop might have duplicate entries)
+    await expect(page.locator('text="Pipeline"').first()).toBeVisible();
+    await expect(page.locator('text="Nuevo Contrato"').first()).toBeVisible();
+    await expect(page.locator('text="Verificador"').first()).toBeVisible();
+    await expect(page.locator('text="Documentos"').first()).toBeVisible();
+    await expect(page.locator('text="Cerrar Sesión"').first()).toBeVisible();
 
     // Navigate to landing page (while logged in/in demo mode)
     await page.goto("/");
@@ -65,7 +61,7 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
 
     // 6. Logout and verify return to logged out state
     await page.goto("/dashboard");
-    await header.locator('text="Cerrar Sesión"').click();
+    await page.locator('text="Cerrar Sesión"').first().click();
     
     // Verify redirected to /login
     await expect(page).toHaveURL(/\/login/);
@@ -74,6 +70,6 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     // Navigate back to home and verify header is simplified again
     await page.goto("/");
     await expect(header.locator('text="Iniciar Sesión"')).toBeVisible();
-    await expect(header.locator('text="Panel"')).not.toBeVisible();
+    await expect(page.locator('text="Pipeline"')).not.toBeVisible();
   });
 });

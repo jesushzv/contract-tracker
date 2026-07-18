@@ -27,7 +27,7 @@ test.describe("Authentication & Session Redirection E2E Suite", () => {
     // Expect default profile name to render in settings or main views
     const heading = page.locator("h1");
     await expect(heading).toContainText("Hola");
-    await expect(page.locator("body")).toContainText("Héctor G.");
+    await expect(page.locator("body")).toContainText("Héctor J. Guerrero");
   });
 
   test("should load the correct template in /contracts/new based on URL parameter", async ({ page }) => {

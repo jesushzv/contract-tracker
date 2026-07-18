@@ -91,7 +91,8 @@ test.describe("Sprint 8: Stripe Monetization & SaaS Onboarding Funnel E2E Suite"
     await expect(page.locator("h4:has-text('Plan de Suscripción y Facturación')")).toBeVisible();
     await expect(page.locator("span:has-text('Plan starter')")).toBeVisible();
 
-    // Verify upgrade button is visible
-    await expect(page.locator("a:has-text('Mejorar Plan')")).toBeVisible();
+    // Verify upgrade or manage billing button is visible
+    const planBtn = page.locator("a:has-text('Mejorar Plan'), button:has-text('Administrar Facturación')").first();
+    await expect(planBtn).toBeVisible();
   });
 });

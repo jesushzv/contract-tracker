@@ -19,7 +19,7 @@ test.describe("Sprint WB-3: UX & Document Completeness E2E Suite", () => {
     await expect(page.locator("h1")).toContainText("Notificaciones");
 
     // 3. Check Standalone Documents page
-    await page.goto("/documents?demo=true");
+    await page.goto("/dashboard/documents?demo=true");
     await expect(page.locator("h1")).toContainText("Expediente de Documentos");
   });
 

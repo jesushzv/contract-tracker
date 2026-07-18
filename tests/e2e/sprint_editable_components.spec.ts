@@ -47,8 +47,8 @@ test.describe("Sprint E2E: Contract Components Custom Editing Suite", () => {
     // 7. Now navigate to the Client portal view for this contract with token parameter
     await page.goto("/c/c2-landing-page?token=token-c2-landing-page&demo=true");
 
-    // Verify client page displays modified name
-    await expect(page.locator("text=Mariana Rosas (Studio Flora E2E)").first()).toBeVisible();
+    // Verify client page displays modified name (targeting span to avoid hidden print view)
+    await expect(page.locator("span:has-text('Mariana Rosas (Studio Flora E2E)')").first()).toBeVisible();
 
     // 8. Open client revision request modal
     const solicitRevBtn = page.locator("button:has-text('Solicitar Revisión')");
@@ -84,7 +84,7 @@ test.describe("Sprint E2E: Contract Components Custom Editing Suite", () => {
     await expect(page.locator("span:has-text('Borrador'), span:has-text('draft')").first()).toBeVisible();
     
     // Check that new budget 19,000.00 MXN is updated
-    await expect(page.locator("text=$19,000.00")).toBeVisible();
+    await expect(page.locator("span:has-text('$19,000.00')").first()).toBeVisible();
   });
 
 });
