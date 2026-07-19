@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getAdminSupabaseClient, verifyAdmin } from '@/lib/adminUtils';
 import { stripe } from '@/lib/stripe';
+import {
+  checkDatabaseHealth,
+  checkStorageHealth,
+  checkAuthHealth,
+  checkStripeHealth,
+  checkEmailHealth
+} from '@/lib/healthUtils';
 
 export async function GET(request: Request) {
   try {
@@ -14,59 +21,12 @@ export async function GET(request: Request) {
     const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
     const actualUrl = isLocal ? `http://${host}` : `https://${host}`;
 
-    // 1. Database Health Check
-    let databaseStatus = 'operational';
-    try {
-      const { error } = await adminClient.from('profiles').select('id').limit(1);
-      if (error) throw error;
-    } catch (e) {
-      console.error('Database health check failed:', e);
-      databaseStatus = 'error';
-    }
-
-    // 2. Storage Health Check
-    let storageStatus = 'operational';
-    try {
-      const { error } = await adminClient.storage.listBuckets();
-      if (error) throw error;
-    } catch (e) {
-      console.error('Storage health check failed:', e);
-      storageStatus = 'error';
-    }
-
-    // 3. Auth Health Check
-    let authStatus = 'operational';
-    try {
-      const { error } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1 });
-      if (error) throw error;
-    } catch (e) {
-      console.error('Auth health check failed:', e);
-      authStatus = 'error';
-    }
-
-    // 4. Payments (Stripe) Health Check
-    let paymentStatus = 'operational';
-    try {
-      if (process.env.STRIPE_SECRET_KEY) {
-        await stripe.paymentIntents.list({ limit: 1 });
-      } else {
-        paymentStatus = 'error';
-      }
-    } catch (e) {
-      console.error('Stripe health check failed:', e);
-      paymentStatus = 'error';
-    }
-
-    // 5. Email (Resend) Health Check
-    let emailStatus = 'operational';
-    try {
-      if (!process.env.RESEND_API_KEY) {
-        emailStatus = 'error';
-      }
-    } catch (e) {
-      console.error('Resend health check failed:', e);
-      emailStatus = 'error';
-    }
+    // Execute all sub-checks using the core utilities
+    const databaseStatus = await checkDatabaseHealth(adminClient);
+    const storageStatus = await checkStorageHealth(adminClient);
+    const authStatus = await checkAuthHealth(adminClient);
+    const paymentStatus = await checkStripeHealth(stripe, !!process.env.STRIPE_SECRET_KEY);
+    const emailStatus = await checkEmailHealth(!!process.env.RESEND_API_KEY);
 
     const systemStatus = {
       database: databaseStatus,

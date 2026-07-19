@@ -4,6 +4,13 @@ const crypto = require('crypto');
 
 // Import compiled TS files
 const { validateRFC } = require('./compiled/rfcValidator');
+const {
+  checkDatabaseHealth,
+  checkStorageHealth,
+  checkAuthHealth,
+  checkStripeHealth,
+  checkEmailHealth
+} = require('./compiled/healthUtils');
 
 // Mock milestone validator function (matching new contract page check)
 function isBalanceValid(milestones, totalAmount) {
@@ -197,4 +204,102 @@ test('Test 10: File Magic Bytes & Size Validation', () => {
   assert.throws(() => {
     validateReceiptFile("big.pdf", "application/pdf", largeBase64);
   }, /El archivo excede el límite/);
+});
+
+test('Test 11: Database Health Check Success', async () => {
+  const mockClient = {
+    from: () => ({
+      select: () => ({
+        limit: () => Promise.resolve({ data: [{ id: 1 }], error: null })
+      })
+    })
+  };
+  const status = await checkDatabaseHealth(mockClient);
+  assert.strictEqual(status, 'operational');
+});
+
+test('Test 12: Database Health Check Failure', async () => {
+  const mockClient = {
+    from: () => ({
+      select: () => ({
+        limit: () => Promise.resolve({ data: null, error: new Error('Db offline') })
+      })
+    })
+  };
+  const status = await checkDatabaseHealth(mockClient);
+  assert.strictEqual(status, 'error');
+});
+
+test('Test 13: Storage Health Check Success', async () => {
+  const mockClient = {
+    storage: {
+      listBuckets: () => Promise.resolve({ data: [], error: null })
+    }
+  };
+  const status = await checkStorageHealth(mockClient);
+  assert.strictEqual(status, 'operational');
+});
+
+test('Test 14: Storage Health Check Failure', async () => {
+  const mockClient = {
+    storage: {
+      listBuckets: () => Promise.resolve({ data: null, error: new Error('Storage offline') })
+    }
+  };
+  const status = await checkStorageHealth(mockClient);
+  assert.strictEqual(status, 'error');
+});
+
+test('Test 15: Auth Health Check Success', async () => {
+  const mockClient = {
+    auth: {
+      admin: {
+        listUsers: () => Promise.resolve({ data: [], error: null })
+      }
+    }
+  };
+  const status = await checkAuthHealth(mockClient);
+  assert.strictEqual(status, 'operational');
+});
+
+test('Test 16: Auth Health Check Failure', async () => {
+  const mockClient = {
+    auth: {
+      admin: {
+        listUsers: () => Promise.resolve({ data: null, error: new Error('Auth offline') })
+      }
+    }
+  };
+  const status = await checkAuthHealth(mockClient);
+  assert.strictEqual(status, 'error');
+});
+
+test('Test 17: Stripe Health Check Success', async () => {
+  const mockStripe = {
+    paymentIntents: {
+      list: () => Promise.resolve({ data: [] })
+    }
+  };
+  const status = await checkStripeHealth(mockStripe, true);
+  assert.strictEqual(status, 'operational');
+});
+
+test('Test 18: Stripe Health Check Failure (API Failure)', async () => {
+  const mockStripe = {
+    paymentIntents: {
+      list: () => Promise.reject(new Error('Stripe API offline'))
+    }
+  };
+  const status = await checkStripeHealth(mockStripe, true);
+  assert.strictEqual(status, 'error');
+});
+
+test('Test 19: Stripe Health Check Failure (No Key)', async () => {
+  const status = await checkStripeHealth({}, false);
+  assert.strictEqual(status, 'error');
+});
+
+test('Test 20: Email Health Check', async () => {
+  assert.strictEqual(await checkEmailHealth(true), 'operational');
+  assert.strictEqual(await checkEmailHealth(false), 'error');
 });

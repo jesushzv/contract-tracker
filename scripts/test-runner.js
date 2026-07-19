@@ -15,9 +15,9 @@ if (!fs.existsSync(coverageDir)) {
 }
 
 try {
-  // 1. Compile TS dependency
+  // 1. Compile TS dependencies
   console.log("📦 Compiling TypeScript dependencies...");
-  execSync('npx tsc lib/rfcValidator.ts --outDir scripts/compiled --module commonjs --target es2020', { stdio: 'inherit' });
+  execSync('npx tsc lib/rfcValidator.ts lib/healthUtils.ts --outDir scripts/compiled --module commonjs --target es2020', { stdio: 'inherit' });
 
   // 2. Run tests with coverage collection
   console.log("🧪 Running unit tests with native V8 coverage...");
