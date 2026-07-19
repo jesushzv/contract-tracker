@@ -63,7 +63,7 @@ export async function GET(request: Request) {
       creator: string;
       url: string;
     }[] = [];
-    const vercelToken = process.env.VERCEL_BEARER_TOKEN || process.env.VERCEL_ACCESS_TOKEN;
+    const vercelToken = process.env.VERCEL_BEARER_TOKEN || process.env.VERCEL_ACCESS_TOKEN || process.env.VERCEL_TOKEN;
     const vercelProjectId = process.env.VERCEL_PROJECT_ID;
     const vercelTeamId = process.env.VERCEL_TEAM_ID;
     const vercelConfigured = !!vercelToken;
