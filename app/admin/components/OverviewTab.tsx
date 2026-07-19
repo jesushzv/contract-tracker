@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Users, FileText, TrendingUp, DollarSign, Loader2, ArrowUpRight } from 'lucide-react';
 import { formatMxn } from '@/lib/formatUtils';
 
 export default function OverviewTab() {
+  const router = useRouter();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -117,20 +119,26 @@ export default function OverviewTab() {
             </p>
           </div>
           <div className="space-y-3">
-            <div className="bg-indigo-700 rounded p-4 flex justify-between items-center">
+            <button 
+              onClick={() => router.push('/admin?tab=feedback')}
+              className="w-full text-left bg-indigo-700 hover:bg-indigo-800 rounded p-4 flex justify-between items-center transition-colors cursor-pointer border border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-600"
+            >
               <div>
-                <p className="font-semibold">Review Unresolved Feedback</p>
+                <p className="font-semibold text-white">Review Unresolved Feedback</p>
                 <p className="text-xs text-indigo-200 mt-0.5">Check what users are saying</p>
               </div>
-              <ArrowUpRight className="h-5 w-5 opacity-75" />
-            </div>
-            <div className="bg-indigo-700 rounded p-4 flex justify-between items-center">
+              <ArrowUpRight className="h-5 w-5 text-white opacity-75" />
+            </button>
+            <button 
+              onClick={() => router.push('/admin?tab=system')}
+              className="w-full text-left bg-indigo-700 hover:bg-indigo-800 rounded p-4 flex justify-between items-center transition-colors cursor-pointer border border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-600"
+            >
               <div>
-                <p className="font-semibold">Check System Health</p>
+                <p className="font-semibold text-white">Check System Health</p>
                 <p className="text-xs text-indigo-200 mt-0.5">View recent Vercel deployments</p>
               </div>
-              <ArrowUpRight className="h-5 w-5 opacity-75" />
-            </div>
+              <ArrowUpRight className="h-5 w-5 text-white opacity-75" />
+            </button>
           </div>
         </div>
       </div>

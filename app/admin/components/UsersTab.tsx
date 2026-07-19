@@ -9,6 +9,8 @@ export default function UsersTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -111,7 +113,10 @@ export default function UsersTab() {
                     {user.rfc || 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-indigo-600 hover:text-indigo-900">
+                    <button 
+                      onClick={() => setSelectedUser(user)}
+                      className="text-indigo-600 hover:text-indigo-900 focus:outline-none"
+                    >
                       View details
                     </button>
                   </td>
@@ -128,6 +133,83 @@ export default function UsersTab() {
           </table>
         )}
       </div>
+
+      {selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-lg max-w-lg w-full overflow-hidden shadow-xl border border-neutral-200 text-left">
+            {/* Modal Header */}
+            <div className="bg-neutral-900 px-6 py-4 flex justify-between items-center text-white">
+              <h3 className="font-bold text-lg">User Details</h3>
+              <button 
+                onClick={() => setSelectedUser(null)}
+                className="text-neutral-400 hover:text-white transition-colors focus:outline-none text-xl"
+              >
+                ✕
+              </button>
+            </div>
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              <div>
+                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block">User ID</span>
+                <span className="text-sm font-mono break-all text-neutral-800">{selectedUser.id}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block">Full Name</span>
+                  <span className="text-sm font-medium text-neutral-900">{selectedUser.fullName || 'No Name'}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block">Email Address</span>
+                  <span className="text-sm font-medium text-neutral-900 break-all">{selectedUser.email}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block">Subscription Tier</span>
+                  <div>
+                    <span className={`inline-flex px-2 mt-1 text-xs leading-5 font-semibold rounded-full ${
+                      selectedUser.tier === 'pro' ? 'bg-purple-100 text-purple-800' :
+                      selectedUser.tier === 'starter' ? 'bg-blue-100 text-blue-800' :
+                      'bg-neutral-100 text-neutral-800'
+                    }`}>
+                      {selectedUser.tier || 'free'}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block">RFC</span>
+                  <span className="text-sm font-mono text-neutral-900">{selectedUser.rfc || 'Not Registered'}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block">Phone Number</span>
+                  <span className="text-sm text-neutral-900">{selectedUser.phone || 'Not Registered'}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block">Contracts Created</span>
+                  <span className="text-sm font-medium text-neutral-900">{selectedUser.contractCount}</span>
+                </div>
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block">Registration Date</span>
+                <span className="text-sm text-neutral-900">
+                  {selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleString('es-MX') : 'N/A'}
+                </span>
+              </div>
+            </div>
+            {/* Modal Footer */}
+            <div className="bg-neutral-50 px-6 py-4 flex justify-end">
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="px-4 py-2 bg-neutral-200 hover:bg-neutral-300 text-neutral-800 rounded font-medium text-sm transition-colors focus:outline-none"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

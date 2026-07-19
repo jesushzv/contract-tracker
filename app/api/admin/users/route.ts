@@ -38,7 +38,13 @@ export async function GET(request: Request) {
           .eq('freelancer_id', profile.id);
           
         return {
-          ...profile,
+          id: profile.id,
+          email: profile.email,
+          fullName: profile.full_name,
+          tier: profile.tier,
+          rfc: profile.rfc,
+          phone: profile.phone,
+          created_at: profile.created_at,
           contractCount: contractCount || 0
         };
       })
