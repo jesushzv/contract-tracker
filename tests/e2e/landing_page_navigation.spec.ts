@@ -162,4 +162,31 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     await expect(page).toHaveURL(/\/contracts\/new/);
     await expect(page.locator("h1").first()).toContainText("Crear Nuevo Contrato");
   });
+
+  test("should automatically clear demo mode when navigating to a public marketing page", async ({ page }) => {
+    // 1. Enter demo mode
+    await page.goto("/");
+    await page.getByRole('link', { name: /Probar Demo/i }).first().click();
+    await page.waitForURL(/\/dashboard/);
+    
+    // Verify we are in demo mode
+    const cookiesBefore = await page.context().cookies();
+    const demoCookieBefore = cookiesBefore.find(c => c.name === "demo_mode");
+    expect(demoCookieBefore?.value).toBe("true");
+
+    // 2. Navigate to /faq (a public marketing page)
+    await page.goto("/faq");
+    
+    // Verify header on public page displays "Iniciar Sesión" (logged out state) first,
+    // which guarantees that the client-side React useEffect has run and updated state.
+    const header = page.locator("header");
+    await expect(header.getByRole('link', { name: /Iniciar Sesión/i })).toBeVisible();
+    await expect(header.getByRole('link', { name: /Cerrar Sesión/i })).not.toBeVisible();
+    await expect(header.getByRole('link', { name: /Mi Panel/i })).not.toBeVisible();
+
+    // Verify that the demo cookie is cleared
+    const cookiesAfter = await page.context().cookies();
+    const demoCookieAfter = cookiesAfter.find(c => c.name === "demo_mode");
+    expect(demoCookieAfter).toBeUndefined();
+  });
 });

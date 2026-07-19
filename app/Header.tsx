@@ -17,12 +17,34 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
+    const isAppPath = 
+      pathname.startsWith("/c/") || 
+      pathname.startsWith("/dashboard") || 
+      pathname.startsWith("/contracts") ||
+      pathname.startsWith("/notifications") ||
+      pathname.startsWith("/hash-verifier") ||
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/onboarding");
+
+    // Detect and clear demo/sandbox session if we have navigated to a public marketing page
+    if (!isAppPath) {
+      const hasDemoModeCookie = document.cookie.split(";").some((c) => c.trim() === "demo_mode=true");
+      const hasDemoModeStorage = typeof window !== "undefined" && (localStorage.getItem("demo_mode") === "true" || sessionStorage.getItem("demo_mode") === "true");
+      
+      if (hasDemoModeCookie || hasDemoModeStorage) {
+        localStorage.removeItem("demo_mode");
+        sessionStorage.removeItem("demo_mode");
+        document.cookie = "demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+        document.cookie = "sb-mock-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+      }
+    }
+
     // Check if user is logged in via cookies or demo mode
     const checkSession = () => {
       const cookies = document.cookie;
       const hasCookie = cookies.split(";").some((c) => {
         const trimmed = c.trim();
-        if (trimmed === "demo_mode=true") return true;
+        if (trimmed === "demo_mode=true") return isAppPath;
         if (trimmed.startsWith("sb-") && trimmed.includes("-auth-token=")) {
           const valueStr = trimmed.substring(trimmed.indexOf("=") + 1);
           try {
@@ -48,7 +70,8 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
     pathname.startsWith("/contracts") ||
     pathname.startsWith("/notifications") ||
     pathname.startsWith("/hash-verifier") ||
-    pathname.startsWith("/admin")
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/onboarding")
   ) {
     return null;
   }

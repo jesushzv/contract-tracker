@@ -39,8 +39,8 @@ export default function Home() {
       const cookies = document.cookie.split(";");
       const hasCookie = cookies.some((c) => {
         const trimmed = c.trim();
-        // Since we clear demo_mode cookie above, this will now only be true for real sessions
-        if (trimmed === "demo_mode=true") return true;
+        // Do not treat demo_mode as a logged-in state on the landing page
+        if (trimmed === "demo_mode=true") return false;
         if (trimmed.startsWith("sb-") && trimmed.includes("-auth-token=")) {
           const valueStr = trimmed.substring(trimmed.indexOf("=") + 1);
           try {
