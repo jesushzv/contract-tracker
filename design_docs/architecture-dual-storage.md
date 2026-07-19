@@ -47,7 +47,7 @@ The system abstracts database actions behind a unified API layer defined in [typ
     *   `sandbox_milestones`: Associated payment milestones.
     *   `sandbox_audit_logs`: Integrity audit log history.
     *   `sandbox_contract_versions`: Changeset history of contract renegotiations.
-*   **Behavior**: When a user is in demo mode, all CRUD transactions and validation checks are simulated entirely in-browser. A cookie (`demo_mode=true`) is also written to sync state across route redirects and Next.js middleware.
+*   **Behavior**: When a user is in demo mode, all CRUD transactions and validation checks are simulated entirely in-browser. A cookie (`demo_mode=true`) is also written (both instantly on button click, and by the Next.js middleware upon seeing `?demo=true`) to sync state across route redirects and Next.js middleware.
 
 ### 2. Cloud Database (Supabase Client Actions)
 *   **Trigger**: Triggered when `isDemoMode()` is false and `shouldUseSupabase()` returns true.

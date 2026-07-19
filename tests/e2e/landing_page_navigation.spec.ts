@@ -140,4 +140,26 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     });
     expect(desktopOverflow).toBe(false);
   });
+
+  test("should allow navigating the app in demo mode without redirecting to login", async ({ page }) => {
+    // 1. Start on home page and click "Probar Demo"
+    await page.goto("/");
+    await page.getByRole('link', { name: /Probar Demo/i }).first().click();
+    
+    // Verify we landed on /dashboard
+    await page.waitForURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/dashboard/);
+
+    // 2. Navigate to documents page via Sidebar (without demo parameter in url)
+    await page.getByRole('link', { name: /Documentos/i }).first().click();
+    await page.waitForURL(/\/dashboard\/documents/);
+    await expect(page).toHaveURL(/\/dashboard\/documents/);
+    await expect(page.locator("h1").first()).toContainText("Expediente de Documentos");
+
+    // 3. Navigate to new contract page
+    await page.getByRole('link', { name: /Nuevo Contrato/i }).first().click();
+    await page.waitForURL(/\/contracts\/new/);
+    await expect(page).toHaveURL(/\/contracts\/new/);
+    await expect(page.locator("h1").first()).toContainText("Crear Nuevo Contrato");
+  });
 });

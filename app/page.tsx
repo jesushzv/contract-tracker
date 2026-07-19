@@ -148,6 +148,9 @@ export default function Home() {
                   <Link
                     href="/dashboard?demo=true"
                     onClick={() => {
+                      localStorage.setItem("demo_mode", "true");
+                      sessionStorage.setItem("demo_mode", "true");
+                      document.cookie = "demo_mode=true; path=/;";
                       localStorage.removeItem("sandbox_profile");
                       localStorage.removeItem("sandbox_contracts");
                       localStorage.removeItem("sandbox_milestones");

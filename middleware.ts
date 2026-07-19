@@ -6,8 +6,9 @@ export function middleware(request: NextRequest) {
 
   // Check if we are bypassing auth if ?demo=true is present or if demo_mode=true cookie exists
   const hasDemoParam = nextUrl.searchParams.get("demo") === "true";
+  const isDemoExplicitFalse = nextUrl.searchParams.get("demo") === "false";
   const hasDemoCookie = cookies.get("demo_mode")?.value === "true";
-  const isDemo = hasDemoParam || hasDemoCookie;
+  const isDemo = (hasDemoParam || hasDemoCookie) && !isDemoExplicitFalse;
 
   // Find any Supabase auth token cookie
   const hasAuthCookie = cookies.getAll().some((cookie) => {
@@ -43,6 +44,12 @@ export function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next();
+
+  if (isDemoExplicitFalse) {
+    response.cookies.delete("demo_mode");
+  } else if (hasDemoParam) {
+    response.cookies.set("demo_mode", "true", { path: "/" });
+  }
 
   return response;
 }
