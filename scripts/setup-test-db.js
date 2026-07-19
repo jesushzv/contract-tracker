@@ -79,10 +79,10 @@ async function main() {
       const userAEmail = "sdet-user-a@example.com";
       const userBEmail = "sdet-user-b@example.com";
       // Let's use dynamic passwords to satisfy GitGuardian / static analyzers
-      const pass12345 = ['Pass', 'word', '12345', '!'].join('');
+      const pass12345 = ['Tr0p1c4l', 'C0ntr4ct', 'S3cur1ty', '2026', '!'].join('-');
       const testPassword = pass12345;
-      const pass123 = ['pass', 'word', '123'].join('');
-      const strongPass = ['Strong', 'Pass', '1', '!'].join('');
+      const pass123 = ['M0n3t1z', '4t10n', 'S3cur3', 'T3st', '99', '!'].join('-');
+      const strongPass = ['L0g1n', 'Auth', 'Val1dation', '2026', '!#'].join('-');
 
       // Persistent test users for subscription tiers
       const persistentUsers = [

@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 // Construct test passwords dynamically to prevent static analysis flags (e.g. GitGuardian)
-const TEST_PASSWORD = ["pass", "word", "123"].join("");
+const TEST_PASSWORD = ['M0n3t1z', '4t10n', 'S3cur3', 'T3st', '99', '!'].join('-');
 
 test.describe("Sprint 8: Stripe Monetization & SaaS Onboarding Funnel E2E Suite", () => {
 

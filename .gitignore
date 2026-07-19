@@ -58,3 +58,12 @@ next-env.d.ts
 /clean-specific.js
 /remove-dark.js
 
+# System files
+.DS_Store
+**/.DS_Store
+
+# IDE configs
+.vscode/
+.idea/
+
+

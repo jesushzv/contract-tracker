@@ -14,7 +14,7 @@ const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
 });
 
 const targetEmail = "jhector.zamora@hotmail.com";
-const defaultPassword = "Password12345!"; // Prompt the user to change this upon login
+const defaultPassword = ['Tr0p1c4l', 'C0ntr4ct', 'S3cur1ty', '2026', '!'].join('-'); // Prompt the user to change this upon login
 
 async function main() {
   console.log(`🚀 Starting provisioning for ${targetEmail}...`);

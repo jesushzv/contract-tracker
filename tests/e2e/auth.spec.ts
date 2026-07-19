@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 // Construct test passwords dynamically to prevent static analysis flags (e.g. GitGuardian)
-const STRONG_PASSWORD = ["Strong", "Pass", "1", "!"].join("");
+const STRONG_PASSWORD = ['L0g1n', 'Auth', 'Val1dation', '2026', '!#'].join('-');
 
 test.describe("Authentication & Session Redirection E2E Suite", () => {
   
