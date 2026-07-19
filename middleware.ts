@@ -45,9 +45,13 @@ export function middleware(request: NextRequest) {
 
   const response = NextResponse.next();
 
+  const isPrefetch = 
+    request.headers.get("purpose") === "prefetch" || 
+    request.headers.get("x-middleware-prefetch") === "1";
+
   if (isDemoExplicitFalse) {
     response.cookies.delete("demo_mode");
-  } else if (hasDemoParam) {
+  } else if (hasDemoParam && !isPrefetch) {
     response.cookies.set("demo_mode", "true", { path: "/" });
   }
 

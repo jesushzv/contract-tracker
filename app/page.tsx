@@ -147,6 +147,7 @@ export default function Home() {
                   </Link>
                   <Link
                     href="/dashboard?demo=true"
+                    prefetch={false}
                     onClick={() => {
                       localStorage.setItem("demo_mode", "true");
                       sessionStorage.setItem("demo_mode", "true");
