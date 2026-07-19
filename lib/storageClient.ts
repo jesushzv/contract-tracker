@@ -587,7 +587,7 @@ function translateStatus(s: string): string {
 
 export async function markMilestoneAsTransferred(
   milestoneId: string,
-  trackingReference: string,
+  trackingReference?: string,
   transferredAmount?: number,
   receiptUrl?: string,
   exchangeRate?: number,
@@ -606,8 +606,8 @@ export async function markMilestoneAsTransferred(
       throw new Error("El hito debe estar en estado 'Solicitado' antes de que el cliente lo marque como transferido.");
     }
 
-    const cleanRef = trackingReference.toUpperCase().trim();
-    const isRejected = cleanRef.includes("REJECT") || cleanRef.includes("INVALID") || cleanRef.length < 5;
+    const cleanRef = (trackingReference || "").toUpperCase().trim();
+    const isRejected = !cleanRef || cleanRef.includes("REJECT") || cleanRef.includes("INVALID") || cleanRef.length < 5;
     const targetStatus = !isRejected ? "confirmed" : "marked_paid";
 
     milestone.status = targetStatus;
@@ -645,11 +645,32 @@ export async function markMilestoneAsTransferred(
         details: `Reconciliación automática SPEI: CEP validado con éxito. Clave de rastreo: ${trackingReference}. Banco Emisor: BBVA México, Beneficiario: CLABE terminada en ${lastDigits}. Estado: LIQUIDADO.`
       });
     } else {
+      const detailMsg = trackingReference
+        ? `Fallo de reconciliación automática CEP: Clave de rastreo ${trackingReference} no encontrada o rechazada en Banco de México.`
+        : "Pago reportado por el cliente sin clave de rastreo ni comprobante adjunto.";
       await addAuditLog({
         contractId: milestone.contractId,
         action: "milestone_transferred",
         actor: "client",
-        details: `Fallo de reconciliación automática CEP: Clave de rastreo ${trackingReference} no encontrada o rechazada en Banco de México.`
+        details: detailMsg
+      });
+    }
+
+    // Alert freelancer in demo/sandbox mode
+    const contractsData = localStorage.getItem(KEYS.CONTRACTS);
+    const contracts: Contract[] = contractsData ? JSON.parse(contractsData) : [];
+    const contract = contracts.find(c => c.id === milestone.contractId);
+    if (contract) {
+      const isMissingEvidence = !receiptUrl;
+      const message = isMissingEvidence
+        ? `El cliente ${contract.clientName} ha reportado el pago del hito "${milestone.label}" sin adjuntar comprobante (evidencia).`
+        : `El cliente ${contract.clientName} ha reportado el pago del hito "${milestone.label}".`;
+      
+      await addNotification({
+        userId: contract.freelancerId,
+        contractId: contract.id,
+        eventType: isMissingEvidence ? "payment_missing_evidence" : "milestone_transferred",
+        message
       });
     }
 

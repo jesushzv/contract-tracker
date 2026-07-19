@@ -860,9 +860,10 @@ function translateStatus(s: string): string {
   return s;
 }
 
+// SERVER ACTION: Record client transfer reference and mark milestone as paid
 export async function markMilestoneAsTransferred(
   milestoneId: string,
-  trackingReference: string,
+  trackingReference?: string,
   transferredAmount?: number,
   receiptUrl?: string,
   exchangeRate?: number,
@@ -887,15 +888,15 @@ export async function markMilestoneAsTransferred(
     throw new Error("El hito debe estar en estado 'Solicitado' antes de que el cliente lo marque como transferido.");
   }
 
-  const cleanRef = trackingReference.toUpperCase().trim();
-  const isRejected = cleanRef.includes("REJECT") || cleanRef.includes("INVALID") || cleanRef.length < 5;
+  const cleanRef = (trackingReference || "").toUpperCase().trim();
+  const isRejected = !cleanRef || cleanRef.includes("REJECT") || cleanRef.includes("INVALID") || cleanRef.length < 5;
   const targetStatus = !isRejected ? "confirmed" : "marked_paid";
 
   const updates: { 
     status: MilestoneStatus; 
     marked_paid_at: string; 
     confirmed_at?: string;
-    tracking_reference: string; 
+    tracking_reference?: string | null; 
     transferred_amount?: number;
     receipt_url?: string;
     exchange_rate?: number;
@@ -903,7 +904,7 @@ export async function markMilestoneAsTransferred(
   } = {
     status: targetStatus,
     marked_paid_at: new Date().toISOString(),
-    tracking_reference: sanitizeInput(trackingReference)
+    tracking_reference: trackingReference ? sanitizeInput(trackingReference) : null
   };
   if (transferredAmount !== undefined) {
     updates.transferred_amount = transferredAmount;
@@ -944,21 +945,53 @@ export async function markMilestoneAsTransferred(
       details: `Reconciliación automática SPEI: CEP validado con éxito. Clave de rastreo: ${trackingReference}. Banco Emisor: BBVA México, Beneficiario: CLABE terminada en ${lastDigits}. Estado: LIQUIDADO.`
     });
   } else {
+    const detailMsg = trackingReference
+      ? `Fallo de reconciliación automática CEP: Clave de rastreo ${trackingReference} no encontrada o rechazada en Banco de México.`
+      : "Pago reportado por el cliente sin clave de rastreo ni comprobante adjunto.";
     await addAuditLog({
       contractId: current.data.contract_id,
       action: "milestone_transferred",
       actor: "client",
-      details: `Fallo de reconciliación automática CEP: Clave de rastreo ${trackingReference} no encontrada o rechazada en Banco de México.`
+      details: detailMsg
+    });
+  }
+
+  // Alert the freelancer via in-app notifications
+  const { data: contractData } = await client
+    .from("contracts")
+    .select("client_name, client_email, freelancer_id")
+    .eq("id", current.data.contract_id)
+    .single();
+
+  if (contractData) {
+    const isMissingEvidence = !receiptUrl;
+    const message = isMissingEvidence
+      ? `El cliente ${contractData.client_name} ha reportado el pago del hito "${data.label}" sin adjuntar comprobante (evidencia).`
+      : `El cliente ${contractData.client_name} ha reportado el pago del hito "${data.label}".`;
+
+    await addNotification({
+      userId: contractData.freelancer_id,
+      contractId: current.data.contract_id,
+      eventType: isMissingEvidence ? "payment_missing_evidence" : "milestone_transferred",
+      message
     });
   }
 
   // Send email to freelancer
   const profile = await getProfile().catch(() => null);
   const freelancerEmail = profile?.email || "hector@freelancemx.dev";
+  const evidenceSection = receiptUrl
+    ? `<p>Comprobante adjunto: <a href="${receiptUrl}">Ver comprobante</a></p>`
+    : `<p style="color: #dc2626; font-weight: bold; background-color: #fef2f2; border: 1px solid #fee2e2; padding: 10px; border-radius: 8px;">⚠️ El cliente no adjuntó un comprobante de pago/evidencia.</p>`;
+
   sendSimulatedEmail({
     to: freelancerEmail,
     subject: `Pago Reportado: Hito "${data.label}"`,
-    html: `<p>Hola,</p><p>El cliente ha reportado la transferencia para el hito <strong>"${data.label}"</strong> por un monto de <strong>$${data.amount}</strong>.</p><p>Clave de rastreo: <strong>${trackingReference}</strong>.</p><p>Por favor, ingresa al panel para verificar y confirmarlo de conformidad.</p>`
+    html: `<p>Hola,</p>
+           <p>El cliente ha reportado la transferencia para el hito <strong>"${data.label}"</strong> por un monto de <strong>$${data.amount}</strong>.</p>
+           <p>Clave de rastreo: <strong>${trackingReference || "No proporcionada"}</strong>.</p>
+           ${evidenceSection}
+           <p>Por favor, ingresa al panel para verificar y confirmarlo de conformidad.</p>`
   }).catch(console.error);
 
   return {

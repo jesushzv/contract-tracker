@@ -126,11 +126,6 @@ export default function Dashboard() {
     e.preventDefault();
     if (!paymentMilestone) return;
 
-    if (!trackingReference.trim()) {
-      setModalError("La clave de rastreo es requerida.");
-      return;
-    }
-
     if (receiptFileType === 'url' && receiptUrl && !receiptUrl.startsWith('http')) {
       setModalError("Debes proporcionar un enlace URL válido.");
       return;
@@ -225,6 +220,7 @@ export default function Dashboard() {
       />
       
       <ClientPaymentUpload 
+        isFreelancer={true}
         showPaymentModal={showPaymentModal}
         setShowPaymentModal={setShowPaymentModal}
         paymentMilestone={paymentMilestone}

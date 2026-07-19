@@ -646,7 +646,7 @@ export default function ClientPortalPage() {
 
   const handleMarkAsTransferred = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paymentMilestone || !trackingReference) return;
+    if (!paymentMilestone) return;
     
     setLoading(true);
     setModalError("");

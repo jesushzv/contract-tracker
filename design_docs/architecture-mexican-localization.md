@@ -68,14 +68,20 @@ When ISR and/or IVA withholding are toggled, the totals are calculated based on 
 
 ---
 
-## 🏦 Banxico SPEI Reconciliation (CEP)
+## 🏦 Banxico SPEI Reconciliation (CEP) & Optional Evidence
 
-When clients report transfers on milestones, they submit a Mexican SPEI banking reference code (*Clave de Rastreo*). The application connects to Banco de México's services to verify payment settlement automatically.
+Clients and freelancers have the option, but not the obligation, to submit a Mexican SPEI banking reference code (*Clave de Rastreo*) and upload a payment receipt/screenshot (evidence).
 
-### 1. SPEI Reference Check Logic
-*   **Verification**: The system reads the tracking reference, sanitizes it, and checks it against Banxico's public settlement state logs.
+### 1. SPEI Reference & Evidence Check Logic
+*   **Optional Inputs**: Neither the tracking reference nor the screenshot file/URL is strictly enforced.
+*   **Client Suggestion Modal**: If a client attempts to mark a milestone as paid without providing a screenshot/receipt (file or URL), a suggestion modal is displayed recommending that they do so to speed up verification. They can choose to go back and attach evidence or proceed without it.
+*   **Freelancer Alerts**: If a client proceeds without attaching a screenshot/receipt, the system automatically alerts the freelancer by:
+    1. Creating an in-app notification indicating that the client marked the milestone as paid but missed the payment evidence.
+    2. Adding a styled warning alert to the simulated email sent to the freelancer.
+    3. Logging a custom message in the contract's audit logs.
 *   **Mock Verification Simulation**:
-    *   If the reference contains `"REJECT"`, `"INVALID"`, or is under 5 characters, it fails simulation, logging a reconciliation error and leaving the hito state as `marked_paid` or reverting to `requested`.
+    *   If a tracking reference is provided and contains `"REJECT"`, `"INVALID"`, or is under 5 characters, it fails simulation, logging a reconciliation error and leaving the hito state as `marked_paid`.
+    *   If no tracking reference is provided (empty), it defaults to manual verification (leaving the hito state as `marked_paid`).
     *   Otherwise, the transfer is successfully reconciled, moving the milestone status to `confirmed` automatically and logging:
         `Reconciliación automática SPEI: CEP validado con éxito. Clave de rastreo: [REF]. Banco Emisor: BBVA México... Estado: LIQUIDADO.`
 
