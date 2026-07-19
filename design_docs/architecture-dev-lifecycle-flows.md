@@ -29,6 +29,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 *   **Run Unit Tests**: `npm run test` (Runs native V8 tests and checks code coverage threshold).
 *   **Setup Mock Test Database**: `node scripts/setup-test-db.js` (Creates and seeds a local schema in PostgreSQL container).
 *   **Run E2E Integration Suite**: `npx playwright test` (Launches E2E browser automation scripts).
+*   **Absolute Local Validation**: `npm run validate` (Executes the complete CI verification pipeline locally: ESLint lint check, TypeScript typecheck, unit tests with coverage validation, Next.js production build, and Playwright E2E integration test suite).
 
 ---
 

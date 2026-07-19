@@ -30,7 +30,9 @@ test.describe("Sprint WB-3: UX & Document Completeness E2E Suite", () => {
     await page.goto("/dashboard/settings?demo=true");
     
     // Create a new payment profile
-    await page.locator("button:has-text('+ Agregar Cuenta')").click();
+    const addAccountBtn = page.locator("button:has-text('+ Agregar Cuenta')");
+    await addAccountBtn.waitFor({ state: "visible", timeout: 10000 });
+    await addAccountBtn.click();
     await page.locator("input[placeholder='Ej. Mi Cuenta Principal']").fill("Mi Cuenta de STP");
     await page.locator("input[placeholder='Ej. BBVA, Santander, STP']").fill("STP");
     await page.locator("input[placeholder='18 dígitos']").fill("123456789012345678");

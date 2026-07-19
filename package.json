@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "pretest": "npm run typecheck && npm run lint",
     "test": "node scripts/test-runner.js",
+    "validate": "node scripts/validate-local.js",
     "prepare": "husky"
   },
   "dependencies": {

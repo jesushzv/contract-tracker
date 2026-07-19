@@ -93,6 +93,7 @@ test.describe("Authentication & Session Redirection E2E Suite", () => {
     
     // Expect registered email field to contain the default mock profile email and be disabled
     const emailInput = page.locator('input[type="email"]').first();
+    await emailInput.waitFor({ state: "visible", timeout: 10000 });
     await expect(emailInput).toHaveValue("hector@freelancemx.dev");
     await expect(emailInput).toBeDisabled();
     
