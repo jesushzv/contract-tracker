@@ -91,6 +91,12 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto("/");
 
+    // Assert that the page does not overflow horizontally under mobile viewport
+    const mobileOverflow = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > window.innerWidth;
+    });
+    expect(mobileOverflow).toBe(false);
+
     const header = page.locator("header");
     const hamburgerBtn = header.getByRole("button", { name: /Toggle navigation menu/i });
     
@@ -127,5 +133,11 @@ test.describe("Landing Page & Navigation Header E2E Suite", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await expect(hamburgerBtn).toBeHidden();
     await expect(desktopLinksContainer).toBeVisible();
+
+    // Assert that the page does not overflow horizontally under desktop viewport
+    const desktopOverflow = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > window.innerWidth;
+    });
+    expect(desktopOverflow).toBe(false);
   });
 });

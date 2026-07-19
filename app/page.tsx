@@ -192,7 +192,7 @@ export default function Home() {
                   <div className="w-3 h-3 rounded-full bg-amber-400"></div>
                   <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
                 </div>
-                <div className="mx-auto bg-white rounded-md border border-slate-200 text-xs text-slate-400 px-24 py-1 flex items-center gap-1">
+                <div className="mx-auto bg-white rounded-md border border-slate-200 text-xs text-slate-400 px-4 sm:px-24 py-1 flex items-center gap-1">
                   <ShieldCheck className="h-3 w-3 text-emerald-500" />
                   app.mipacto.app/dashboard
                 </div>
@@ -211,13 +211,13 @@ export default function Home() {
                     <div className="h-3 w-24 bg-slate-200 rounded"></div>
                   </div>
                 </div>
-                <div className="flex-1 p-6 flex flex-col gap-6 overflow-hidden">
-                  <div className="flex justify-between items-center">
+                <div className="flex-1 p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 overflow-hidden">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                      <div className="h-5 w-40 bg-slate-800 rounded mb-2"></div>
-                      <div className="h-3 w-64 bg-slate-400 rounded"></div>
+                      <div className="h-5 w-32 sm:w-40 bg-slate-800 rounded mb-2"></div>
+                      <div className="h-3 w-48 sm:w-64 bg-slate-400 rounded"></div>
                     </div>
-                    <div className="h-10 w-32 bg-indigo-600 rounded-lg"></div>
+                    <div className="h-10 w-28 sm:w-32 bg-indigo-600 rounded-lg"></div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="h-24 bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
@@ -233,16 +233,16 @@ export default function Home() {
                       <div className="h-6 w-24 bg-indigo-600 rounded"></div>
                     </div>
                   </div>
-                  <div className="flex-1 bg-white border border-slate-200 rounded-xl shadow-sm p-4">
+                  <div className="flex-1 bg-white border border-slate-200 rounded-xl shadow-sm p-3 sm:p-4">
                      <div className="h-4 w-32 bg-slate-800 rounded mb-6"></div>
                      <div className="space-y-4">
-                       <div className="h-12 bg-slate-50 border border-slate-100 rounded-lg flex items-center px-4 justify-between">
-                         <div className="flex items-center gap-3"><div className="h-8 w-8 bg-indigo-100 rounded-full"></div><div className="h-3 w-32 bg-slate-400 rounded"></div></div>
-                         <div className="h-5 w-20 bg-amber-100 rounded-full border border-amber-200"></div>
+                       <div className="h-12 bg-slate-50 border border-slate-100 rounded-lg flex items-center px-2 sm:px-4 justify-between gap-2">
+                         <div className="flex items-center gap-2 sm:gap-3"><div className="h-8 w-8 bg-indigo-100 rounded-full flex-shrink-0"></div><div className="h-3 w-20 sm:w-32 bg-slate-400 rounded"></div></div>
+                         <div className="h-5 w-16 sm:w-20 bg-amber-100 rounded-full border border-amber-200 flex-shrink-0"></div>
                        </div>
-                       <div className="h-12 bg-slate-50 border border-slate-100 rounded-lg flex items-center px-4 justify-between">
-                         <div className="flex items-center gap-3"><div className="h-8 w-8 bg-emerald-100 rounded-full"></div><div className="h-3 w-28 bg-slate-400 rounded"></div></div>
-                         <div className="h-5 w-24 bg-emerald-100 rounded-full border border-emerald-200"></div>
+                       <div className="h-12 bg-slate-50 border border-slate-100 rounded-lg flex items-center px-2 sm:px-4 justify-between gap-2">
+                         <div className="flex items-center gap-2 sm:gap-3"><div className="h-8 w-8 bg-emerald-100 rounded-full flex-shrink-0"></div><div className="h-3 w-16 sm:w-28 bg-slate-400 rounded"></div></div>
+                         <div className="h-5 w-20 sm:w-24 bg-emerald-100 rounded-full border border-emerald-200 flex-shrink-0"></div>
                        </div>
                      </div>
                   </div>
@@ -774,7 +774,7 @@ export default function Home() {
         </div>
 
         {/* Call to Action card */}
-        <div className="mx-auto max-w-5xl w-full rounded-3xl bg-gradient-to-tr from-indigo-900 via-slate-900 to-slate-950 p-10 text-white shadow-2xl relative overflow-hidden text-left mt-12">
+        <div className="mx-auto max-w-5xl w-full rounded-3xl bg-gradient-to-tr from-indigo-900 via-slate-900 to-slate-950 p-6 sm:p-10 text-white shadow-2xl relative overflow-hidden text-left mt-12">
           <div className="absolute right-0 bottom-0 opacity-10 translate-x-12 translate-y-12">
             <ShieldCheck className="h-96 w-96" />
           </div>
@@ -788,7 +788,7 @@ export default function Home() {
             </div>
             <Link
               href="/register"
-              className="inline-flex items-center rounded-xl bg-emerald-500 px-8 py-4 text-sm font-bold text-slate-950 hover:bg-emerald-400 hover:scale-105 transition-all shadow-xl shadow-emerald-500/20 whitespace-nowrap"
+              className="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-6 sm:px-8 py-3.5 sm:py-4 text-sm font-bold text-slate-950 hover:bg-emerald-400 hover:scale-105 transition-all shadow-xl shadow-emerald-500/20 text-center w-full sm:w-auto"
             >
               Crear mi Primer Contrato
             </Link>
