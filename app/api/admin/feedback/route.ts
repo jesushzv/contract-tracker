@@ -21,13 +21,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch feedback' }, { status: 500 });
     }
 
-    // Map the joined profile data for easier consumption
+    // Map the joined profile data and convert snake_case to camelCase
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mappedFeedback = feedback.map((item: any) => ({
-      ...item,
+      id: item.id,
+      userId: item.user_id,
+      category: item.category,
+      subject: item.subject,
+      message: item.message,
+      status: item.status,
+      adminReply: item.admin_reply,
+      created_at: item.created_at,
+      replied_at: item.replied_at,
       userEmail: item.profiles?.email,
-      userName: item.profiles?.full_name,
-      profiles: undefined
+      userName: item.profiles?.full_name
     }));
 
     return NextResponse.json({ feedback: mappedFeedback });
@@ -54,10 +61,14 @@ export async function PATCH(request: Request) {
     const adminClient = await getAdminSupabaseClient();
     
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updateData: any = { status };
+    const updateData: any = {};
+    if (status !== undefined) {
+      updateData.status = status;
+    }
     if (adminReply !== undefined) {
       updateData.admin_reply = adminReply;
       updateData.replied_at = new Date().toISOString();
+      updateData.status = 'resolved'; // automatically resolve on reply
     }
 
     const { data: feedback, error } = await adminClient
@@ -72,7 +83,19 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Failed to update feedback' }, { status: 500 });
     }
 
-    return NextResponse.json({ feedback });
+    const mappedFeedback = {
+      id: feedback.id,
+      userId: feedback.user_id,
+      category: feedback.category,
+      subject: feedback.subject,
+      message: feedback.message,
+      status: feedback.status,
+      adminReply: feedback.admin_reply,
+      created_at: feedback.created_at,
+      replied_at: feedback.replied_at
+    };
+
+    return NextResponse.json({ feedback: mappedFeedback });
   } catch (error) {
     console.error('Admin feedback update error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

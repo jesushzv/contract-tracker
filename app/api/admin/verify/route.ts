@@ -13,7 +13,7 @@ export async function GET() {
     // 1. Get user ID from Supabase auth token
     let userId = null;
     const authCookie = cookieStore.getAll().find((cookie) => 
-      cookie.name.startsWith("sb-") && cookie.name.endsWith("-auth-token")
+      cookie.name.includes("-auth-token")
     );
     if (authCookie) {
       try {

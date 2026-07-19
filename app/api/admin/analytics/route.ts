@@ -32,20 +32,54 @@ export async function GET() {
       .select('*', { count: 'exact', head: true });
 
     // Calculate MRR (Monthly Recurring Revenue) estimation
-    // Assuming starter=$10, pro=$30 (can adjust based on actual pricing)
-    const mrr = (usersByTier.starter || 0) * 199 + (usersByTier.pro || 0) * 499;
+    // Starter is $99 MXN/mo, Pro is $199 MXN/mo
+    const mrr = (usersByTier.starter || 0) * 99 + (usersByTier.pro || 0) * 199;
 
-    // Generate mock time-series data for charts (Last 7 days)
-    // In a real scenario, this would aggregate `created_at` from DB
-    const days = 7;
-    const chartData = Array.from({ length: days }).map((_, i) => {
+    // Fetch profiles and contracts created in the last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const { data: recentProfiles } = await adminClient
+      .from('profiles')
+      .select('created_at')
+      .gte('created_at', sevenDaysAgo.toISOString());
+
+    const { data: recentContracts } = await adminClient
+      .from('contracts')
+      .select('created_at')
+      .gte('created_at', sevenDaysAgo.toISOString());
+
+    // Generate real time-series data for the last 7 days
+    const chartData = Array.from({ length: 7 }).map((_, i) => {
       const d = new Date();
-      d.setDate(d.getDate() - (days - 1 - i));
+      d.setDate(d.getDate() - (6 - i));
+      
+      const dateStr = d.toLocaleDateString('es-MX', { month: 'short', day: 'numeric' });
+      
+      // Define day boundaries in UTC
+      const dayStart = new Date(d);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(d);
+      dayEnd.setHours(23, 59, 59, 999);
+      
+      const newUsersCount = (recentProfiles || []).filter((p: { created_at: string }) => {
+        const pDate = new Date(p.created_at);
+        return pDate >= dayStart && pDate <= dayEnd;
+      }).length;
+      
+      const contractsCount = (recentContracts || []).filter((c: { created_at: string }) => {
+        const cDate = new Date(c.created_at);
+        return cDate >= dayStart && cDate <= dayEnd;
+      }).length;
+      
+      // Calculate estimated daily revenue based on new users (20% starter, 5% pro ratio approximation)
+      const revenue = Math.round(newUsersCount * 0.20 * 99 + newUsersCount * 0.05 * 199);
+      
       return {
-        date: d.toLocaleDateString('es-MX', { month: 'short', day: 'numeric' }),
-        newUsers: Math.floor(Math.random() * 10) + 1,
-        contracts: Math.floor(Math.random() * 20) + 5,
-        revenue: Math.floor(Math.random() * 1000) + 200
+        date: dateStr,
+        newUsers: newUsersCount,
+        contracts: contractsCount,
+        revenue: revenue
       };
     });
 

@@ -1,6 +1,25 @@
 import { NextResponse } from 'next/server';
 import { getAdminSupabaseClient, verifyAdmin } from '@/lib/adminUtils';
 
+// Helper to map DB promo_code to Frontend PromoCode
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapDbPromoToFrontend(p: any) {
+  if (!p) return null;
+  return {
+    id: p.id,
+    code: p.code,
+    discount_type: p.discount_percent ? 'percentage' : 'fixed',
+    discount_amount: p.discount_percent ? Number(p.discount_percent) : Number(p.discount_amount),
+    max_uses: p.max_uses,
+    times_used: p.current_uses,
+    expires_at: p.valid_until,
+    is_active: p.is_active,
+    stripe_coupon_id: p.stripe_promotion_id,
+    is_stripe_coupon: !!p.stripe_promotion_id,
+    created_at: p.created_at
+  };
+}
+
 export async function GET() {
   try {
     const adminId = await verifyAdmin();
@@ -20,7 +39,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch promos' }, { status: 500 });
     }
 
-    return NextResponse.json({ promos });
+    const mappedPromos = (promos || []).map(mapDbPromoToFrontend);
+
+    return NextResponse.json({ promos: mappedPromos });
   } catch (error) {
     console.error('Admin promos get error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -47,23 +68,28 @@ export async function POST(request: Request) {
     const { data: existing } = await adminClient
       .from('promo_codes')
       .select('id')
-      .eq('code', code)
+      .eq('code', code.toUpperCase())
       .single();
 
     if (existing) {
       return NextResponse.json({ error: 'Promo code already exists' }, { status: 400 });
     }
 
+    const isPercentage = discount_type === 'percentage';
+    const insertData = {
+      code: code.toUpperCase(),
+      description: `${discount_type === 'percentage' ? `${discount_amount}%` : `$${discount_amount}`} discount code`,
+      discount_percent: isPercentage ? discount_amount : null,
+      discount_amount: isPercentage ? null : discount_amount,
+      valid_until: expires_at,
+      max_uses: max_uses || 100,
+      stripe_promotion_id: is_stripe_coupon ? `promo_${code.toLowerCase()}` : null,
+      is_active: true
+    };
+
     const { data: promo, error } = await adminClient
       .from('promo_codes')
-      .insert({
-        code: code.toUpperCase(),
-        discount_amount,
-        discount_type,
-        expires_at,
-        max_uses,
-        is_stripe_coupon: is_stripe_coupon || false
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -72,7 +98,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create promo code' }, { status: 500 });
     }
 
-    return NextResponse.json({ promo });
+    return NextResponse.json({ promo: mapDbPromoToFrontend(promo) });
   } catch (error) {
     console.error('Admin promo create error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -107,7 +133,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Failed to update promo code' }, { status: 500 });
     }
 
-    return NextResponse.json({ promo });
+    return NextResponse.json({ promo: mapDbPromoToFrontend(promo) });
   } catch (error) {
     console.error('Admin promo update error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

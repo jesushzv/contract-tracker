@@ -12,7 +12,7 @@ export function middleware(request: NextRequest) {
 
   // Find any Supabase auth token cookie
   const hasAuthCookie = cookies.getAll().some((cookie) => {
-    if (cookie.name.startsWith("sb-") && cookie.name.endsWith("-auth-token")) {
+    if (cookie.name.includes("-auth-token")) {
       try {
         const val = JSON.parse(cookie.value);
         if (val === true || val === "true") return true;

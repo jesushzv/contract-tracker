@@ -5,6 +5,23 @@ import CampaignEmail from '@/emails/CampaignEmail';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_123456789');
 
+// Helper to map DB campaign to Frontend campaign
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapDbCampaignToFrontend(c: any) {
+  if (!c) return null;
+  return {
+    id: c.id,
+    name: c.name,
+    subject: c.subject,
+    content: c.html_body,
+    target_audience: c.target_tier || 'all',
+    status: c.status,
+    sent_count: c.sent_count,
+    sent_at: c.sent_at,
+    created_at: c.created_at
+  };
+}
+
 export async function GET() {
   try {
     const adminId = await verifyAdmin();
@@ -24,7 +41,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch campaigns' }, { status: 500 });
     }
 
-    return NextResponse.json({ campaigns });
+    const mappedCampaigns = (campaigns || []).map(mapDbCampaignToFrontend);
+
+    return NextResponse.json({ campaigns: mappedCampaigns });
   } catch (error) {
     console.error('Admin campaigns get error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -53,8 +72,8 @@ export async function POST(request: Request) {
       .insert({
         name,
         subject,
-        content,
-        target_audience,
+        html_body: content,
+        target_tier: target_audience,
         status: 'draft',
         sent_count: 0
       })
@@ -66,7 +85,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create campaign' }, { status: 500 });
     }
 
-    return NextResponse.json({ campaign });
+    return NextResponse.json({ campaign: mapDbCampaignToFrontend(campaign) });
   } catch (error) {
     console.error('Admin campaign create error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -100,11 +119,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Campaign not found or already sent' }, { status: 400 });
     }
 
-    // Get target users
+    // Get target users based on target_tier
     let query = adminClient.from('profiles').select('email');
-    if (campaign.target_audience === 'pro') query = query.eq('tier', 'pro');
-    if (campaign.target_audience === 'starter') query = query.eq('tier', 'starter');
-    if (campaign.target_audience === 'free') query = query.eq('tier', 'free');
+    if (campaign.target_tier === 'pro') query = query.eq('tier', 'pro');
+    if (campaign.target_tier === 'starter') query = query.eq('tier', 'starter');
+    if (campaign.target_tier === 'free') query = query.eq('tier', 'free');
     
     const { data: users } = await query;
     if (!users || users.length === 0) {
@@ -128,7 +147,7 @@ export async function PATCH(request: Request) {
           from: 'Mi Pacto <hola@mipacto.app>',
           to: [adminProfile?.email || 'admin@example.com'],
           subject: campaign.subject,
-          react: CampaignEmail({ subject: campaign.subject, bodyText: campaign.content })
+          react: CampaignEmail({ subject: campaign.subject, bodyText: campaign.html_body })
         });
         sentCount = emails.length; // Assume all sent
       } else {
@@ -148,7 +167,7 @@ export async function PATCH(request: Request) {
         .select()
         .single();
         
-      return NextResponse.json({ campaign: updatedCampaign });
+      return NextResponse.json({ campaign: mapDbCampaignToFrontend(updatedCampaign) });
     } catch (e) {
       console.error('Failed to send with Resend', e);
       return NextResponse.json({ error: 'Failed to send emails' }, { status: 500 });
