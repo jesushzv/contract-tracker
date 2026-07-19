@@ -99,46 +99,64 @@ export default function SystemTab() {
             <span className="bg-neutral-100 text-neutral-600 px-2 py-1 rounded text-xs font-medium">Vercel</span>
           </div>
           <ul className="divide-y divide-neutral-200">
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {data.deployments.map((deployment: any) => (
-              <li key={deployment.id} className="p-4 sm:px-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className={clsx(
-                      "flex-shrink-0 h-2.5 w-2.5 rounded-full mr-3",
-                      deployment.state === 'READY' ? "bg-green-500" : 
-                      deployment.state === 'ERROR' ? "bg-red-500" : "bg-yellow-500"
-                    )} />
-                    <p className="text-sm font-medium text-indigo-600 truncate">
-                      {deployment.url.replace('https://', '')}
-                    </p>
-                  </div>
-                  <div className="ml-2 flex-shrink-0 flex">
-                    <p className={clsx(
-                      "px-2 inline-flex text-xs leading-5 font-semibold rounded-full",
-                      deployment.state === 'READY' ? "bg-green-100 text-green-800" :
-                      deployment.state === 'ERROR' ? "bg-red-100 text-red-800" :
-                      "bg-yellow-100 text-yellow-800"
-                    )}>
-                      {deployment.state}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-2 sm:flex sm:justify-between">
-                  <div className="sm:flex">
-                    <p className="flex items-center text-sm text-neutral-500">
-                      by {deployment.creator}
-                    </p>
-                  </div>
-                  <div className="mt-2 flex items-center text-sm text-neutral-500 sm:mt-0">
-                    <p>{new Date(deployment.createdAt).toLocaleString()}</p>
-                  </div>
-                </div>
+            {!data.vercelConfigured ? (
+              <li className="p-6 text-center">
+                <p className="text-sm text-neutral-500 mb-2">Vercel integration is not configured.</p>
+                <p className="text-xs text-neutral-400">
+                  To view live deployments, define <code className="bg-neutral-100 px-1 py-0.5 rounded text-neutral-700 font-mono">VERCEL_BEARER_TOKEN</code> in your environment variables.
+                </p>
               </li>
-            ))}
+            ) : data.deployments.length === 0 ? (
+              <li className="p-6 text-center text-sm text-neutral-500">
+                No recent deployments found.
+              </li>
+            ) : (
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              data.deployments.map((deployment: any) => (
+                <li key={deployment.id} className="p-4 sm:px-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className={clsx(
+                        "flex-shrink-0 h-2.5 w-2.5 rounded-full mr-3",
+                        deployment.state === 'READY' ? "bg-green-500" : 
+                        deployment.state === 'ERROR' ? "bg-red-500" : "bg-yellow-500"
+                      )} />
+                      <a 
+                        href={deployment.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-sm font-medium text-indigo-600 hover:text-indigo-500 hover:underline truncate"
+                      >
+                        {deployment.url.replace('https://', '')}
+                      </a>
+                    </div>
+                    <div className="ml-2 flex-shrink-0 flex">
+                      <p className={clsx(
+                        "px-2 inline-flex text-xs leading-5 font-semibold rounded-full",
+                        deployment.state === 'READY' ? "bg-green-100 text-green-800" :
+                        deployment.state === 'ERROR' ? "bg-red-100 text-red-800" :
+                        "bg-yellow-100 text-yellow-800"
+                      )}>
+                        {deployment.state}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2 sm:flex sm:justify-between">
+                    <div className="sm:flex">
+                      <p className="flex items-center text-sm text-neutral-500">
+                        by {deployment.creator}
+                      </p>
+                    </div>
+                    <div className="mt-2 flex items-center text-sm text-neutral-500 sm:mt-0">
+                      <p>{new Date(deployment.createdAt).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </li>
+              ))
+            )}
           </ul>
         </div>
-
+ 
         {/* System Logs */}
         <div className="bg-white border border-neutral-200 rounded-lg shadow-sm">
           <div className="px-4 py-5 border-b border-neutral-200 sm:px-6">
@@ -146,25 +164,31 @@ export default function SystemTab() {
           </div>
           <div className="p-4 sm:px-6 overflow-hidden">
             <div className="space-y-4">
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              {data.logs.map((log: any) => (
-                <div key={log.id} className="flex gap-3 text-sm">
-                  <span className="text-neutral-500 whitespace-nowrap font-mono text-xs mt-0.5">
-                    {new Date(log.timestamp).toLocaleTimeString()}
-                  </span>
-                  <span className={clsx(
-                    "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider h-fit",
-                    log.level === 'error' ? 'bg-red-100 text-red-700' :
-                    log.level === 'warn' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-blue-100 text-blue-700'
-                  )}>
-                    {log.level}
-                  </span>
-                  <span className="text-neutral-700 font-mono text-xs break-all">
-                    {log.message}
-                  </span>
+              {data.logs.length === 0 ? (
+                <div className="text-center text-sm text-neutral-500 py-6">
+                  No system logs found.
                 </div>
-              ))}
+              ) : (
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                data.logs.map((log: any) => (
+                  <div key={log.id} className="flex gap-3 text-sm">
+                    <span className="text-neutral-500 whitespace-nowrap font-mono text-xs mt-0.5">
+                      {new Date(log.timestamp).toLocaleTimeString()}
+                    </span>
+                    <span className={clsx(
+                      "px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider h-fit",
+                      log.level === 'error' ? 'bg-red-100 text-red-700' :
+                      log.level === 'warn' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-blue-100 text-blue-700'
+                    )}>
+                      {log.level}
+                    </span>
+                    <span className="text-neutral-700 font-mono text-xs break-all">
+                      {log.message}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

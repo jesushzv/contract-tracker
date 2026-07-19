@@ -92,39 +92,65 @@ export async function GET(request: Request) {
       timestamp: log.timestamp
     }));
 
-    const defaultMockLogs = [
-      { id: 'log_1', level: 'info', message: 'User logged in successfully', timestamp: new Date().toISOString() },
-      { id: 'log_2', level: 'error', message: 'Failed to process Stripe webhook', timestamp: new Date(Date.now() - 3600000).toISOString() },
-      { id: 'log_3', level: 'warn', message: 'Rate limit approaching for API', timestamp: new Date(Date.now() - 7200000).toISOString() },
-      { id: 'log_4', level: 'info', message: 'Contract created by user', timestamp: new Date(Date.now() - 10800000).toISOString() }
-    ];
+    const logs = mappedLogs;
 
-    const logs = mappedLogs.length > 0 ? mappedLogs : defaultMockLogs;
+    // Vercel deployment info (live Vercel API integration if configured)
+    let deployments: {
+      id: string;
+      name: string;
+      state: string;
+      createdAt: number;
+      creator: string;
+      url: string;
+    }[] = [];
+    const vercelToken = process.env.VERCEL_BEARER_TOKEN || process.env.VERCEL_ACCESS_TOKEN;
+    const vercelProjectId = process.env.VERCEL_PROJECT_ID;
+    const vercelTeamId = process.env.VERCEL_TEAM_ID;
+    const vercelConfigured = !!vercelToken;
 
-    // Vercel deployment info (live domain lookup + dynamic fallback)
-    const deployments = [
-      {
-        id: 'dpl_1',
-        name: 'mi-pacto',
-        state: 'READY',
-        createdAt: new Date().getTime(),
-        creator: 'jhzamora',
-        url: actualUrl
-      },
-      {
-        id: 'dpl_2',
-        name: 'mi-pacto',
-        state: 'READY',
-        createdAt: new Date(Date.now() - 86400000).getTime(),
-        creator: 'jhzamora',
-        url: isLocal ? 'http://localhost:3000' : 'https://mi-pacto-prev.vercel.app'
+    if (vercelToken) {
+      try {
+        const queryParams = new URLSearchParams();
+        if (vercelProjectId) queryParams.append('projectId', vercelProjectId);
+        if (vercelTeamId) queryParams.append('teamId', vercelTeamId);
+        queryParams.append('limit', '5');
+
+        const vercelRes = await fetch(`https://api.vercel.com/v7/deployments?${queryParams.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${vercelToken}`,
+          },
+        });
+
+        if (vercelRes.ok) {
+          const vercelData = await vercelRes.json();
+          deployments = (vercelData.deployments || []).map((d: {
+            uid: string;
+            name: string;
+            state: string;
+            created: string | number;
+            creator?: { username: string };
+            url: string | null;
+          }) => ({
+            id: d.uid,
+            name: d.name,
+            state: d.state,
+            createdAt: typeof d.created === 'string' ? parseInt(d.created, 10) : d.created,
+            creator: d.creator?.username || 'Vercel System',
+            url: d.url ? `https://${d.url}` : actualUrl
+          }));
+        } else {
+          console.error(`Vercel API error: ${vercelRes.status} ${vercelRes.statusText}`);
+        }
+      } catch (err) {
+        console.error('Failed to fetch Vercel deployments:', err);
       }
-    ];
+    }
 
     return NextResponse.json({
       deployments,
       logs,
-      status: systemStatus
+      status: systemStatus,
+      vercelConfigured
     });
   } catch (error) {
     console.error('Admin system get error:', error);
