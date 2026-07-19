@@ -23,7 +23,8 @@ import {
   getPaymentProfiles,
   savePaymentProfile,
   deletePaymentProfile,
-  shouldUseSupabase
+  shouldUseSupabase,
+  getCachedProfile
 } from "@/lib/storageClient";
 import { supabase } from "@/lib/supabaseClient";
 import { Profile, Contract, PaymentProfile } from "@/lib/types";
@@ -33,23 +34,24 @@ import { CancelPlanModal } from "@/app/components/modals/CancelPlanModal";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const cachedProf = getCachedProfile();
+  const [profile, setProfile] = useState<Profile | null>(cachedProf);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [paymentProfiles, setPaymentProfiles] = useState<PaymentProfile[]>([]);
   
   // Profile Form States
-  const [fullName, setFullName] = useState("");
-  const [rfc, setRfc] = useState("");
-  const [regimenFiscal, setRegimenFiscal] = useState("");
-  const [codigoPostal, setCodigoPostal] = useState("");
-  const [phone, setPhone] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [clabe, setClabe] = useState("");
-  const [beneficiaryName, setBeneficiaryName] = useState("");
+  const [fullName, setFullName] = useState(cachedProf?.fullName || "");
+  const [rfc, setRfc] = useState(cachedProf?.rfc || "");
+  const [regimenFiscal, setRegimenFiscal] = useState(cachedProf?.regimenFiscal || "");
+  const [codigoPostal, setCodigoPostal] = useState(cachedProf?.codigoPostal || "");
+  const [phone, setPhone] = useState(cachedProf?.phone || "");
+  const [bankName, setBankName] = useState(cachedProf?.bankDetails?.bankName || "");
+  const [clabe, setClabe] = useState(cachedProf?.bankDetails?.clabe || "");
+  const [beneficiaryName, setBeneficiaryName] = useState(cachedProf?.bankDetails?.beneficiaryName || "");
   
   // Branding States
-  const [logoUrl, setLogoUrl] = useState("");
-  const [signatureUrl, setSignatureUrl] = useState("");
+  const [logoUrl, setLogoUrl] = useState(cachedProf?.logoUrl || "");
+  const [signatureUrl, setSignatureUrl] = useState(cachedProf?.signatureUrl || "");
   const [uploadError, setUploadError] = useState("");
   
   // Payment Profiles States

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { ContractPipeline } from "../components/ContractPipeline";
 import { ContractListView } from "../components/ContractListView";
@@ -19,6 +20,7 @@ import { LayoutList, LayoutGrid, Plus } from "lucide-react";
 import { ClientPaymentUpload } from "../components/client/ClientPaymentUpload";
 
 export default function Dashboard() {
+  const router = useRouter();
   const { profile } = useProfile();
   const { contracts, setContracts, selectedContract, setSelectedContract, selectedContractLogs, setSelectedContractLogs } = useContracts();
   const { milestones, setMilestones, allMilestones, setAllMilestones } = useMilestones();
@@ -164,7 +166,7 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold text-slate-900">Hola, {profile?.fullName?.split(' ')[0] || 'Usuario'}</h1>
             <p className="text-slate-500">Aquí está el resumen de tu negocio.</p>
           </div>
-          <Button onClick={() => {}}>
+          <Button onClick={() => router.push("/contracts/new")}>
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Contrato
           </Button>

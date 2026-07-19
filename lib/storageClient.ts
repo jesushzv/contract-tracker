@@ -335,14 +335,33 @@ const seedSandboxIfNeeded = () => {
   }
 };
 
+let cachedProfile: Profile | null = null;
+
+export function getCachedProfile(): Profile | null {
+  return cachedProfile;
+}
+
 // CLIENT HANDLER: DISPATCHES TO LOCALSTORAGE IF IN DEMO, ELSE CALLS ACTIVE SERVER ACTIONS
 export async function getProfile(): Promise<Profile> {
   if (isDemoMode()) {
     seedSandboxIfNeeded();
     const data = localStorage.getItem(KEYS.PROFILE);
-    return data ? JSON.parse(data) : ({} as Profile);
+    const profile = data ? JSON.parse(data) : ({} as Profile);
+    cachedProfile = profile;
+    return profile;
   }
-  return serverActions.getProfile();
+
+  if (cachedProfile) {
+    // Asynchronously update cache in the background
+    serverActions.getProfile().then((p) => {
+      cachedProfile = p;
+    }).catch(console.error);
+    return cachedProfile;
+  }
+
+  const profile = await serverActions.getProfile();
+  cachedProfile = profile;
+  return profile;
 }
 
 export async function getProfileByStripeCustomerId(customerId: string): Promise<Profile | null> {
@@ -361,9 +380,12 @@ export async function getProfileByStripeCustomerId(customerId: string): Promise<
 export async function updateProfile(profile: Profile, isAdmin = false): Promise<Profile> {
   if (isDemoMode()) {
     localStorage.setItem(KEYS.PROFILE, JSON.stringify(profile));
+    cachedProfile = profile;
     return profile;
   }
-  return serverActions.updateProfile(profile, isAdmin);
+  const updated = await serverActions.updateProfile(profile, isAdmin);
+  cachedProfile = updated;
+  return updated;
 }
 
 export async function getContracts(): Promise<Contract[]> {

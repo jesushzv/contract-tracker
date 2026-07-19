@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Profile } from '@/lib/types';
-import { getProfile } from '@/lib/storageClient';
+import { getProfile, getCachedProfile } from '@/lib/storageClient';
 
 export function useProfile() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isDemo, setIsDemo] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(() => getCachedProfile());
+  const [isDemo, setIsDemo] = useState(() => getCachedProfile()?.tier === 'free');
 
   useEffect(() => {
     // Basic initialization for profile extraction

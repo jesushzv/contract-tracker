@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Briefcase, FileText, Settings, BarChart3, CheckCircle, PlusCircle, Bell } from "lucide-react";
-import { getProfile, isDemoMode } from "@/lib/storageClient";
+import { getProfile, isDemoMode, getCachedProfile } from "@/lib/storageClient";
 import { Profile } from "@/lib/types";
 
 interface SidebarProps {
@@ -12,7 +12,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activePath, onNavigate }: SidebarProps) {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(() => getCachedProfile());
   const [demo, setDemo] = useState(false);
 
   useEffect(() => {
