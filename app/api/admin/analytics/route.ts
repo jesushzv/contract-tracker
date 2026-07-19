@@ -10,26 +10,49 @@ export async function GET() {
 
     const adminClient = await getAdminSupabaseClient();
     
+    // Fetch all profiles to filter test/admin accounts
+    const { data: allProfiles, error: profilesError } = await adminClient
+      .from('profiles')
+      .select('id, tier, email, created_at, is_admin');
+
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+      return NextResponse.json({ error: 'Failed to fetch profiles' }, { status: 500 });
+    }
+
+    // Filter out test and admin accounts from metrics
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const isTestOrAdmin = (p: any) => {
+      if (p.is_admin) return true;
+      const email = (p.email || '').toLowerCase();
+      return email.endsWith('@example.com') || email.endsWith('@freelancemx.dev');
+    };
+
+    const realProfiles = (allProfiles || []).filter((p: { id: string; tier: string | null; email: string | null; created_at: string; is_admin: boolean | null }) => !isTestOrAdmin(p));
+    const realUserIds = new Set(realProfiles.map((p: { id: string }) => p.id));
+
     // Get total users
-    const { count: totalUsers } = await adminClient
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
-      
+    const totalUsers = realProfiles.length;
+
     // Get users by tier
-    const { data: tierData } = await adminClient
-      .from('profiles')
-      .select('tier');
-      
-    const usersByTier: Record<string, number> = (tierData || []).reduce((acc: Record<string, number>, curr: { tier: string | null }) => {
+    const usersByTier: Record<string, number> = realProfiles.reduce((acc: Record<string, number>, curr: { tier: string | null }) => {
       const tier = curr.tier || 'free';
       acc[tier] = (acc[tier] || 0) + 1;
       return acc;
     }, {});
 
-    // Get total contracts
-    const { count: totalContracts } = await adminClient
+    // Fetch all contracts to filter out test/admin contracts
+    const { data: allContracts, error: contractsError } = await adminClient
       .from('contracts')
-      .select('*', { count: 'exact', head: true });
+      .select('id, freelancer_id, created_at');
+
+    if (contractsError) {
+      console.error('Error fetching contracts:', contractsError);
+      return NextResponse.json({ error: 'Failed to fetch contracts' }, { status: 500 });
+    }
+
+    const realContracts = (allContracts || []).filter((c: { id: string; freelancer_id: string; created_at: string }) => realUserIds.has(c.freelancer_id));
+    const totalContracts = realContracts.length;
 
     // Calculate MRR (Monthly Recurring Revenue) estimation
     // Starter is $99 MXN/mo, Pro is $199 MXN/mo
@@ -38,16 +61,9 @@ export async function GET() {
     // Fetch profiles and contracts created in the last 7 days
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const { data: recentProfiles } = await adminClient
-      .from('profiles')
-      .select('created_at')
-      .gte('created_at', sevenDaysAgo.toISOString());
 
-    const { data: recentContracts } = await adminClient
-      .from('contracts')
-      .select('created_at')
-      .gte('created_at', sevenDaysAgo.toISOString());
+    const recentRealProfiles = realProfiles.filter((p: { created_at: string }) => new Date(p.created_at) >= sevenDaysAgo);
+    const recentRealContracts = realContracts.filter((c: { created_at: string }) => new Date(c.created_at) >= sevenDaysAgo);
 
     // Generate real time-series data for the last 7 days
     const chartData = Array.from({ length: 7 }).map((_, i) => {
@@ -62,12 +78,12 @@ export async function GET() {
       const dayEnd = new Date(d);
       dayEnd.setHours(23, 59, 59, 999);
       
-      const newUsersCount = (recentProfiles || []).filter((p: { created_at: string }) => {
+      const newUsersCount = recentRealProfiles.filter((p: { created_at: string }) => {
         const pDate = new Date(p.created_at);
         return pDate >= dayStart && pDate <= dayEnd;
       }).length;
       
-      const contractsCount = (recentContracts || []).filter((c: { created_at: string }) => {
+      const contractsCount = recentRealContracts.filter((c: { created_at: string }) => {
         const cDate = new Date(c.created_at);
         return cDate >= dayStart && cDate <= dayEnd;
       }).length;
