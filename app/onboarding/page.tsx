@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { updateProfile, uploadBrandAsset, getProfile, isDemoMode } from "@/lib/storageClient";
+import { updateProfile, uploadBrandAsset, getProfile, isDemoMode, shouldUseSupabase } from "@/lib/storageClient";
 import { Profile } from "@/lib/types";
 import { ShieldCheck, ArrowRight, ArrowLeft, AlertCircle, Loader2, Landmark, Check } from "lucide-react";
 import { validateRFC } from "@/lib/rfcValidator";
@@ -61,6 +61,10 @@ export default function OnboardingPage() {
         if (demoModeActive) {
           userEmail = "hector@freelancemx.dev";
           setEmail(userEmail);
+        } else if (!shouldUseSupabase()) {
+          const prof = await getProfile();
+          userEmail = prof?.email || "monetization-test@example.com";
+          setEmail(userEmail);
         } else {
           const { data: { session } } = await supabase.auth.getSession();
           if (!session) {
@@ -86,13 +90,22 @@ export default function OnboardingPage() {
 
         let activeTier: 'free' | 'starter' | 'pro' | undefined = undefined;
 
-        if (sessionId && !demoModeActive) {
+        if (sessionId) {
           try {
             const res = await fetch(`/api/stripe/checkout-session?session_id=${sessionId}`);
             const data = await res.json();
             if (data.success && data.tier) {
               activeTier = data.tier;
               setTier(data.tier);
+              
+              // Ensure local storage profile is updated in demo/mock mode
+              if (demoModeActive) {
+                const currentProf = await getProfile();
+                if (currentProf) {
+                  currentProf.tier = data.tier;
+                  await updateProfile(currentProf);
+                }
+              }
             }
           } catch (err) {
             console.error("Error syncing checkout session on client:", err);
@@ -175,7 +188,7 @@ export default function OnboardingPage() {
     try {
       const isDemoActive = isDemoMode();
       let userId = "demo-freelancer-uuid";
-      if (!isDemoActive) {
+      if (!isDemoActive && shouldUseSupabase()) {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           setError("La sesión ha expirado. Inicia sesión de nuevo.");
@@ -183,6 +196,9 @@ export default function OnboardingPage() {
           return;
         }
         userId = session.user.id;
+      } else if (!isDemoActive && !shouldUseSupabase()) {
+        const prof = await getProfile();
+        userId = prof?.id || "demo-freelancer-uuid";
       }
 
       const newProfile: Profile = {

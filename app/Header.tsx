@@ -24,7 +24,8 @@ export default function Header({ hasAuthCookie, useSupabase }: HeaderProps) {
       pathname.startsWith("/notifications") ||
       pathname.startsWith("/hash-verifier") ||
       pathname.startsWith("/admin") ||
-      pathname.startsWith("/onboarding");
+      pathname.startsWith("/onboarding") ||
+      pathname.startsWith("/plans");
 
     // Detect and clear demo/sandbox session if we have navigated to a public marketing page
     if (!isAppPath) {

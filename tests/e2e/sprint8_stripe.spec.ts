@@ -24,7 +24,7 @@ test.describe("Sprint 8: Stripe Monetization & SaaS Onboarding Funnel E2E Suite"
     await expect(page.locator("h3:has-text('Plan Profesional')")).toBeVisible();
 
     // Intercept checkout session creation (POST) to return a mock redirect URL
-    await page.route("**/api/stripe/checkout-session", async (route) => {
+    await page.route(/\/api\/stripe\/checkout-session$/, async (route) => {
       if (route.request().method() === "POST") {
         await route.fulfill({
           status: 200,
@@ -37,7 +37,7 @@ test.describe("Sprint 8: Stripe Monetization & SaaS Onboarding Funnel E2E Suite"
     });
 
     // Intercept the GET for session sync on onboarding
-    await page.route("**/api/stripe/checkout-session?session_id=mock_session_123", async (route) => {
+    await page.route(/\/api\/stripe\/checkout-session\?session_id=mock_session_123$/, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",

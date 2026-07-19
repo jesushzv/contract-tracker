@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         userId,
         tier,
       },
-      ...(profile.stripeCustomerId 
+      ...(profile.stripeCustomerId && !profile.stripeCustomerId.startsWith("cus_test")
         ? { customer: profile.stripeCustomerId } 
         : { customer_email: email }
       )
