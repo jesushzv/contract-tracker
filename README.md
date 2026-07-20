@@ -5,136 +5,136 @@
 [![Supabase](https://img.shields.io/badge/Supabase-Database-emerald?style=flat&logo=supabase)](https://supabase.com/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38bdf8?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
 
-> **Mi Pacto** es una plataforma premium de gestión de contratos y automatización de cobranza diseñada exclusivamente para freelancers y profesionales independientes en México. Simplifica la creación de acuerdos legales, habilita la firma electrónica inmediata y rastrea cobros vía SPEI de manera segura.
+> **Mi Pacto** is a premium contract management and payment collection automation platform designed exclusively for freelancers and independent professionals in Mexico. It simplifies the creation of legal agreements, enables immediate electronic signature, and securely tracks payments via SPEI.
 
 ---
 
-## 🚀 Características Principales
+## 🚀 Key Features
 
-- **Creador de Contratos Legalmente Alineados**: Plantillas preconfiguradas para esquemas locales comunes en México (Honorarios Profesionales, RESICO, etc.).
-- **Firma Express**: Enlace directo para firma digital por WhatsApp o correo electrónico, con registro de huella digital, IP y consentimiento de firma vinculante.
-- **Rastreo de Cobros SPEI**: Vinculación de CLABE interbancaria para rastrear anticipos e hitos mediante la verificación de Claves de Rastreo y Comprobantes Electrónicos de Pago (CEP) de Banxico.
-- **Panel de Control de Clientes e Insights**: Visualización del estado del pipeline de contratos, analíticas de ingresos y estimaciones fiscales.
-- **Centro de Comando Administrativo (`/admin`)**: Administración centralizada de usuarios, análisis de métricas clave del sistema, promociones y seguimiento de campañas.
+- **Legally Aligned Contract Creator**: Preconfigured templates for common local tax and contract structures in Mexico (Professional Services/Honorarios Profesionales, RESICO, etc.).
+- **Express Signing**: Direct digital signature link via WhatsApp or email, featuring fingerprint, IP logging, and binding consent logs.
+- **SPEI Payment Tracking**: Bank CLABE integration to track advances and milestones by verifying Banxico tracking keys (Claves de Rastreo) and Electronic Payment Receipts (CEP).
+- **Client Dashboard & Insights**: Visualization of the contract pipeline status, revenue analytics, and tax estimations.
+- **Administrative Command Center (`/admin`)**: Centralized administration of users, key system metrics analysis, promotions, and campaign tracking.
 
 ---
 
-## 📂 Estructura del Proyecto
+## 📂 Project Structure
 
-La estructura principal del repositorio está organizada de la siguiente manera:
+The repository structure is organized as follows:
 
 ```text
-├── app/                      # Rutas de Next.js (App Router) y componentes de página
-│   ├── admin/                # Panel de control de administración de la plataforma
-│   ├── api/                  # Endpoints de API backend (Stripe, Facturapi, Resend, etc.)
-│   ├── dashboard/            # Panel de control principal del freelancer
-│   └── components/           # Componentes interactivos y componentes del Wizard
-├── data/                     # Datos estáticos o mockups para desarrollo local
-├── emails/                   # Plantillas de correo electrónico enlazadas con React Email
-├── lib/                      # Utilidades compartidas, validadores de RFC y configuraciones
-├── scripts/                  # Scripts de utilidades y aprovisionamiento del entorno
-│   ├── setup-test-db.js      # Inicialización y siembra de base de datos con verificación de RLS
-│   ├── create-admin-user.js  # Herramienta CLI para aprovisionamiento de accesos admin
-│   └── test-runner.js        # Orquestador de pruebas unitarias y cálculo de cobertura
-├── supabase/                 # Archivos de migración de base de datos y esquemas SQL
-└── tests/                    # Suites de pruebas automatizadas
-    └── e2e/                  # Pruebas integrales de flujo con Playwright
+├── app/                      # Next.js routes (App Router) and page components
+│   ├── admin/                # Platform administration dashboard
+│   ├── api/                  # Backend API endpoints (Stripe, Facturapi, Resend, etc.)
+│   ├── dashboard/            # Main freelancer control dashboard
+│   └── components/           # Interactive components and Wizard components
+├── data/                     # Static data or mocks for local development
+├── emails/                   # Email templates powered by React Email
+├── lib/                      # Shared utilities, RFC validators, and configurations
+├── scripts/                  # Utility and environment provisioning scripts
+│   ├── setup-test-db.js      # Database initialization and seeding with RLS checks
+│   ├── create-admin-user.js  # CLI tool for provisioning admin accounts
+│   └── test-runner.js        # Unit test orchestrator and coverage calculator
+├── supabase/                 # Database migration files and SQL schemas
+└── tests/                    # Automated test suites
+    └── e2e/                  # End-to-end integration flows using Playwright
 ```
 
 ---
 
-## 🛠️ Configuración de Entorno
+## 🛠️ Environment Configuration
 
-Para ejecutar la aplicación localmente, debes crear un archivo `.env.local` en la raíz del proyecto. Asegúrate de incluir las siguientes variables:
+To run the application locally, you must create a `.env.local` file in the project root. Make sure to include the following variables:
 
 ```bash
 # Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=tu_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_anon_key
-SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key
-DATABASE_URL=postgresql://postgres:... # URL de conexión directa PostgreSQL para migraciones
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+DATABASE_URL=postgresql://postgres:... # Direct PostgreSQL connection URL for migrations
 
-# Stripe Integration (Pasarela de pagos)
-STRIPE_SECRET_KEY=tu_stripe_secret_key
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=tu_stripe_publishable_key
-STRIPE_WEBHOOK_SECRET=tu_stripe_webhook_secret
+# Stripe Integration (Payment Gateway)
+STRIPE_SECRET_KEY=your_stripe_secret_key
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 
-# Facturapi Integration (Facturación SAT)
-FACTURAPI_API_KEY=tu_facturapi_api_key
+# Facturapi Integration (SAT Invoicing)
+FACTURAPI_API_KEY=your_facturapi_api_key
 
 # Email Sending (Resend)
-RESEND_API_KEY=tu_resend_api_key
+RESEND_API_KEY=your_resend_api_key
 ```
 
 ---
 
-## 💻 Desarrollo Local
+## 💻 Local Development
 
-### 1. Requisitos Previos
+### 1. Prerequisites
 
-Instala las dependencias del proyecto:
+Install the project dependencies:
 
 ```bash
 npm install
 ```
 
-### 2. Inicializar la Base de Datos y Seed
+### 2. Initialize Database and Seed
 
-Para aplicar las migraciones de Supabase en tu entorno y poblar la base de datos con cuentas de prueba persistentes bajo Row Level Security (RLS), ejecuta:
+To apply Supabase migrations to your environment and populate the database with persistent test accounts under Row Level Security (RLS), run:
 
 ```bash
 node scripts/setup-test-db.js
 ```
 
-> **Cuentas creadas automáticamente**:
+> **Automatically Created Accounts**:
 > - **Free**: `test-free@example.com`
 > - **Starter**: `test-starter@example.com`
 > - **Pro**: `test-pro@example.com`
-> - **Admin**: `admin@example.com` y `jhector.zamora@hotmail.com` (Acceso completo a `/admin`)
+> - **Admin**: `admin@example.com` and `jhector.zamora@hotmail.com` (Full access to `/admin`)
 
-Para más detalles sobre contraseñas y propósitos de pruebas, consulta [test_accounts.md](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/contract-tracker/test_accounts.md) (local).
+For more details on passwords and test purposes, consult [test_accounts.md](file:///Users/jhzamora/.gemini/antigravity-ide/scratch/contract-tracker/test_accounts.md) (local).
 
-### 3. Aprovisionamiento de Administrador
+### 3. Admin Provisioning
 
-Si necesitas aprovisionar un nuevo usuario como administrador de forma manual o promover una cuenta existente, puedes usar:
+If you need to manually provision a new administrator or promote an existing account, you can use:
 
 ```bash
 node scripts/create-admin-user.js
 ```
 
-### 4. Ejecutar Servidor de Desarrollo
+### 4. Run Development Server
 
-Inicia el entorno local de Next.js:
+Start the local Next.js environment:
 
 ```bash
 npm run dev
 ```
 
-La aplicación estará disponible en [http://localhost:3000](http://localhost:3000).
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 🧪 Pruebas y Validación
+## 🧪 Testing and Validation
 
-La plataforma incluye suites completas de validación de código y pruebas automatizadas:
+The platform includes comprehensive code validation and automated test suites:
 
-### Pruebas Unitarias y Cobertura
-Las pruebas unitarias corren con el motor nativo de Node.js. Para ejecutarlas y validar el umbral estricto de cobertura de código, usa:
+### Unit Tests and Coverage
+Unit tests run using Node.js's native test runner. To execute them and validate the strict code coverage threshold, run:
 
 ```bash
 npm run test
 ```
-*Nota: Se requiere una cobertura mínima de **85%** en líneas y ramas para superar la suite.*
+*Note: A minimum coverage of **85%** on lines and branches is required to pass.*
 
-### Pruebas E2E (Playwright)
-Para correr las pruebas de integración en navegadores (Headless):
+### E2E Tests (Playwright)
+To run integration tests in headless browsers:
 
 ```bash
 npx playwright test
 ```
 
-### Flujo de Validación Local Completo
-Antes de realizar commits o subir cambios al repositorio remoto, se recomienda ejecutar el validador local de extremo a extremo que realiza typecheck, linting, compilación, pruebas unitarias y pruebas de integración:
+### Full Local Validation Flow
+Before committing or pushing changes to the remote repository, it is recommended to run the local end-to-end validator which performs typechecking, linting, building, unit tests, and integration tests:
 
 ```bash
 npm run validate
@@ -142,4 +142,4 @@ npm run validate
 
 ---
 
-*Desarrollado con excelencia para impulsar a los profesionales independientes en México.*
+*Developed with excellence to empower independent professionals in Mexico.*
