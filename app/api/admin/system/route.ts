@@ -16,6 +16,49 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (adminId === 'demo-admin-id') {
+      const mockSystemStatus = {
+        database: 'operational',
+        storage: 'operational',
+        auth: 'operational',
+        paymentGateway: 'operational',
+        emailService: 'operational'
+      };
+
+      const mockLogs = [
+        {
+          id: '1',
+          level: 'info',
+          message: 'DEMO MODE: System status initialized successfully',
+          timestamp: new Date().toISOString()
+        },
+        {
+          id: '2',
+          level: 'info',
+          message: 'Sandbox local-file session initialized successfully',
+          timestamp: new Date(Date.now() - 5000).toISOString()
+        }
+      ];
+
+      const mockDeployments = [
+        {
+          id: 'dep-1',
+          name: 'mi-pacto-demo',
+          state: 'READY',
+          createdAt: Date.now() - 3600000,
+          creator: 'Demo Admin',
+          url: 'https://mi-pacto-demo.vercel.app'
+        }
+      ];
+
+      return NextResponse.json({
+        deployments: mockDeployments,
+        logs: mockLogs,
+        status: mockSystemStatus,
+        vercelConfigured: false
+      });
+    }
+
     const adminClient = await getAdminSupabaseClient();
     const host = request.headers.get('host') || 'mi-pacto.vercel.app';
     const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
