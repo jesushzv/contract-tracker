@@ -68,6 +68,8 @@ export default function RegisterPage() {
       // Simulate registration success
       setSuccess(true);
       setSuccessMessage("¡Registro exitoso (Modo Demo)! Redirigiéndote...");
+      // @ts-expect-error - fbq is injected via script
+      if (typeof window !== "undefined" && window.fbq) window.fbq('track', 'CompleteRegistration');
       
       // Set mock authentication cookies and localStorage
       document.cookie = "sb-mock-auth-token=true; path=/";
@@ -114,6 +116,8 @@ export default function RegisterPage() {
 
       if (data.user) {
         setSuccess(true);
+        // @ts-expect-error - fbq is injected via script
+        if (typeof window !== "undefined" && window.fbq) window.fbq('track', 'CompleteRegistration');
         if (data.session) {
           setSuccessMessage("¡Registro exitoso! Redirigiéndote...");
           setTimeout(() => {

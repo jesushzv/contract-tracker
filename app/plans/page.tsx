@@ -59,6 +59,9 @@ export default function PlansPage() {
     }
 
     // Production redirect to Stripe Checkout
+    // @ts-expect-error - fbq is injected via script
+    if (typeof window !== "undefined" && window.fbq) window.fbq('track', 'InitiateCheckout', { content_name: tier });
+    
     const res = await fetch("/api/stripe/checkout-session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

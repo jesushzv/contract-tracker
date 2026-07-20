@@ -98,6 +98,9 @@ export default function OnboardingPage() {
               activeTier = data.tier;
               setTier(data.tier);
               
+              // @ts-expect-error - fbq is injected via script
+              if (typeof window !== "undefined" && window.fbq) window.fbq('track', 'Purchase', { content_name: data.tier, currency: 'MXN', value: data.tier === 'pro' ? 199 : 99 });
+              
               // Ensure local storage profile is updated in demo/mock mode
               if (demoModeActive) {
                 const currentProf = await getProfile();

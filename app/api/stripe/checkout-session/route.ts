@@ -67,6 +67,11 @@ export async function GET(req: NextRequest) {
     }
 
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
+    if (session.status !== 'complete') {
+      return NextResponse.json({ error: "Checkout not completed" }, { status: 400 });
+    }
+    
     const userId = session.metadata?.userId;
     const tier = session.metadata?.tier as "starter" | "pro";
 

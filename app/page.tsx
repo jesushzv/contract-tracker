@@ -150,6 +150,8 @@ export default function Home() {
                     href="/dashboard?demo=true"
                     prefetch={false}
                     onClick={() => {
+                      // @ts-expect-error - fbq is injected via script
+                      if (typeof window !== "undefined" && window.fbq) window.fbq('track', 'Lead', { content_name: 'Demo' });
                       localStorage.setItem("demo_mode", "true");
                       sessionStorage.setItem("demo_mode", "true");
                       document.cookie = "demo_mode=true; path=/;";
