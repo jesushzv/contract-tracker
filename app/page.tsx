@@ -18,7 +18,8 @@ import {
   PlayCircle,
   MessageCircle,
   Check,
-  Star
+  Star,
+  Lock
 } from "lucide-react";
 
 export default function Home() {
@@ -257,17 +258,50 @@ export default function Home() {
         </div>
 
         {/* TRUST BADGES */}
-        <div className="mx-auto max-w-4xl text-center border-y border-slate-200/60 py-8">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-6">
-            Profesionales independientes y agencias lo utilizan para colaborar con:
+        <div className="mx-auto max-w-5xl text-center border-y border-slate-200/60 py-10 px-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-8">
+            Infraestructura Segura y Cumplimiento Legal en México
           </p>
-          <div className="flex flex-wrap justify-center gap-8 md:gap-16 items-center opacity-60 grayscale">
-             {/* Fake logos represented by text for simplicity */}
-             <div className="text-lg font-black font-sans text-slate-800 tracking-tighter">Acme Corp</div>
-             <div className="text-xl font-bold font-serif text-slate-800 italic">Globex</div>
-             <div className="text-lg font-extrabold font-mono text-slate-800 tracking-widest">SOYUZ</div>
-             <div className="text-xl font-bold text-slate-800">Initech</div>
-             <div className="text-lg font-medium text-slate-800 uppercase tracking-widest hidden md:block">Massive Dynamic</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
+            <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-5 hover:border-indigo-100 transition-colors shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-4">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">Validez NOM-151</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Contratos firmados digitalmente con plena validez mercantil según el Código de Comercio.
+              </p>
+            </div>
+
+            <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-5 hover:border-indigo-100 transition-colors shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-4">
+                <Landmark className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">Conciliación SPEI</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Validación de comprobantes CEP oficiales mediante clave de rastreo de Banxico.
+              </p>
+            </div>
+
+            <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-5 hover:border-indigo-100 transition-colors shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-4">
+                <Calculator className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">Cálculo SAT</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Estimaciones precisas de retenciones de ISR e IVA (Actividad Profesional y RESICO).
+              </p>
+            </div>
+
+            <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-5 hover:border-indigo-100 transition-colors shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-4">
+                <Lock className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">Cifrado de Datos</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Cuentas CLABE e información sensible protegidas con cifrado SSL de nivel bancario.
+              </p>
+            </div>
           </div>
         </div>
 

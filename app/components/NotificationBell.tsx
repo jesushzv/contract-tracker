@@ -31,7 +31,7 @@ export function NotificationBell() {
             
             <div className="max-h-96 overflow-y-auto">
               <div className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer">
-                <p className="text-sm text-slate-800"><span className="font-medium">Acme Corp</span> ha firmado el contrato.</p>
+                <p className="text-sm text-slate-800"><span className="font-medium">Studio Flora</span> ha firmado el contrato.</p>
                 <p className="text-xs text-slate-400 mt-1">Hace 2 horas</p>
               </div>
               <div className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer">
