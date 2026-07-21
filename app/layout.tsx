@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit, Inter } from "next/font/google";
+import { Outfit, Inter, Nunito } from "next/font/google";
 import Script from "next/script";
 import { cookies } from "next/headers";
 import Header from "./Header";
@@ -19,9 +19,42 @@ const inter = Inter({
   weight: ["300", "400", "500", "600", "700"],
 });
 
+const nunito = Nunito({
+  variable: "--font-nunito",
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
+});
+
 export const metadata: Metadata = {
-  title: "Mi Pacto | Gestión de Contratos para Freelancers",
-  description: "Crea contratos con validez digital, firma express por WhatsApp y controla tus cobros SPEI. mipacto.app",
+  title: "Mi Pacto | Gestión de Contratos & Pagos SPEI para Freelancers",
+  description: "Crea contratos con validez digital, firma express por WhatsApp y controla tus cobros SPEI con conciliación automática.",
+  icons: {
+    icon: "/branding/favicon.svg",
+    shortcut: "/branding/favicon.svg",
+    apple: "/branding/apple-touch-icon.svg",
+  },
+  openGraph: {
+    title: "Mi Pacto | Contratos Legales & Pagos SPEI para Freelancers",
+    description: "Crea contratos legales en 3 minutos, firma express vía OTP y monitorea depósitos SPEI en México.",
+    url: "https://mipacto.app",
+    siteName: "Mi Pacto",
+    images: [
+      {
+        url: "/branding/og-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "Mi Pacto — Plataforma de Contratos y Pagos para Freelancers",
+      },
+    ],
+    locale: "es_MX",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Mi Pacto — Contratos y Pagos SPEI",
+    description: "La solución de contratación y cobranza para independientes en México.",
+    images: ["/branding/og-image.svg"],
+  },
 };
 
 export default async function RootLayout({
@@ -52,7 +85,7 @@ export default async function RootLayout({
   return (
     <html
       lang="es"
-      className={`${outfit.variable} ${inter.variable} h-full antialiased`}
+      className={`${outfit.variable} ${inter.variable} ${nunito.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#fafbfe] text-[#0f172a] transition-colors duration-300">
         <Script id="meta-pixel" strategy="afterInteractive">

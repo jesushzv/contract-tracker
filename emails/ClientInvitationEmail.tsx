@@ -119,7 +119,7 @@ const btnContainer = {
 };
 
 const button = {
-  backgroundColor: "#0f172a",
+  backgroundColor: "#6A1B9A",
   borderRadius: "6px",
   color: "#fff",
   fontSize: "16px",
