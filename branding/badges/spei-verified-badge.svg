@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" width="100%" height="100%">
+  <defs>
+    <linearGradient id="spei-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#10B981" />
+    </linearGradient>
+  </defs>
+  
+  <rect x="2" y="2" width="236" height="56" rx="12" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1.5" />
+  
+  <!-- Icon: Bank + Checkmark -->
+  <g transform="translate(14, 12)">
+    <rect width="36" height="36" rx="8" fill="url(#spei-grad)" />
+    <g transform="translate(6, 6)">
+      <path d="M12 2L2 7h20L12 2zM4 10v7M9 10v7M15 10v7M20 10v7M2 19h20" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    </g>
+  </g>
+  
+  <text x="60" y="26" font-family="'Nunito', sans-serif" font-weight="800" font-size="11.5" fill="#065F46">
+    PAGO VERIFICADO VÍA SPEI
+  </text>
+  <text x="60" y="41" font-family="'Nunito', sans-serif" font-weight="700" font-size="9.5" fill="#047857">
+    Conciliación CEP / Banxico Automática
+  </text>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="100%" height="100%">
+  <defs>
+    <linearGradient id="apple-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6A1B9A" />
+      <stop offset="100%" stop-color="#00ACC1" />
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="40" fill="url(#apple-grad)" />
+  <g transform="translate(42, 38)">
+    <path d="M64 8H28c-4.4 0-8 3.6-8 8v64c0 4.4 3.6 8 8 8h44c4.4 0 8-3.6 8-8V26L64 8z" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    <path d="M62 8v20h20" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    <path d="m32 54 10 10 22-22" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  </g>
+</svg>

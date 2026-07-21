@@ -1,0 +1,66 @@
+{
+  "name": "Mi Pacto Brand Design System Tokens",
+  "version": "1.0.0",
+  "colors": {
+    "primary": {
+      "name": "Morado Azteca",
+      "hex": "#6A1B9A",
+      "hsl": "hsl(277, 70%, 35%)",
+      "rgb": "rgb(106, 27, 154)",
+      "usage": "Primary CTA, Brand Accent, Gradient Start"
+    },
+    "primaryHover": {
+      "name": "Morado Azteca Dark",
+      "hex": "#4A148C",
+      "hsl": "hsl(277, 75%, 28%)",
+      "rgb": "rgb(74, 20, 140)",
+      "usage": "Primary Hover State"
+    },
+    "accent": {
+      "name": "Turquesa Cielo",
+      "hex": "#00ACC1",
+      "hsl": "hsl(187, 100%, 38%)",
+      "rgb": "rgb(0, 172, 193)",
+      "usage": "Gradient End, Positive Indicators, Secondary CTA"
+    },
+    "emerald": {
+      "name": "SPEI Emerald",
+      "hex": "#059669",
+      "hsl": "hsl(160, 84%, 39%)",
+      "rgb": "rgb(5, 150, 105)",
+      "usage": "Payment Status Verified, CEP Receipt Confirmation"
+    },
+    "dark": {
+      "name": "Deep Slate Header",
+      "hex": "#0F172A",
+      "hsl": "hsl(222, 47%, 11%)",
+      "rgb": "rgb(15, 23, 42)",
+      "usage": "Dark Chrome, Wordmark Text Light Mode, Dark Card Backgrounds"
+    },
+    "slateSecondary": {
+      "name": "Cool Slate Gray",
+      "hex": "#64748B",
+      "hsl": "hsl(215, 16%, 47%)",
+      "rgb": "rgb(100, 116, 139)",
+      "usage": "Subtitles, Captions, Borders"
+    },
+    "backgroundLight": {
+      "hex": "#F8FAFC",
+      "usage": "Application Background Light Mode"
+    },
+    "cardSurface": {
+      "hex": "#FFFFFF",
+      "usage": "Card Surface, Modal Surface"
+    }
+  },
+  "gradients": {
+    "brandPrimary": "linear-gradient(135deg, #6A1B9A 0%, #00ACC1 100%)",
+    "brandDark": "linear-gradient(135deg, #4A148C 0%, #059669 100%)",
+    "goldTrust": "linear-gradient(135deg, #D97706 0%, #F59E0B 100%)"
+  },
+  "typography": {
+    "fontSans": "Nunito, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
+    "fontHeading": "Nunito, Outfit, sans-serif",
+    "fontMono": "Geist Mono, Fira Code, monospace"
+  }
+}

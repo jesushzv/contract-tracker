@@ -1,32 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" width="100%" height="100%">
   <defs>
-    <!-- Brand Gradient: Morado Azteca to Turquesa Cielo -->
-    <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="pub-mipacto-grad-light" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#6A1B9A" />
       <stop offset="100%" stop-color="#00ACC1" />
     </linearGradient>
-    <filter id="logo-shadow" x="-10%" y="-10%" width="120%" height="120%">
+    <filter id="pub-shadow-light" x="-10%" y="-10%" width="120%" height="120%">
       <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#6A1B9A" flood-opacity="0.25"/>
     </filter>
   </defs>
-  
-  <!-- Icon Mark (48x48 rounded container) -->
-  <g transform="translate(8, 6)" filter="url(#logo-shadow)">
-    <rect x="0" y="0" width="48" height="48" rx="12" fill="url(#logo-grad)" />
-    <!-- Document + Checkmark SVG inside -->
+  <g transform="translate(8, 6)" filter="url(#pub-shadow-light)">
+    <rect x="0" y="0" width="48" height="48" rx="12" fill="url(#pub-mipacto-grad-light)" />
     <g transform="translate(10, 10)">
       <path d="M18 2.5H8c-1.4 0-2.5 1.1-2.5 2.5v22c0 1.4 1.1 2.5 2.5 2.5h12c1.4 0 2.5-1.1 2.5-2.5V8L18 2.5z" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
       <path d="M17.5 2.5v6.5h6.5" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-      <path d="m8.5 16 3 3 6.5-6.5" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      <path d="m8.5 16 3 3 6.5-6.5" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="none" fill="none" />
     </g>
   </g>
-  
-  <!-- Text Wordmark -->
   <text x="68" y="34" font-family="'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="25" fill="#0F172A" letter-spacing="-0.5px">
-    Mi <tspan fill="url(#logo-grad)">Pacto</tspan>
+    Mi <tspan fill="url(#pub-mipacto-grad-light)">Pacto</tspan>
   </text>
-  
-  <!-- Subtitle Tagline -->
   <text x="69" y="47" font-family="'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="8.5" fill="#64748B" letter-spacing="1.8px">
     CONTRATOS Y PAGOS
   </text>
