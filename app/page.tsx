@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   FileText, 
@@ -8,18 +8,62 @@ import {
   ShieldCheck, 
   ArrowRight, 
   Sparkles, 
-  MessageSquare, 
   Landmark, 
   Smartphone,
   TrendingUp,
-  Percent,
   Clock,
   HelpCircle,
   Calculator,
-  ChevronDown
+  ChevronDown,
+  PlayCircle,
+  MessageCircle,
+  Check,
+  Star,
+  Lock
 } from "lucide-react";
 
 export default function Home() {
+  // Check if user is logged in
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    // Enable smooth scrolling for anchor links
+    document.documentElement.style.scrollBehavior = "smooth";
+    
+    // Clear demo mode if we land on the homepage
+    localStorage.removeItem("demo_mode");
+    sessionStorage.removeItem("demo_mode");
+    document.cookie = "demo_mode=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    document.cookie = "sb-mock-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+
+    const checkSession = () => {
+      const cookies = document.cookie.split(";");
+      const hasCookie = cookies.some((c) => {
+        const trimmed = c.trim();
+        // Do not treat demo_mode as a logged-in state on the landing page
+        if (trimmed === "demo_mode=true") return false;
+        if (trimmed.startsWith("sb-") && trimmed.includes("-auth-token=")) {
+          const valueStr = trimmed.substring(trimmed.indexOf("=") + 1);
+          try {
+            const decoded = decodeURIComponent(valueStr);
+            const val = JSON.parse(decoded);
+            if (val === true || val === "true") return true;
+            if (val && typeof val === "object" && val.access_token) return true;
+          } catch {
+            if (valueStr === "true") return true;
+          }
+        }
+        return false;
+      });
+      setIsLoggedIn(hasCookie);
+    };
+    checkSession();
+    
+    return () => {
+      document.documentElement.style.scrollBehavior = "auto";
+    };
+  }, []);
+
   // ROI Calculator states
   const [projectRate, setProjectRate] = useState(25000);
   const [projectCount, setProjectCount] = useState(10);
@@ -60,97 +104,412 @@ export default function Home() {
     <div className="relative isolate overflow-hidden flex flex-col flex-grow">
       {/* Background gradients */}
       <div className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80" aria-hidden="true">
-        <div className="relative left-[calc(50%-11rem)] aspect-1155/678 w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-indigo-500 to-[#10b981] opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"></div>
+        <div className="relative left-[calc(50%-11rem)] aspect-1155/678 w-[36.125rem] -translate-x-1/2 rotate-[30deg] bg-gradient-to-tr from-indigo-500 to-[#00ACC1] opacity-20 sm:left-[calc(50%-30rem)] sm:w-[72.1875rem]"></div>
       </div>
 
       <div className="mx-auto max-w-7xl px-6 py-16 sm:py-24 lg:px-8 flex-grow flex flex-col gap-24">
         
         {/* HERO SECTION */}
-        <div className="mx-auto max-w-2xl text-center flex flex-col items-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-4 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-8 border border-indigo-500/20 pulse-subtle">
+        <div className="mx-auto max-w-4xl text-center flex flex-col items-center relative z-10">
+          <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-4 py-1.5 text-xs font-semibold text-indigo-600 mb-8 border border-indigo-500/20 pulse-subtle">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Simplifica tu freelance en México</span>
+            <span>El estándar para freelancers en México</span>
           </div>
 
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-6xl leading-tight">
+          <h1 className="font-heading text-5xl font-extrabold tracking-tight text-slate-900 sm:text-7xl leading-tight">
             Contratos Rápidos y{" "}
-            <span className="bg-gradient-to-r from-indigo-600 to-emerald-500 bg-clip-text text-transparent dark:from-indigo-400 dark:to-emerald-400">
+            <span className="bg-gradient-to-r from-indigo-600 to-emerald-500 bg-clip-text text-transparent ">
               Anticipos Seguros
             </span>
           </h1>
           
-          <p className="mt-6 text-base sm:text-lg leading-relaxed text-slate-600 dark:text-slate-350 max-w-xl">
-            Crea propuestas con plantillas legales de México (Honorarios, no subordinación laboral LFT), firma de aceptación express por WhatsApp y controla el estado de tus cobros en una sola herramienta.
+          <p className="mt-6 text-lg sm:text-xl leading-relaxed text-slate-600 max-w-2xl">
+            Crea propuestas con plantillas legales (RESICO / Honorarios), firma de aceptación express por WhatsApp y controla el estado de tus cobros SPEI en una sola plataforma.
           </p>
 
-          <div className="mt-10 flex items-center justify-center gap-x-6 w-full sm:w-auto flex-col sm:flex-row gap-y-4">
-            <Link
-              href="/dashboard"
-              className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3.5 text-base font-semibold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200 group"
-            >
-              Comenzar a Crear
-              <ArrowRight className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-            <Link
-              href="/dashboard?demo=true"
-              className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white/40 dark:bg-slate-900/40 px-6 py-3.5 text-base font-semibold text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-900/80 transition-all duration-200"
-            >
-              Probar Demo con Datos
-            </Link>
+          <div className="mt-10 flex flex-col items-center justify-center gap-y-4 w-full sm:w-auto">
+            <div className="flex items-center justify-center gap-x-6 w-full sm:w-auto flex-col sm:flex-row gap-y-4">
+              {isLoggedIn ? (
+                <Link
+                  href="/dashboard"
+                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-indigo-600/25 hover:bg-indigo-500 dark:bg-indigo-400 transition-all duration-200 group"
+                >
+                  Ir a mi Panel
+                  <ArrowRight className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/register"
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-indigo-600 px-8 py-4 text-base font-semibold text-white shadow-lg shadow-indigo-600/25 hover:bg-indigo-500 dark:bg-indigo-400 transition-all duration-200 group"
+                  >
+                    Comenzar Gratis
+                    <ArrowRight className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                  <Link
+                    href="/dashboard?demo=true"
+                    prefetch={false}
+                    onClick={() => {
+                      // @ts-expect-error - fbq is injected via script
+                      if (typeof window !== "undefined" && window.fbq) window.fbq('track', 'Lead', { content_name: 'Demo' });
+                      localStorage.setItem("demo_mode", "true");
+                      sessionStorage.setItem("demo_mode", "true");
+                      document.cookie = "demo_mode=true; path=/;";
+                      localStorage.removeItem("sandbox_profile");
+                      localStorage.removeItem("sandbox_contracts");
+                      localStorage.removeItem("sandbox_milestones");
+                      localStorage.removeItem("sandbox_audit_logs");
+                      localStorage.removeItem("sandbox_contract_versions");
+                    }}
+                    className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-8 py-4 text-base font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-all duration-200 group"
+                  >
+                    <PlayCircle className="mr-2.5 h-5 w-5 text-indigo-500 transition-transform group-hover:scale-110" />
+                    Probar Demo
+                  </Link>
+                </>
+              )}
+            </div>
+            {!isLoggedIn && (
+              <p className="text-sm text-slate-500 mt-4 font-medium">
+                Sin tarjeta de crédito. Configura en 2 minutos.
+              </p>
+            )}
+            
+            <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 mt-6 opacity-80">
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-100/50 px-3 py-1.5 rounded-full border border-slate-200/50">
+                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                Válido ante Código de Comercio (Art. 89)
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium bg-slate-100/50 px-3 py-1.5 rounded-full border border-slate-200/50">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                No Subordinación Laboral (LFT)
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* FEATURE GRID */}
-        <div className="mx-auto max-w-5xl">
-          <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-8 sm:max-w-none sm:grid-cols-3">
+        {/* HERO MOCKUP VISUALIZATION */}
+        <div className="mx-auto max-w-5xl w-full -mt-8 relative z-0 perspective-1000">
+          <div className="relative rounded-2xl bg-slate-900/5 p-2 md:p-4 ring-1 ring-inset ring-slate-900/10 shadow-2xl backdrop-blur-sm transform rotate-x-2 hover:rotate-x-0 transition-transform duration-700 overflow-hidden">
+            <div className="rounded-xl overflow-hidden border border-slate-200 bg-white shadow-sm flex flex-col h-auto min-h-[500px] md:h-[500px]">
+              {/* Fake browser header */}
+              <div className="h-10 bg-slate-50 border-b border-slate-200 flex items-center px-4 gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                  <div className="w-3 h-3 rounded-full bg-amber-400"></div>
+                  <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
+                </div>
+                <div className="mx-auto bg-white rounded-md border border-slate-200 text-xs text-slate-400 px-4 sm:px-24 py-1 flex items-center gap-1">
+                  <ShieldCheck className="h-3 w-3 text-emerald-500" />
+                  app.mipacto.app/dashboard
+                </div>
+              </div>
+              {/* Fake dashboard UI */}
+              <div className="flex-1 bg-slate-50 flex">
+                <div className="w-48 border-r border-slate-200 bg-white p-4 hidden md:flex flex-col gap-4">
+                  <div className="h-4 w-24 bg-slate-200 rounded animate-pulse"></div>
+                  <div className="h-8 bg-indigo-50 rounded-lg border border-indigo-100 flex items-center px-3">
+                    <div className="h-3 w-20 bg-indigo-200 rounded"></div>
+                  </div>
+                  <div className="h-8 bg-slate-50 rounded-lg flex items-center px-3">
+                    <div className="h-3 w-16 bg-slate-200 rounded"></div>
+                  </div>
+                  <div className="h-8 bg-slate-50 rounded-lg flex items-center px-3">
+                    <div className="h-3 w-24 bg-slate-200 rounded"></div>
+                  </div>
+                </div>
+                <div className="flex-1 p-3 sm:p-6 flex flex-col gap-4 sm:gap-6 overflow-hidden">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <div className="h-5 w-32 sm:w-40 bg-slate-800 rounded mb-2"></div>
+                      <div className="h-3 w-48 sm:w-64 bg-slate-400 rounded"></div>
+                    </div>
+                    <div className="h-10 w-28 sm:w-32 bg-indigo-600 rounded-lg"></div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="h-24 bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+                      <div className="h-3 w-20 bg-slate-300 rounded"></div>
+                      <div className="h-6 w-32 bg-emerald-500 rounded"></div>
+                    </div>
+                    <div className="h-24 bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+                      <div className="h-3 w-24 bg-slate-300 rounded"></div>
+                      <div className="h-6 w-28 bg-slate-800 rounded"></div>
+                    </div>
+                    <div className="h-24 bg-white border border-slate-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+                      <div className="h-3 w-16 bg-slate-300 rounded"></div>
+                      <div className="h-6 w-24 bg-indigo-600 rounded"></div>
+                    </div>
+                  </div>
+                  <div className="flex-1 bg-white border border-slate-200 rounded-xl shadow-sm p-3 sm:p-4">
+                     <div className="h-4 w-32 bg-slate-800 rounded mb-6"></div>
+                     <div className="space-y-4">
+                       <div className="h-12 bg-slate-50 border border-slate-100 rounded-lg flex items-center px-2 sm:px-4 justify-between gap-2">
+                         <div className="flex items-center gap-2 sm:gap-3"><div className="h-8 w-8 bg-indigo-100 rounded-full flex-shrink-0"></div><div className="h-3 w-20 sm:w-32 bg-slate-400 rounded"></div></div>
+                         <div className="h-5 w-16 sm:w-20 bg-amber-100 rounded-full border border-amber-200 flex-shrink-0"></div>
+                       </div>
+                       <div className="h-12 bg-slate-50 border border-slate-100 rounded-lg flex items-center px-2 sm:px-4 justify-between gap-2">
+                         <div className="flex items-center gap-2 sm:gap-3"><div className="h-8 w-8 bg-emerald-100 rounded-full flex-shrink-0"></div><div className="h-3 w-16 sm:w-28 bg-slate-400 rounded"></div></div>
+                         <div className="h-5 w-20 sm:w-24 bg-emerald-100 rounded-full border border-emerald-200 flex-shrink-0"></div>
+                       </div>
+                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* TRUST BADGES */}
+        <div className="mx-auto max-w-5xl text-center border-y border-slate-200/60 py-10 px-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-8">
+            Infraestructura Segura y Cumplimiento Legal en México
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
+            <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-5 hover:border-indigo-100 transition-colors shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-4">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">Validez NOM-151</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Contratos firmados digitalmente con plena validez mercantil según el Código de Comercio.
+              </p>
+            </div>
+
+            <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-5 hover:border-indigo-100 transition-colors shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-4">
+                <Landmark className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">Conciliación SPEI</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Validación de comprobantes CEP oficiales mediante clave de rastreo de Banxico.
+              </p>
+            </div>
+
+            <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-5 hover:border-indigo-100 transition-colors shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-4">
+                <Calculator className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">Cálculo SAT</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Estimaciones precisas de retenciones de ISR e IVA (Actividad Profesional y RESICO).
+              </p>
+            </div>
+
+            <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-5 hover:border-indigo-100 transition-colors shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 mb-4">
+                <Lock className="w-5 h-5" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">Cifrado de Datos</h4>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Cuentas CLABE e información sensible protegidas con cifrado SSL de nivel bancario.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* HOW IT WORKS */}
+        <div id="como-funciona" className="mx-auto max-w-5xl text-center scroll-mt-24">
+          <h2 className="font-heading text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+            Tu proceso de cobro, automatizado
+          </h2>
+          <p className="mt-4 text-lg text-slate-500 max-w-2xl mx-auto">
+            Olvídate de redactar Word, exportar a PDF y esperar semanas por una firma.
+          </p>
+          
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            <div className="hidden md:block absolute top-12 left-1/6 right-1/6 h-0.5 bg-gradient-to-r from-indigo-500 via-sky-400 to-emerald-500 z-0 opacity-30"></div>
             
+            <div className="relative z-10 flex flex-col items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/20">
+              <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-indigo-600/30 mb-6 ring-8 ring-white">1</div>
+              <h3 className="text-xl font-bold text-slate-900">Configura Hitos</h3>
+              <p className="text-sm text-slate-500 mt-2 text-center">
+                Define el alcance y divide el pago (ej. 50% anticipo, 50% finiquito). Nuestro sistema redacta el contrato legal automáticamente.
+              </p>
+            </div>
+            
+            <div className="relative z-10 flex flex-col items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/20">
+              <div className="w-16 h-16 bg-sky-500 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-sky-500/30 mb-6 ring-8 ring-white">2</div>
+              <h3 className="text-xl font-bold text-slate-900">Envía por WhatsApp</h3>
+              <p className="text-sm text-slate-500 mt-2 text-center">
+                Genera un link seguro. Tu cliente lo abre en su celular y acepta los términos con un clickwrap legal (NOM-151).
+              </p>
+            </div>
+            
+            <div className="relative z-10 flex flex-col items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/20">
+              <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-emerald-500/30 mb-6 ring-8 ring-white">3</div>
+              <h3 className="text-xl font-bold text-slate-900">Recibe tu SPEI</h3>
+              <p className="text-sm text-slate-500 mt-2 text-center">
+                El cliente te transfiere directamente a tu banco. Sube su comprobante CEP y el hito se marca como pagado en tu panel.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* DEEP DIVE 1: LEGAL */}
+        <div className="mx-auto max-w-6xl mt-12 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div className="order-2 lg:order-1 relative">
+            <div className="absolute -inset-4 bg-gradient-to-tr from-indigo-100 to-emerald-50 rounded-3xl transform rotate-2 z-0"></div>
+            <div className="relative z-10 bg-white border border-slate-200 rounded-2xl shadow-xl p-6">
+              {/* Fake Contract Doc */}
+              <div className="border-b border-slate-100 pb-4 mb-4 flex justify-between items-center">
+                 <div className="text-xs font-bold text-slate-400">CONTRATO DE PRESTACIÓN DE SERVICIOS</div>
+                 <div className="bg-emerald-100 text-emerald-700 text-2xs font-bold px-2 py-1 rounded-md">VINCULANTE</div>
+              </div>
+              <div className="space-y-3">
+                <div className="h-3 w-full bg-slate-200 rounded"></div>
+                <div className="h-3 w-5/6 bg-slate-200 rounded"></div>
+                <div className="h-3 w-full bg-slate-200 rounded"></div>
+                <div className="h-3 w-4/6 bg-slate-200 rounded"></div>
+              </div>
+              <div className="mt-6 bg-slate-50 rounded-lg p-4 border border-slate-100">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-bold text-slate-900">Cláusula de No Subordinación (LFT)</div>
+                    <div className="text-xs text-slate-500 mt-1">El Prestador actúa con independencia, herramientas propias y sin horario fijo, desvirtuando relación laboral.</div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 bg-slate-50 rounded-lg p-4 border border-slate-100">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-bold text-slate-900">Validez Código de Comercio (Art. 89)</div>
+                    <div className="text-xs text-slate-500 mt-1">La firma electrónica mediante NIP/OTP tiene pleno valor probatorio y obligatoriedad legal.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="order-1 lg:order-2 flex flex-col gap-6">
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 w-max text-xs font-semibold text-emerald-600 border border-emerald-500/20">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>Protección Legal Sólida</span>
+            </div>
+            <h2 className="font-heading text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              Diseñado específicamente para las leyes mexicanas
+            </h2>
+            <p className="text-lg text-slate-600 leading-relaxed">
+              No uses plantillas gringas genéricas. Nuestros contratos civiles (Código Civil Federal) están redactados para protegerte de demandas por subordinación (Ley Federal del Trabajo), cumplir con retenciones fiscales (RESICO) y garantizar firmas vinculantes (Código de Comercio).
+            </p>
+            <ul className="space-y-3 mt-2">
+              <li className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                <Check className="h-5 w-5 text-indigo-500" /> Basado en el Código Civil Federal.
+              </li>
+              <li className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                <Check className="h-5 w-5 text-indigo-500" /> Registro de IP y Timestamp de firma electrónica (Art. 89).
+              </li>
+              <li className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                <Check className="h-5 w-5 text-indigo-500" /> Huella criptográfica SHA-256 inmutable por documento.
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* DEEP DIVE 2: WHATSAPP */}
+        <div className="mx-auto max-w-6xl mt-12 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div className="flex flex-col gap-6">
+            <div className="inline-flex items-center gap-2 rounded-full bg-green-500/10 px-3 py-1 w-max text-xs font-semibold text-green-600 border border-green-500/20">
+              <MessageCircle className="h-3.5 w-3.5" />
+              <span>Fricción Cero</span>
+            </div>
+            <h2 className="font-heading text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              Cierra tratos directo en su celular
+            </h2>
+            <p className="text-lg text-slate-600 leading-relaxed">
+              Tus clientes no tienen que crear cuentas ni descargar apps. Envíales un link mágico por WhatsApp; ellos revisan la propuesta en su teléfono, aceptan los términos (clickwrap) y te avisan cuando suben el comprobante SPEI.
+            </p>
+            <Link href="/register" className="text-indigo-600 font-bold hover:text-indigo-500 flex items-center gap-1 w-max">
+              Ver cómo se ve para tu cliente <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <div className="relative flex justify-center">
+             <div className="absolute inset-0 bg-green-100 rounded-full blur-3xl opacity-50 w-64 h-64 m-auto"></div>
+             {/* Fake Mobile Phone */}
+             <div className="relative z-10 w-[280px] h-[580px] bg-slate-900 rounded-[2.5rem] border-[8px] border-slate-900 shadow-2xl flex flex-col overflow-hidden">
+               {/* Mobile Screen */}
+               <div className="flex-1 bg-slate-50 flex flex-col">
+                  {/* Fake header */}
+                  <div className="bg-indigo-600 pt-8 pb-4 px-4 text-white">
+                    <div className="text-xs opacity-70">Propuesta Comercial</div>
+                    <div className="font-bold text-lg mt-1">Desarrollo Web E-commerce</div>
+                  </div>
+                  <div className="flex-1 p-4 overflow-y-auto space-y-4 relative">
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-xs font-bold text-slate-500 mb-2">Hito 1: Anticipo</div>
+                      <div className="text-xl font-black text-slate-900">$12,500 MXN</div>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="text-xs font-bold text-slate-500 mb-2">Hito 2: Entrega</div>
+                      <div className="text-xl font-black text-slate-900">$12,500 MXN</div>
+                    </div>
+                    {/* Fake action sheet at bottom */}
+                    <div className="absolute bottom-4 left-4 right-4 bg-white p-4 rounded-2xl shadow-xl border border-slate-100 text-center">
+                       <p className="text-2xs text-slate-500 mb-3">Al aceptar, firmas legalmente este contrato.</p>
+                       <div className="bg-indigo-600 text-white font-bold py-3 rounded-xl text-sm">
+                         Aceptar y Firmar Contrato
+                       </div>
+                    </div>
+                  </div>
+               </div>
+             </div>
+          </div>
+        </div>
+
+        {/* FEATURE GRID (Beneficios) */}
+        <div id="beneficios" className="mx-auto max-w-5xl mt-12 scroll-mt-24">
+          <div className="text-center mb-12">
+            <h2 className="font-heading text-3xl font-extrabold tracking-tight text-slate-900">
+              Todo lo que necesitas para profesionalizar tu servicio
+            </h2>
+          </div>
+          <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-8 sm:max-w-none sm:grid-cols-3">
             <div className="glass glass-interactive rounded-2xl p-6 flex flex-col text-left">
-              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900 dark:text-white">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
                   <FileText className="h-5 w-5" />
                 </div>
-                Cláusulas de Ley (MX)
+                Generador de Plantillas
               </dt>
-              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500">
                 <p className="flex-auto">
-                  Evita demandas de subordinación laboral. Plantillas optimizadas para el régimen simplificado de confianza (RESICO) y servicios profesionales de honorarios en México.
+                  Responde 4 preguntas y el sistema genera el contrato completo. Adiós a buscar machotes en Google.
                 </p>
               </dd>
             </div>
 
             <div className="glass glass-interactive rounded-2xl p-6 flex flex-col text-left">
-              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900 dark:text-white">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                   <Smartphone className="h-5 w-5" />
                 </div>
                 Aceptación por WhatsApp
               </dt>
-              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500">
                 <p className="flex-auto">
-                  Tu cliente abre el link en su móvil, revisa los hitos y acepta con un click. Guardamos nombre, timestamp e IP como registro probatorio y te notificamos al instante.
+                  Guarda nombre, timestamp e IP del cliente como registro probatorio y te notifica al instante.
                 </p>
               </dd>
             </div>
 
             <div className="glass glass-interactive rounded-2xl p-6 flex flex-col text-left">
-              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900 dark:text-white">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+              <dt className="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
                   <Landmark className="h-5 w-5" />
                 </div>
-                Seguimiento de Anticipos
+                Seguimiento SPEI / CEP
               </dt>
-              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+              <dd className="mt-4 flex flex-auto flex-col text-sm leading-relaxed text-slate-500">
                 <p className="flex-auto">
-                  Configura montos (ej. 50% anticipo, 50% finiquito). El cliente visualiza tu CLABE de SPEI, ingresa su Clave de Rastreo bancaria y confirmas en tu dashboard.
+                  El cliente visualiza tu CLABE, ingresa su comprobante y tú confirmas el pago desde tu celular.
                 </p>
               </dd>
             </div>
-
           </dl>
         </div>
 
         {/* INTERACTIVE ROI CALCULATOR */}
-        <div className="mx-auto max-w-4xl w-full text-left">
+        <div className="mx-auto max-w-4xl w-full text-left mt-8">
           <div className="glass rounded-3xl p-6 md:p-8 border-indigo-500/10 flex flex-col md:flex-row gap-8 items-center">
             
             <div className="flex-1 flex flex-col gap-5">
@@ -158,16 +517,16 @@ export default function Home() {
                 <Calculator className="h-5 w-5" />
                 <span className="text-xs font-bold uppercase tracking-wider">Calculadora de Impacto Financiero</span>
               </div>
-              <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+              <h3 className="font-heading text-2xl font-extrabold text-slate-900">
                 ¿Cuánto te cuesta la cobranza informal?
               </h3>
-              <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                Chasing client payments over WhatsApp without formal, milestone-backed clickwrap agreements delays cash flow and hurts your monthly liquidity. Measure the cost below:
+              <p className="text-xs leading-relaxed text-slate-500">
+                Perseguir pagos por WhatsApp sin un acuerdo firmado lastima tu flujo de caja. Mide el costo de oportunidad:
               </p>
 
               <div className="flex flex-col gap-4 mt-2">
                 <div>
-                  <div className="flex justify-between text-2xs font-semibold text-slate-500 uppercase mb-2">
+                  <div className="flex justify-between text-xs font-semibold text-slate-500 uppercase mb-2">
                     <span>Cobro promedio por Proyecto</span>
                     <span className="text-indigo-500 font-bold">${projectRate.toLocaleString("es-MX")} MXN</span>
                   </div>
@@ -178,12 +537,12 @@ export default function Home() {
                     step={5000}
                     value={projectRate}
                     onChange={(e) => setProjectRate(Number(e.target.value))}
-                    className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
+                    className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 "
                   />
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-2xs font-semibold text-slate-500 uppercase mb-2">
+                  <div className="flex justify-between text-xs font-semibold text-slate-500 uppercase mb-2">
                     <span>Proyectos al Año</span>
                     <span className="text-indigo-500 font-bold">{projectCount} proyectos</span>
                   </div>
@@ -194,12 +553,12 @@ export default function Home() {
                     step={1}
                     value={projectCount}
                     onChange={(e) => setProjectCount(Number(e.target.value))}
-                    className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
+                    className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 "
                   />
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-2xs font-semibold text-slate-500 uppercase mb-2">
+                  <div className="flex justify-between text-xs font-semibold text-slate-500 uppercase mb-2">
                     <span>Días promedio de retraso en pago</span>
                     <span className="text-indigo-500 font-bold">{delayDays} días</span>
                   </div>
@@ -210,71 +569,117 @@ export default function Home() {
                     step={1}
                     value={delayDays}
                     onChange={(e) => setDelayDays(Number(e.target.value))}
-                    className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600 dark:accent-indigo-500"
+                    className="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 "
                   />
                 </div>
               </div>
             </div>
 
-            <div className="w-full md:w-80 rounded-2xl bg-indigo-900/10 dark:bg-indigo-500/5 p-6 border border-indigo-500/20 flex flex-col gap-6">
+            <div className="w-full md:w-80 rounded-2xl bg-indigo-900/10 p-6 border border-indigo-500/20 flex flex-col gap-6">
               <div>
-                <span className="text-3xs font-semibold text-slate-400 uppercase tracking-wider block">Ingresos anuales estimados</span>
-                <span className="text-xl font-bold text-slate-800 dark:text-slate-200">{formatMoney(totalYearlyRevenue)}</span>
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Ingresos anuales estimados</span>
+                <span className="text-xl font-bold text-slate-800">{formatMoney(totalYearlyRevenue)}</span>
               </div>
 
-              <div className="border-t border-slate-200 dark:border-slate-800/80 pt-4">
-                <span className="text-3xs font-semibold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
+              <div className="border-t border-slate-200 pt-4">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
                   <Clock className="h-3 w-3 text-amber-500" />
                   Días de demora acumulados
                 </span>
-                <span className="text-2xl font-black text-amber-600 dark:text-amber-400">{yearlyDaysDelayed} días/año</span>
-                <p className="text-4xs text-slate-400 mt-1">Tiempo que pasas persiguiendo transferencias bancarias.</p>
+                <span className="text-2xl font-black text-amber-600 ">{yearlyDaysDelayed} días/año</span>
+                <p className="text-xs text-slate-400 mt-1">Tiempo que pasas persiguiendo transferencias bancarias.</p>
               </div>
 
-              <div className="border-t border-slate-200 dark:border-slate-800/80 pt-4">
-                <span className="text-3xs font-semibold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
+              <div className="border-t border-slate-200 pt-4">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-indigo-500" />
                   Liquidez atorada en cartera
                 </span>
-                <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{formatMoney(liquidityAtRisk)}</span>
-                <p className="text-4xs text-slate-400 mt-1">Capital de trabajo atrapado por la falta de un flujo de cobranza digital.</p>
+                <span className="text-xl font-black text-indigo-600 ">{formatMoney(liquidityAtRisk)}</span>
+                <p className="text-xs text-slate-400 mt-1">Capital de trabajo atrapado por la falta de cobranza automatizada.</p>
               </div>
             </div>
 
           </div>
         </div>
 
+        {/* TESTIMONIALS */}
+        <div className="mx-auto max-w-6xl mt-8">
+          <div className="text-center mb-12">
+            <h2 className="font-heading text-3xl font-extrabold tracking-tight text-slate-900">
+              Freelancers que ya no persiguen pagos
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-4 relative">
+              <div className="flex text-amber-400"><Star className="h-4 w-4 fill-current"/><Star className="h-4 w-4 fill-current"/><Star className="h-4 w-4 fill-current"/><Star className="h-4 w-4 fill-current"/><Star className="h-4 w-4 fill-current"/></div>
+              <p className="text-sm text-slate-600 italic">&quot;Antes me daba pena cobrar el anticipo. Ahora el sistema se encarga. El cliente lee el contrato, firma digitalmente y sabe que debe depositar para que yo inicie.&quot;</p>
+              <div className="mt-auto flex items-center gap-3 pt-4 border-t border-slate-100">
+                <div className="h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center font-bold text-indigo-600">MG</div>
+                <div>
+                  <div className="text-sm font-bold text-slate-900">Mariana G.</div>
+                  <div className="text-xs text-slate-500">Diseñadora UI/UX</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-4 relative">
+              <div className="flex text-amber-400"><Star className="h-4 w-4 fill-current"/><Star className="h-4 w-4 fill-current"/><Star className="h-4 w-4 fill-current"/><Star className="h-4 w-4 fill-current"/><Star className="h-4 w-4 fill-current"/></div>
+              <p className="text-sm text-slate-600 italic">&quot;Me salvó de un cliente que no quería pagar el finiquito. Como tenía el registro de aceptación del contrato y de los hitos aprobados, le mostré el log de auditoría y pagó al día siguiente.&quot;</p>
+              <div className="mt-auto flex items-center gap-3 pt-4 border-t border-slate-100">
+                <div className="h-10 w-10 bg-emerald-100 rounded-full flex items-center justify-center font-bold text-emerald-600">CR</div>
+                <div>
+                  <div className="text-sm font-bold text-slate-900">Carlos R.</div>
+                  <div className="text-xs text-slate-500">Desarrollador Full-Stack</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-4 relative">
+              <div className="flex text-amber-400"><Star className="h-4 w-4 fill-current"/><Star className="h-4 w-4 fill-current"/><Star className="h-4 w-4 fill-current"/><Star className="h-4 w-4 fill-current"/><Star className="h-4 w-4 fill-current"/></div>
+              <p className="text-sm text-slate-600 italic">&quot;Pase de RESICO a la herramienta y fue súper sencillo. Las cláusulas fiscales ya vienen incluidas, por lo que mis facturas de honorarios cuadran perfecto con los montos sin pelear por el IVA.&quot;</p>
+              <div className="mt-auto flex items-center gap-3 pt-4 border-t border-slate-100">
+                <div className="h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center font-bold text-indigo-600">LP</div>
+                <div>
+                  <div className="text-sm font-bold text-slate-900">Laura P.</div>
+                  <div className="text-xs text-slate-500">Consultora de Marketing</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* PRICING PLANS */}
-        <div className="mx-auto max-w-4xl w-full text-center flex flex-col gap-8">
+        <div id="precios" className="mx-auto max-w-4xl w-full text-center flex flex-col gap-8 scroll-mt-24 mt-12">
           <div>
-            <h3 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Planes Justos para Freelancers</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Comienza gratis hoy mismo. Actualiza para desbloquear automatizaciones y cobros recurrentes.
+            <h3 className="font-heading text-3xl font-extrabold tracking-tight text-slate-900">Planes Justos para Freelancers</h3>
+            <p className="text-base text-slate-500 mt-2">
+              Comienza gratis hoy mismo. Actualiza para desbloquear automatizaciones ilimitadas.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto w-full">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto w-full text-left">
             {/* Free tier */}
-            <div className="glass rounded-3xl p-6 flex flex-col justify-between text-left border-slate-200 dark:border-slate-800">
+            <div className="glass rounded-3xl p-6 flex flex-col justify-between border-slate-200 bg-white/10 hover:shadow-lg transition-shadow">
               <div>
-                <h4 className="text-lg font-bold text-slate-800 dark:text-white">Plan Semilla</h4>
+                <h4 className="font-heading text-lg font-bold text-slate-900">Plan Semilla</h4>
                 <p className="text-2xs text-slate-400 mt-1">Ideal para iniciar en el freelance con orden.</p>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-extrabold text-slate-900 dark:text-white">$0</span>
+                  <span className="text-4xl font-extrabold text-slate-900">$0</span>
                   <span className="text-xs text-slate-400 ml-1">Gratis de por vida</span>
                 </div>
-                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 dark:text-slate-450">
+                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 font-medium">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                    Hasta 3 contratos activos al mes
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                    Plantillas legales básicas (Ley MX)
+                    Hasta 3 contratos creados
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                     Aceptación por clickwrap express
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                    Plantillas de contrato básicas (MXN)
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
@@ -283,60 +688,99 @@ export default function Home() {
                 </ul>
               </div>
               <Link 
-                href="/dashboard"
-                className="mt-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-center py-2.5 text-xs font-bold transition-colors"
+                href="/register?tier=free"
+                className="mt-8 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-center py-3 text-sm font-bold transition-colors cursor-pointer shadow-md w-full"
               >
                 Comenzar Gratis
               </Link>
             </div>
 
-            {/* Pro tier */}
-            <div className="glass rounded-3xl p-6 flex flex-col justify-between text-left border-indigo-500/35 relative overflow-hidden bg-indigo-500/5">
-              <div className="absolute top-3 right-3 bg-indigo-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
+            {/* Starter tier */}
+            <div className="glass rounded-3xl p-6 flex flex-col justify-between border-emerald-500/35 relative overflow-hidden bg-emerald-500/5 hover:shadow-xl hover:shadow-emerald-500/10 transition-shadow">
+              <div className="absolute top-3 right-3 bg-emerald-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm">
                 Popular
               </div>
               <div>
-                <h4 className="text-lg font-bold text-indigo-500">Plan Crecimiento</h4>
-                <p className="text-2xs text-slate-400 mt-1">Para profesionales con flujo de clientes constante.</p>
+                <h4 className="font-heading text-lg font-bold text-emerald-600">Plan Emprendedor</h4>
+                <p className="text-2xs text-slate-500 mt-1">Para profesionales con flujo de clientes constante.</p>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-extrabold text-slate-900 dark:text-white">$149</span>
-                  <span className="text-xs text-slate-400 ml-1">MXN / mes</span>
+                  <span className="text-4xl font-extrabold text-slate-900">$99</span>
+                  <span className="text-xs text-slate-500 ml-1">MXN / mes</span>
                 </div>
-                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-500 dark:text-slate-455">
-                  <li className="flex items-center gap-2 text-slate-700 dark:text-slate-250">
+                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-600 font-medium">
+                  <li className="flex items-center gap-2 text-slate-900">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                    <strong>Hasta 10 contratos activos</strong>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                    Monedas múltiples (MXN & USD)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                    Personalización de logotipos y firmas
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                    Soporte prioritario
+                  </li>
+                </ul>
+              </div>
+              <Link 
+                href="/register?tier=starter"
+                className="mt-8 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-center py-3 text-sm font-bold shadow-lg shadow-emerald-600/15 transition-colors cursor-pointer w-full"
+              >
+                Suscribirse a Emprendedor
+              </Link>
+            </div>
+
+            {/* Pro tier */}
+            <div className="glass rounded-3xl p-6 flex flex-col justify-between border-indigo-500/35 relative overflow-hidden bg-indigo-500/5 hover:shadow-xl hover:shadow-indigo-500/10 transition-shadow">
+              <div>
+                <h4 className="font-heading text-lg font-bold text-indigo-600">Plan Profesional</h4>
+                <p className="text-2xs text-slate-500 mt-1">Control absoluto, automatización y conciliación.</p>
+                <div className="mt-4 flex items-baseline">
+                  <span className="text-4xl font-extrabold text-slate-900">$199</span>
+                  <span className="text-xs text-slate-500 ml-1">MXN / mes</span>
+                </div>
+                <ul className="mt-6 flex flex-col gap-3 text-xs text-slate-600 font-medium">
+                  <li className="flex items-center gap-2 text-slate-900">
                     <CheckCircle2 className="h-4 w-4 text-indigo-500 flex-shrink-0" />
                     <strong>Contratos e hitos ilimitados</strong>
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-indigo-500 flex-shrink-0" />
-                    Alertas dinámicas de atraso ("Atrasado")
+                    Reconciliación SPEI automática (CEP)
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-indigo-500 flex-shrink-0" />
-                    Verificación SPEI Clave de Rastreo (Banxico CEP)
+                    Multi-perfiles de pago bancarios
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-indigo-500 flex-shrink-0" />
-                    Exportación PDF y respaldo legal offline
+                    Control de versiones e historial
                   </li>
                 </ul>
               </div>
               <Link 
-                href="/dashboard"
-                className="mt-8 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-center py-2.5 text-xs font-bold shadow-lg shadow-indigo-600/15 transition-colors"
+                href="/register?tier=pro"
+                className="mt-8 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-center py-3 text-sm font-bold shadow-lg shadow-indigo-600/15 transition-colors cursor-pointer w-full"
               >
-                Probar Plan Pro
+                Suscribirse a Pro
               </Link>
             </div>
           </div>
         </div>
 
         {/* LEGAL VULNERABILITIES & FAQ ACCORDION */}
-        <div className="mx-auto max-w-3xl w-full text-left">
+        <div id="faq" className="mx-auto max-w-3xl w-full text-left scroll-mt-24 mt-12">
           <div className="flex items-center gap-2 text-indigo-500 justify-center mb-6">
             <HelpCircle className="h-5 w-5" />
             <span className="text-xs font-bold uppercase tracking-wider">Preguntas Frecuentes y Respaldo Legal</span>
           </div>
+          <h2 className="text-center font-heading text-3xl font-extrabold tracking-tight text-slate-900 mb-10">
+            Aclaramos tus dudas
+          </h2>
 
           <div className="flex flex-col gap-4">
             {faqs.map((faq, index) => {
@@ -344,17 +788,17 @@ export default function Home() {
               return (
                 <div 
                   key={index}
-                  className="glass rounded-2xl p-4 transition-all duration-300 border-slate-100 dark:border-slate-900 cursor-pointer"
+                  className="glass rounded-2xl p-5 transition-all duration-300 border-slate-200 cursor-pointer hover:border-indigo-300 hover:shadow-md"
                   onClick={() => toggleFaq(index)}
                 >
-                  <div className="flex items-center justify-between gap-4 font-bold text-sm text-slate-800 dark:text-white">
+                  <div className="flex items-center justify-between gap-4 font-bold text-sm text-slate-800">
                     <span>{faq.q}</span>
-                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-300 ${
-                      isOpen ? "rotate-180 text-indigo-500" : ""
+                    <ChevronDown className={`h-5 w-5 text-slate-400 transition-transform duration-300 ${
+                      isOpen ? "rotate-180 text-indigo-600" : ""
                     }`} />
                   </div>
                   {isOpen && (
-                    <div className="mt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400 font-light border-t border-slate-100 dark:border-slate-900 pt-3 animate-in slide-in-from-top-2">
+                    <div className="mt-4 text-sm leading-relaxed text-slate-600 border-t border-slate-100 pt-4 animate-in slide-in-from-top-2">
                       {faq.a}
                     </div>
                   )}
@@ -362,24 +806,29 @@ export default function Home() {
               );
             })}
           </div>
+          <div className="mt-8 text-center">
+            <Link href="/faq" className="inline-flex items-center justify-center rounded-xl bg-indigo-50 px-6 py-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-100 transition-colors">
+              Ver todas las preguntas frecuentes
+            </Link>
+          </div>
         </div>
 
         {/* Call to Action card */}
-        <div className="mx-auto max-w-4xl w-full rounded-2xl bg-gradient-to-tr from-indigo-900 to-slate-950 p-8 text-white shadow-xl relative overflow-hidden text-left">
+        <div className="mx-auto max-w-5xl w-full rounded-3xl bg-gradient-to-tr from-indigo-900 via-slate-900 to-slate-950 p-6 sm:p-10 text-white shadow-2xl relative overflow-hidden text-left mt-12">
           <div className="absolute right-0 bottom-0 opacity-10 translate-x-12 translate-y-12">
             <ShieldCheck className="h-96 w-96" />
           </div>
           
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="max-w-lg">
-              <h3 className="text-xl font-bold">Protege tu trabajo de manera formal</h3>
-              <p className="mt-2 text-xs text-slate-350 leading-relaxed font-light">
-                Comienza a cobrar tus proyectos con el esquema de anticipos y validez legal que necesitas. Deja atrás los cobros informales por WhatsApp.
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="max-w-xl">
+              <h3 className="font-heading text-3xl font-extrabold mb-3">Protege tu trabajo hoy mismo</h3>
+              <p className="text-base text-slate-300 leading-relaxed font-light">
+                Únete a los freelancers que ya no persiguen pagos informales. Crea tu primer contrato en minutos y asegúrate de cobrar lo que mereces, a tiempo.
               </p>
             </div>
             <Link
-              href="/dashboard"
-              className="inline-flex items-center rounded-xl bg-emerald-500 px-5 py-3 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition-colors shadow-lg shadow-emerald-500/20 whitespace-nowrap"
+              href="/register"
+              className="inline-flex items-center justify-center rounded-xl bg-emerald-500 px-6 sm:px-8 py-3.5 sm:py-4 text-sm font-bold text-slate-950 hover:bg-emerald-400 hover:scale-105 transition-all shadow-xl shadow-emerald-500/20 text-center w-full sm:w-auto"
             >
               Crear mi Primer Contrato
             </Link>
@@ -388,9 +837,12 @@ export default function Home() {
       </div>
       
       {/* Footer background gradients */}
-      <div className="absolute inset-x-0 top-[calc(100%-13rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-30rem)]" aria-hidden="true">
+      <div className="absolute inset-x-0 top-[calc(100%-25rem)] -z-10 transform-gpu overflow-hidden blur-3xl sm:top-[calc(100%-40rem)]" aria-hidden="true">
         <div className="relative left-[calc(50%+3rem)] aspect-1155/678 w-[36.125rem] -translate-x-1/2 bg-gradient-to-tr from-emerald-400 to-indigo-500 opacity-20 sm:left-[calc(50%+36rem)] sm:w-[72.1875rem]"></div>
       </div>
+
+
+
     </div>
   );
 }

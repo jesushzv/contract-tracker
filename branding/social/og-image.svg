@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient: Deep Slate to Morado -->
+    <linearGradient id="og-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B0F19" />
+      <stop offset="50%" stop-color="#1E1B4B" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+    <linearGradient id="og-brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A855F7" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+    <linearGradient id="card-glass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.08)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0.02)" />
+    </linearGradient>
+    <filter id="glow-heavy" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#A855F7" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Canvas Background -->
+  <rect width="1200" height="630" fill="url(#og-bg)" />
+
+  <!-- Ambient Light Orbs -->
+  <circle cx="150" cy="150" r="300" fill="#6A1B9A" opacity="0.25" filter="blur(60px)" />
+  <circle cx="1050" cy="480" r="350" fill="#00ACC1" opacity="0.2" filter="blur(70px)" />
+
+  <!-- Glass Card Frame -->
+  <rect x="80" y="80" width="1040" height="470" rx="32" fill="url(#card-glass)" stroke="rgba(255, 255, 255, 0.15)" stroke-width="1.5" />
+
+  <!-- Left Side: Logo & Headline -->
+  <g transform="translate(140, 140)">
+    <!-- Brand Logo Mark + Text -->
+    <g transform="translate(0, 0)">
+      <rect x="0" y="0" width="64" height="64" rx="16" fill="url(#og-brand-grad)" filter="url(#glow-heavy)" />
+      <g transform="translate(14, 14)">
+        <path d="M22 3H10c-1.7 0-3 1.3-3 3v24c0 1.7 1.3 3 3 3h16c1.7 0 3-1.3 3-3V11L22 3z" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+        <path d="M21 3v8h8" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+        <path d="m11 20 4 4 9-9" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+      </g>
+      <text x="88" y="44" font-family="'Nunito', sans-serif" font-weight="800" font-size="38" fill="#FFFFFF" letter-spacing="-0.5px">
+        Mi <tspan fill="url(#og-brand-grad)">Pacto</tspan>
+      </text>
+    </g>
+
+    <!-- Headline -->
+    <text x="0" y="145" font-family="'Nunito', sans-serif" font-weight="800" font-size="44" fill="#FFFFFF" line-height="1.2">
+      Contratos legales express y
+    </text>
+    <text x="0" y="200" font-family="'Nunito', sans-serif" font-weight="800" font-size="44" fill="url(#og-brand-grad)">
+      seguimiento de pagos SPEI
+    </text>
+
+    <!-- Subtitle / Bullet Points -->
+    <text x="0" y="260" font-family="'Nunito', sans-serif" font-weight="600" font-size="22" fill="#94A3B8">
+      La plataforma para freelancers independientes en México.
+    </text>
+    
+    <!-- Badges Row -->
+    <g transform="translate(0, 295)">
+      <!-- Badge 1 -->
+      <rect x="0" y="0" width="210" height="42" rx="21" fill="rgba(168, 85, 247, 0.15)" stroke="#A855F7" stroke-width="1" />
+      <text x="20" y="26" font-family="'Nunito', sans-serif" font-weight="700" font-size="15" fill="#E9D5FF">⚡ Firma Express OTP</text>
+
+      <!-- Badge 2 -->
+      <rect x="225" y="0" width="220" height="42" rx="21" fill="rgba(6, 182, 212, 0.15)" stroke="#06B6D4" stroke-width="1" />
+      <text x="245" y="26" font-family="'Nunito', sans-serif" font-weight="700" font-size="15" fill="#CFFAFE">🔒 Sello SHA-256 Valid</text>
+
+      <!-- Badge 3 -->
+      <rect x="460" y="0" width="200" height="42" rx="21" fill="rgba(16, 185, 129, 0.15)" stroke="#10B981" stroke-width="1" />
+      <text x="480" y="26" font-family="'Nunito', sans-serif" font-weight="700" font-size="15" fill="#D1FAE5">🇲🇽 Cumplimiento SAT</text>
+    </g>
+  </g>
+
+  <!-- Right Side Mockup Card Illustration -->
+  <g transform="translate(800, 160)">
+    <rect width="260" height="310" rx="20" fill="rgba(30, 41, 59, 0.9)" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" />
+    <rect x="20" y="24" width="120" height="16" rx="8" fill="#38BDF8" opacity="0.8" />
+    <rect x="20" y="52" width="220" height="12" rx="6" fill="#475569" />
+    <rect x="20" y="74" width="180" height="12" rx="6" fill="#475569" />
+    
+    <!-- Milestone Box -->
+    <rect x="20" y="105" width="220" height="75" rx="12" fill="rgba(16, 185, 129, 0.15)" stroke="#10B981" stroke-width="1" />
+    <text x="35" y="132" font-family="'Nunito', sans-serif" font-weight="700" font-size="13" fill="#D1FAE5">Hito 1: Anticipo (50%)</text>
+    <text x="35" y="160" font-family="'Geist Mono', monospace" font-weight="800" font-size="18" fill="#10B981">$12,500.00 MXN</text>
+
+    <!-- Signature Stamp -->
+    <circle cx="200" cy="245" r="30" fill="url(#og-brand-grad)" opacity="0.9" />
+    <path d="m188 245 8 8 16-16" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" fill="none" />
+  </g>
+</svg>

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="tw-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="50%" stop-color="#4C1D95" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+    <linearGradient id="tw-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C084FC" />
+      <stop offset="100%" stop-color="#22D3EE" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1500" height="500" fill="url(#tw-bg)" />
+  <circle cx="200" cy="100" r="250" fill="#6A1B9A" opacity="0.3" filter="blur(50px)" />
+  <circle cx="1300" cy="400" r="300" fill="#00ACC1" opacity="0.25" filter="blur(60px)" />
+
+  <g transform="translate(150, 160)">
+    <!-- Logo Mark & Title -->
+    <g transform="translate(0, 0)">
+      <rect width="72" height="72" rx="18" fill="url(#tw-grad)" />
+      <g transform="translate(16, 16)">
+        <path d="M24 3H10c-1.8 0-3.2 1.4-3.2 3.2v25.6c0 1.8 1.4 3.2 3.2 3.2h17.6c1.8 0 3.2-1.4 3.2-3.2V11.8L24 3z" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none" />
+        <path d="m12 21 4.5 4.5 10-10" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none" />
+      </g>
+      <text x="96" y="50" font-family="'Nunito', sans-serif" font-weight="800" font-size="44" fill="#FFFFFF">
+        Mi <tspan fill="url(#tw-grad)">Pacto</tspan>
+      </text>
+    </g>
+
+    <text x="0" y="140" font-family="'Nunito', sans-serif" font-weight="800" font-size="36" fill="#F8FAFC">
+      Crea contratos legales en 3 minutos. Recibe pagos en SPEI con certeza.
+    </text>
+    <text x="0" y="185" font-family="'Nunito', sans-serif" font-weight="600" font-size="22" fill="#94A3B8">
+      Diseñado para freelancers, agencias e independientes en México. 🇲🇽
+    </text>
+  </g>
+</svg>

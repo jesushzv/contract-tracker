@@ -35,3 +35,36 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# playwright
+/playwright-report
+/test-results
+/public/branding/demo_recordings
+
+# design docs
+/design_docs
+
+# credentials & accounts reference
+/admin_accounts.md
+/test_accounts.md
+
+# temporary scratch & testing files
+/test-check*.js
+/test-cookies.js
+/test-header.js
+/test-login-header.js
+/debug_test.js
+/fix_test.js
+/clean-classes.js
+/clean-specific.js
+/remove-dark.js
+
+# System files
+.DS_Store
+**/.DS_Store
+
+# IDE configs
+.vscode/
+.idea/
+
+

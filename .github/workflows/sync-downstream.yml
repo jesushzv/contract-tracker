@@ -1,0 +1,35 @@
+name: Sync Downstream Branches
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for merges
+
+      - name: Configure Git User Identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge main into staging
+        run: |
+          git checkout staging
+          git merge origin/main --no-edit
+          git push origin staging
+
+      - name: Merge main into development
+        run: |
+          git checkout development
+          git merge origin/main --no-edit
+          git push origin development

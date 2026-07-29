@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 120" width="100%" height="100%">
+  <defs>
+    <linearGradient id="lh-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6A1B9A" />
+      <stop offset="100%" stop-color="#00ACC1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Top Accent Bar -->
+  <rect x="0" y="0" width="800" height="6" fill="url(#lh-grad)" />
+
+  <!-- Logo Mark + Wordmark -->
+  <g transform="translate(30, 25)">
+    <rect width="40" height="40" rx="10" fill="url(#lh-grad)" />
+    <g transform="translate(9, 9)">
+      <path d="M15 2H6.5c-1 0-1.8.8-1.8 1.8v18.4c0 1 .8 1.8 1.8 1.8h11c1 0 1.8-.8 1.8-1.8V7L15 2z" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" fill="none" />
+      <path d="m7.5 13 2.5 2.5 5.5-5.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" fill="none" />
+    </g>
+    <text x="52" y="28" font-family="'Nunito', sans-serif" font-weight="800" font-size="20" fill="#0F172A">
+      Mi <tspan fill="url(#lh-grad)">Pacto</tspan>
+    </text>
+    <text x="53" y="38" font-family="'Nunito', sans-serif" font-weight="700" font-size="7.5" fill="#64748B" letter-spacing="1.5px">
+      PLATAFORMA DE CONTRATACIÓN
+    </text>
+  </g>
+
+  <!-- Right Metadata Box -->
+  <g transform="translate(560, 30)">
+    <rect width="210" height="54" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1" />
+    <text x="15" y="22" font-family="'Nunito', sans-serif" font-weight="700" font-size="9" fill="#64748B">FOLIO DE REGISTRO SHA-256</text>
+    <text x="15" y="40" font-family="'Geist Mono', monospace" font-weight="700" font-size="11" fill="#0F172A">MP-2026-88F19A2</text>
+  </g>
+  
+  <!-- Divider Line -->
+  <line x1="30" y1="100" x2="770" y2="100" stroke="#E2E8F0" stroke-width="1" />
+</svg>

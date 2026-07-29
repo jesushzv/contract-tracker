@@ -1,0 +1,43 @@
+/* Mi Pacto — Official Brand Design System CSS Tokens */
+
+:root {
+  /* Brand Core Palette */
+  --mipacto-color-primary: #6A1B9A;
+  --mipacto-color-primary-dark: #4A148C;
+  --mipacto-color-accent: #00ACC1;
+  --mipacto-color-accent-dark: #00838F;
+  --mipacto-color-emerald: #059669;
+  
+  /* Chrome & Typography */
+  --mipacto-color-dark: #0F172A;
+  --mipacto-color-text-primary: #0F172A;
+  --mipacto-color-text-secondary: #64748B;
+  --mipacto-color-border: #E2E8F0;
+  --mipacto-color-bg-light: #F8FAFC;
+  --mipacto-color-card-bg: #FFFFFF;
+
+  /* Gradients */
+  --mipacto-gradient-primary: linear-gradient(135deg, #6A1B9A 0%, #00ACC1 100%);
+  --mipacto-gradient-dark: linear-gradient(135deg, #4A148C 0%, #059669 100%);
+  --mipacto-gradient-gold: linear-gradient(135deg, #D97706 0%, #F59E0B 100%);
+
+  /* Typography */
+  --mipacto-font-sans: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mipacto-font-heading: 'Nunito', 'Outfit', sans-serif;
+  --mipacto-font-mono: 'Geist Mono', 'Fira Code', monospace;
+
+  /* Elevation & Shadows */
+  --mipacto-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --mipacto-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+  --mipacto-shadow-lg: 0 10px 15px -3px rgba(106, 27, 154, 0.12), 0 4px 6px -4px rgba(0, 172, 193, 0.1);
+  --mipacto-shadow-brand: 0 10px 25px -5px rgba(106, 27, 154, 0.25);
+}
+
+/* Dark Theme Overrides */
+[data-theme="dark"] {
+  --mipacto-color-text-primary: #F8FAFC;
+  --mipacto-color-text-secondary: #94A3B8;
+  --mipacto-color-border: #334155;
+  --mipacto-color-bg-light: #0B0F19;
+  --mipacto-color-card-bg: #1E293B;
+}

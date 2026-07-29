@@ -1,0 +1,10 @@
+-- Migration: Add tax and verification columns for Sprint WA
+
+ALTER TABLE public.contracts
+ADD COLUMN IF NOT EXISTS retencion_isr BOOLEAN DEFAULT false NOT NULL,
+ADD COLUMN IF NOT EXISTS retencion_iva BOOLEAN DEFAULT false NOT NULL,
+ADD COLUMN IF NOT EXISTS tax_withholding_amount NUMERIC(12,2) DEFAULT 0.00 NOT NULL,
+ADD COLUMN IF NOT EXISTS iva_amount NUMERIC(12,2) DEFAULT 0.00 NOT NULL,
+ADD COLUMN IF NOT EXISTS subtotal_amount NUMERIC(12,2) DEFAULT 0.00 NOT NULL,
+ADD COLUMN IF NOT EXISTS client_otp_code TEXT,
+ADD COLUMN IF NOT EXISTS client_otp_verified BOOLEAN DEFAULT false NOT NULL;

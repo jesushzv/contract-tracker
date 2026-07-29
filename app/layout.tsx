@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { Outfit, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { Outfit, Inter, Nunito } from "next/font/google";
+import Script from "next/script";
+import { cookies } from "next/headers";
+import Header from "./Header";
+import Footer from "./Footer";
+import ApiKeyGuard from "./ApiKeyGuard";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -15,59 +21,104 @@ const inter = Inter({
   weight: ["300", "400", "500", "600", "700"],
 });
 
+const nunito = Nunito({
+  variable: "--font-nunito",
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
+});
+
 export const metadata: Metadata = {
-  title: "Contrato & Anticipo Tracker | Freelance MX",
-  description: "Crea contratos con validez digital rápida y gestiona tus anticipos/pagos SPEI en un solo lugar.",
+  title: "Mi Pacto | Gestión de Contratos & Pagos SPEI para Freelancers",
+  description: "Crea contratos con validez digital, firma express por WhatsApp y controla tus cobros SPEI con conciliación automática.",
+  icons: {
+    icon: "/branding/favicon.svg",
+    shortcut: "/branding/favicon.svg",
+    apple: "/branding/apple-touch-icon.svg",
+  },
+  openGraph: {
+    title: "Mi Pacto | Contratos Legales & Pagos SPEI para Freelancers",
+    description: "Crea contratos legales en 3 minutos, firma express vía OTP y monitorea depósitos SPEI en México.",
+    url: "https://mipacto.app",
+    siteName: "Mi Pacto",
+    images: [
+      {
+        url: "/branding/og-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "Mi Pacto — Plataforma de Contratos y Pagos para Freelancers",
+      },
+    ],
+    locale: "es_MX",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Mi Pacto — Contratos y Pagos SPEI",
+    description: "La solución de contratación y cobranza para independientes en México.",
+    images: ["/branding/og-image.svg"],
+  },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  console.log("SERVER COOKIES:", cookieStore.getAll());
+  
+  const hasAuthCookie = cookieStore.getAll().some((c) => {
+    if (c.name.startsWith("sb-") && c.name.endsWith("-auth-token")) {
+      try {
+        const val = JSON.parse(c.value);
+        if (val === true || val === "true") return true;
+        if (val && typeof val === "object" && val.access_token) return true;
+      } catch {
+        if (c.value === "true") return true;
+      }
+    }
+    return false;
+  });
+  const useSupabase = 
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL && 
+    process.env.NEXT_PUBLIC_SUPABASE_URL !== "" && 
+    process.env.NEXT_PUBLIC_VERCEL_ENV !== "preview";
+
   return (
     <html
       lang="es"
-      className={`${outfit.variable} ${inter.variable} h-full antialiased`}
+      className={`${outfit.variable} ${inter.variable} ${nunito.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#fafbfe] text-[#0f172a] dark:bg-[#090d16] dark:text-[#f8fafc] transition-colors duration-300">
-        <header className="sticky top-0 z-50 w-full border-b border-[#6366f1]/10 bg-white/70 backdrop-blur-md dark:bg-[#090d16]/70 dark:border-[#6366f1]/20">
-          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-500 shadow-md shadow-indigo-500/20">
-                <span className="text-lg font-extrabold text-white">₳</span>
-              </div>
-              <div>
-                <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-emerald-500 bg-clip-text text-transparent dark:from-indigo-400 dark:to-emerald-400">
-                  Anticipo
-                </span>
-                <span className="text-xs font-semibold text-slate-400 ml-1 block sm:inline">MX</span>
-              </div>
-            </div>
-            
-            <nav className="hidden md:flex items-center gap-6">
-              <a href="/dashboard" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
-                Panel
-              </a>
-              <a href="/contracts/new" className="text-sm font-medium text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-colors">
-                Nuevo Contrato
-              </a>
-            </nav>
+      <body className="min-h-full flex flex-col bg-[#fafbfe] text-[#0f172a] transition-colors duration-300">
+        <Script id="meta-pixel" strategy="afterInteractive">
+          {`
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '812279541878360');
+            fbq('track', 'PageView');
+          `}
+        </Script>
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: "none" }}
+            src="https://www.facebook.com/tr?id=812279541878360&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
+        <ApiKeyGuard>
+          <Header hasAuthCookie={hasAuthCookie} useSupabase={useSupabase} />
 
-            <div className="flex items-center gap-4">
-              <a 
-                href="/dashboard" 
-                className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/10 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 transition-all duration-200"
-              >
-                Mi Panel
-              </a>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-grow flex flex-col">
-          {children}
-        </main>
+          <main className="flex-grow flex flex-col">
+            {children}
+          </main>
 
         <footer className="border-t border-[#6366f1]/10 bg-white/50 py-8 dark:bg-[#090d16]/30 dark:border-[#6366f1]/20">
           <div className="mx-auto max-w-7xl px-4 text-center text-sm text-slate-500 dark:text-slate-400 sm:px-6 lg:px-8">
@@ -80,6 +131,8 @@ export default function RootLayout({
           </div>
         </footer>
         <Analytics />
+          <Footer />
+        </ApiKeyGuard>
       </body>
     </html>
   );
