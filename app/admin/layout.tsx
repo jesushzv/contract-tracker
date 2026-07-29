@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminTabNav from './components/AdminTabNav';
 
+import { isDemoMode } from '@/lib/storageClient';
+
 export default function AdminLayout({
   children,
 }: {
@@ -17,7 +19,7 @@ export default function AdminLayout({
     const verifyAdmin = async () => {
       try {
         // In demo mode, bypass auth check
-        if (typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true') {
+        if (isDemoMode()) {
           setIsAdmin(true);
           setIsVerifying(false);
           return;
