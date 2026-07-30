@@ -50,13 +50,10 @@ export default function RegisterPage() {
     }
 
     const hasLength = password.length >= 8;
-    const hasUpper = /[A-Z]/.test(password);
-    const hasLower = /[a-z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
-    const hasSpecial = /[^A-Za-z0-9]/.test(password);
 
-    if (!hasLength || !hasUpper || !hasLower || !hasNumber || !hasSpecial) {
-      setError("La contraseña debe cumplir con todos los requisitos de seguridad.");
+    if (!hasLength || !hasNumber) {
+      setError("La contraseña debe tener al menos 8 caracteres y 1 número.");
       setLoading(false);
       return;
     }
@@ -118,17 +115,18 @@ export default function RegisterPage() {
         setSuccess(true);
         // @ts-expect-error - fbq is injected via script
         if (typeof window !== "undefined" && window.fbq) window.fbq('track', 'CompleteRegistration');
+        
         if (data.session) {
-          setSuccessMessage("¡Registro exitoso! Redirigiéndote...");
+          setSuccessMessage("¡Registro exitoso! Redirigiéndote a tu cuenta...");
           setTimeout(() => {
             if (selectedTier === "starter" || selectedTier === "pro") {
               router.push(`/plans?tier=${selectedTier}`);
             } else {
               router.push("/onboarding");
             }
-          }, 2000);
+          }, 1500);
         } else {
-          setSuccessMessage("¡Registro exitoso! Por favor, verifica tu correo electrónico para confirmar tu cuenta antes de iniciar sesión.");
+          setSuccessMessage("¡Registro exitoso! Ya puedes iniciar sesión.");
           setLoading(false);
         }
       }
@@ -232,21 +230,9 @@ export default function RegisterPage() {
                       {password.length >= 8 ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
                       Mínimo 8 caracteres
                     </span>
-                    <span className={`flex items-center gap-1 font-medium ${/[A-Z]/.test(password) ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"}`}>
-                      {/[A-Z]/.test(password) ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
-                      1 Mayúscula
-                    </span>
-                    <span className={`flex items-center gap-1 font-medium ${/[a-z]/.test(password) ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"}`}>
-                      {/[a-z]/.test(password) ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
-                      1 Minúscula
-                    </span>
                     <span className={`flex items-center gap-1 font-medium ${/[0-9]/.test(password) ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"}`}>
                       {/[0-9]/.test(password) ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
                       1 Número
-                    </span>
-                    <span className={`flex items-center gap-1 font-medium ${/[^A-Za-z0-9]/.test(password) ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"}`}>
-                      {/[^A-Za-z0-9]/.test(password) ? <Check className="h-3.5 w-3.5 flex-shrink-0" /> : <X className="h-3.5 w-3.5 flex-shrink-0" />}
-                      1 Carácter Especial
                     </span>
                   </div>
                 </div>
@@ -284,9 +270,13 @@ export default function RegisterPage() {
                 className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-slate-900/40"
               />
               <label htmlFor="privacy" className="text-xs text-slate-600 dark:text-slate-400">
-                Acepto el <Link href="#" className="text-indigo-600 dark:text-indigo-400 hover:underline">Aviso de Privacidad</Link> y los <Link href="#" className="text-indigo-600 dark:text-indigo-400 hover:underline">Términos de Servicio</Link>, consintiendo el tratamiento de mis datos conforme a la LFPDPPP.
+                Acepto el <Link href="/privacy" target="_blank" className="text-indigo-600 dark:text-indigo-400 hover:underline">Aviso de Privacidad</Link> y los <Link href="/terms" target="_blank" className="text-indigo-600 dark:text-indigo-400 hover:underline">Términos de Servicio</Link>, consintiendo el tratamiento de mis datos conforme a la LFPDPPP.
               </label>
             </div>
+
+            <p className="text-[10px] text-center text-slate-500 font-semibold uppercase tracking-wider mb-1 mt-2">
+              ✓ Cuenta 100% Gratis • Sin Tarjeta de Crédito
+            </p>
 
             <button
               type="submit"

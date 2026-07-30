@@ -4,13 +4,22 @@ import { Contract, Milestone, Profile, ContractStatus, MilestoneStatus, AuditLog
 
 // Determine if we should use the cloud Supabase database
 export const shouldUseSupabase = (): boolean => {
-  // If not in production, we bypass the cloud DB
-  // to avoid persistent data storage or requiring a secondary DB.
-  if (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production") {
-    return false;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const isConfigured = !!url && url !== "" && !url.includes("placeholder");
+  
+  if (!isConfigured) return false;
+
+  if (
+    process.env.NODE_ENV === "production" ||
+    process.env.NEXT_PUBLIC_VERCEL_ENV === "production" ||
+    process.env.NEXT_PUBLIC_FORCE_SUPABASE === "true"
+  ) {
+    return true;
   }
-  return !!process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== "";
+
+  return isConfigured;
 };
+
 
 
 // Dispatch server actions based on config

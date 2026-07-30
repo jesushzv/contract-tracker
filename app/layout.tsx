@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Inter, Nunito } from "next/font/google";
 import Script from "next/script";
 import { cookies } from "next/headers";
-import { Analytics } from "@vercel/analytics/next";
+import { Analytics } from "@vercel/analytics/react";
 import Header from "./Header";
 import Footer from "./Footer";
 import ApiKeyGuard from "./ApiKeyGuard";

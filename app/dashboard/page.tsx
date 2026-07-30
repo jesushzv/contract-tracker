@@ -18,6 +18,7 @@ import { useFinancialStats } from "../hooks/useFinancialStats";
 import { getContracts, getMilestones, getAuditLogs, updateMilestoneStatus, markMilestoneAsTransferred, isDemoMode } from "@/lib/storageClient";
 import { LayoutList, LayoutGrid, Plus } from "lucide-react";
 import { ClientPaymentUpload } from "../components/client/ClientPaymentUpload";
+import DemoLeadCaptureBanner from "../components/DemoLeadCaptureBanner";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -160,6 +161,7 @@ export default function Dashboard() {
 
   return (
     <AppShell activePath="/dashboard">
+      {isDemoMode() && <DemoLeadCaptureBanner />}
       <div className="flex flex-col gap-6 max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center items-start gap-4">
           <div>
